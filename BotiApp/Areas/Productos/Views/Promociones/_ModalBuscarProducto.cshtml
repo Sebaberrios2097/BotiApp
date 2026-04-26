@@ -1,0 +1,242 @@
+﻿@using Infraestructura.Entities.BotiApp
+@{
+    var idPromocion    = (int)ViewBag.IdPromocion;
+    var idGrupoPresel  = ViewBag.IdGrupo as int?;
+    var grupos         = ViewBag.Grupos as List<ProPromocionGrupo>
+                         ?? new List<ProPromocionGrupo>();
+}
+<style>
+    .mb-header {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:1.1rem 1.5rem; border-bottom:1px solid #f0ebe5;
+        background:var(--color-secundario); border-radius:16px 16px 0 0;
+    }
+    .mb-header-left { display:flex; align-items:center; gap:.65rem; }
+    .mb-header-left svg { width:20px; height:20px; fill:var(--color-primario); }
+    .mb-header-left h2 { font-size:1rem; font-weight:700; color:#fff; margin:0; }
+    .mb-close {
+        width:32px; height:32px; border-radius:8px; border:none; cursor:pointer;
+        background:rgba(255,255,255,.08); color:rgba(255,255,255,.7);
+        display:flex; align-items:center; justify-content:center;
+    }
+    .mb-close:hover { background:rgba(255,255,255,.15); color:#fff; }
+    .mb-close svg { width:18px; height:18px; fill:currentColor; }
+
+    .mb-body { padding:1.25rem 1.5rem; }
+
+    /* Selector de grupo */
+    .mb-grupo-row {
+        display:flex; align-items:center; gap:.6rem;
+        margin-bottom:1rem; flex-wrap:wrap;
+    }
+    .mb-grupo-row label { font-size:.82rem; font-weight:600; color:var(--color-secundario); white-space:nowrap; }
+    .mb-grupo-select {
+        flex:1; min-width:160px; padding:.45rem .75rem;
+        border:1.5px solid #e0d5cc; border-radius:8px; font-size:.85rem;
+        color:var(--color-secundario); background:#fff; outline:none; cursor:pointer;
+    }
+    .mb-grupo-select:focus { border-color:var(--color-primario); }
+    .badge-excl {
+        display:inline-flex; align-items:center; padding:.2rem .55rem;
+        border-radius:20px; font-size:.72rem; font-weight:600;
+    }
+    .badge-excl.si { background:rgba(239,68,68,.1);  color:#dc2626; }
+    .badge-excl.no { background:rgba(34,197,94,.12); color:#16a34a; }
+
+    /* Buscador */
+    .mb-search {
+        display:flex; align-items:center; gap:.6rem;
+        background:#fff; border:1.5px solid #e8ddd4; border-radius:8px;
+        padding:.5rem .85rem; margin-bottom:1rem;
+    }
+    .mb-search svg   { width:18px; height:18px; fill:var(--color-primario); opacity:.7; flex-shrink:0; }
+    .mb-search input { border:none; outline:none; font-size:.9rem; width:100%; background:transparent; color:var(--color-secundario); }
+
+    .mb-results { max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:.5rem; }
+
+    .mb-prod-item {
+        display:flex; align-items:center; gap:.85rem;
+        padding:.7rem .9rem; background:#fff; border:1px solid #ede5df; border-radius:8px;
+        cursor:pointer; transition:background .15s, border-color .15s;
+    }
+    .mb-prod-item:hover  { background:#fdf6f1; border-color:var(--color-primario); }
+    .mb-prod-item.activo { background:#fdf6f1; border-color:var(--color-primario);
+                           box-shadow:0 0 0 2px rgba(231,111,46,.15); }
+
+    .mb-prod-img { width:40px; height:40px; border-radius:6px; object-fit:cover;
+        border:1px solid #e8ddd4; background:#f5f0eb; flex-shrink:0; }
+    .mb-prod-ph  { width:40px; height:40px; border-radius:6px; background:#f5f0eb;
+        border:1px solid #e8ddd4; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center; }
+    .mb-prod-ph svg { width:20px; height:20px; fill:#c9b8a8; }
+
+    .mb-prod-info  { flex:1; min-width:0; }
+    .mb-prod-nombre{ font-size:.88rem; font-weight:600; color:var(--color-secundario); }
+    .mb-prod-meta  { font-size:.75rem; color:#a89080; }
+    .mb-prod-precio{ font-size:.88rem; font-weight:700; color:var(--color-primario); white-space:nowrap; }
+
+    .mb-footer {
+        display:flex; align-items:center; gap:.75rem;
+        margin-top:1rem; padding-top:1rem; border-top:1px solid #f0ebe5; flex-wrap:wrap;
+    }
+    .mb-footer label { font-size:.82rem; font-weight:600; color:var(--color-secundario); }
+    .mb-cant-input {
+        width:80px; padding:.45rem .6rem; border:1.5px solid #e0d5cc;
+        border-radius:8px; font-size:.88rem; outline:none;
+    }
+    .mb-cant-input:focus { border-color:var(--color-primario); }
+    .btn-mb-agregar {
+        margin-left:auto; padding:.5rem 1.3rem; background:var(--color-primario); color:#fff;
+        border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:.88rem;
+        transition:background .15s;
+    }
+    .btn-mb-agregar:hover    { background:#cf5f22; }
+    .btn-mb-agregar:disabled { opacity:.5; cursor:not-allowed; }
+
+    .mb-empty       { text-align:center; padding:2rem; color:#b8a898; font-size:.85rem; }
+    .mb-placeholder { text-align:center; padding:2rem; color:#c9b8a8; font-size:.85rem; }
+    .mb-spinner-sm  { display:flex; justify-content:center; padding:1.5rem; }
+    .spinner-sm {
+        width:28px; height:28px; border:2.5px solid #f0ebe5;
+        border-top-color:var(--color-primario); border-radius:50%;
+        animation:spin .7s linear infinite;
+    }
+</style>
+
+<!-- Header -->
+<div class="mb-header">
+    <div class="mb-header-left">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <h2>Agregar producto a la promoción</h2>
+    </div>
+    <button class="mb-close" onclick="cerrarModal()">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+</div>
+
+<div class="mb-body">
+
+    <div class="mb-grupo-row">
+        <label>Asignar a grupo:</label>
+        <select class="mb-grupo-select" id="mbGrupoSelect" onchange="actualizarBadgeGrupo()">
+            <option value="">— Sin grupo (siempre incluido) —</option>
+            @foreach (var g in grupos)
+            {
+                <option value="@g.IdGrupo"
+                        selected="@(idGrupoPresel == g.IdGrupo ? "selected" : null)"
+                        data-excl="@g.EsExcluyente.ToString().ToLower()">
+                    @g.Descripcion
+                </option>
+            }
+        </select>
+        <span id="mbBadgeExcl"></span>
+    </div>
+
+    <div class="mb-search">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" id="mbInput" placeholder="Buscar por nombre o marca…"
+               oninput="buscarProductos()" autocomplete="off" />
+    </div>
+
+    <div class="mb-results" id="mbResultados">
+        <div class="mb-placeholder">Escribe para buscar productos activos.</div>
+    </div>
+
+    <div class="mb-footer">
+        <label for="mbCant">Cantidad:</label>
+        <input class="mb-cant-input" type="number" id="mbCant" value="1" min="1" />
+        <button class="btn-mb-agregar" id="mbBtnAgregar" disabled onclick="confirmarAgregar()">
+            Agregar a promoción
+        </button>
+    </div>
+
+</div>
+
+<script>
+(function () {
+    const idPromocion = @idPromocion;
+    let seleccionado  = null;
+    let debounceTimer = null;
+
+    // Muestra badge excluyente/libre según el grupo seleccionado
+    window.actualizarBadgeGrupo = function () {
+        const sel   = document.getElementById('mbGrupoSelect');
+        const badge = document.getElementById('mbBadgeExcl');
+        if (!sel.value) { badge.innerHTML = ''; return; }
+        const excl = sel.options[sel.selectedIndex].dataset.excl === 'true';
+        badge.innerHTML = excl
+            ? '<span class="badge-excl si">Excluyente — elige uno</span>'
+            : '<span class="badge-excl no">Libre — todos van</span>';
+    };
+
+    // Ejecutar al cargar para mostrar el badge del grupo pre-seleccionado
+    actualizarBadgeGrupo();
+
+    // Búsqueda con debounce
+    window.buscarProductos = function () {
+        const q = document.getElementById('mbInput').value.trim();
+        clearTimeout(debounceTimer);
+        if (q.length < 2) {
+            document.getElementById('mbResultados').innerHTML =
+                '<div class="mb-placeholder">Escribe al menos 2 caracteres.</div>';
+            seleccionado = null;
+            document.getElementById('mbBtnAgregar').disabled = true;
+            return;
+        }
+        debounceTimer = setTimeout(async () => {
+            document.getElementById('mbResultados').innerHTML =
+                '<div class="mb-spinner-sm"><div class="spinner-sm"></div></div>';
+            try {
+                const r    = await fetch(`/Productos/Promociones/BuscarProductos?q=${encodeURIComponent(q)}`);
+                const data = await r.json();
+                renderResultados(data);
+            } catch {
+                document.getElementById('mbResultados').innerHTML =
+                    '<div class="mb-empty">Error al buscar productos.</div>';
+            }
+        }, 300);
+    };
+
+    function renderResultados(productos) {
+        const cont = document.getElementById('mbResultados');
+        if (!productos.length) {
+            cont.innerHTML = '<div class="mb-empty">Sin resultados.</div>';
+            return;
+        }
+        cont.innerHTML = productos.map(p => {
+            const img = p.tieneImagen
+                ? `<img class="mb-prod-img" src="/Productos/Productos/Imagen/${p.idProducto}" alt="">`
+                : `<div class="mb-prod-ph"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></div>`;
+            return `
+<div class="mb-prod-item" data-id="${p.idProducto}" onclick="seleccionarProducto(${p.idProducto})">
+  ${img}
+  <div class="mb-prod-info">
+    <div class="mb-prod-nombre">${escMb(p.nombreProducto)}</div>
+    <div class="mb-prod-meta">${escMb(p.nombreMarca)} · Stock: ${p.stock}</div>
+  </div>
+  <div class="mb-prod-precio">$${Number(p.precio).toLocaleString('es-CL')}</div>
+</div>`;
+        }).join('');
+    }
+
+    window.seleccionarProducto = function (id) {
+        seleccionado = id;
+        document.querySelectorAll('.mb-prod-item').forEach(el =>
+            el.classList.toggle('activo', el.dataset.id == id));
+        document.getElementById('mbBtnAgregar').disabled = false;
+        document.getElementById('mbCant').focus();
+    };
+
+    window.confirmarAgregar = function () {
+        if (!seleccionado) return;
+        const cantidad = parseInt(document.getElementById('mbCant').value) || 1;
+        // ← Lee el grupo seleccionado; null si es "Sin grupo"
+        const idGrupo  = document.getElementById('mbGrupoSelect').value || null;
+        ejecutarAgregarProducto(idPromocion, seleccionado, cantidad, idGrupo);
+    };
+
+    function escMb(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+})();
+</script>

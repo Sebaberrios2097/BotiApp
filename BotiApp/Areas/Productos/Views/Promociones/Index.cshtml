@@ -1,0 +1,875 @@
+﻿@model IEnumerable<Infraestructura.Entities.BotiApp.ProPromocion>
+@using BotiApp.Areas.Productos.Controllers
+@{
+    ViewData["Title"] = "Promociones";
+}
+
+<style>
+    /* ── Encabezado ── */
+    .prm-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.75rem; }
+    .prm-title  { display:flex; align-items:center; gap:.65rem; }
+    .prm-title svg { width:28px; height:28px; fill:var(--color-primario); }
+    .prm-title h1  { font-size:1.45rem; font-weight:700; color:var(--color-secundario); margin:0; }
+
+    .btn-nuevo {
+        display:inline-flex; align-items:center; gap:.45rem;
+        padding:.55rem 1.1rem; background-color:var(--color-primario);
+        color:var(--blanco); border:none; border-radius:8px;
+        font-size:.88rem; font-weight:600; cursor:pointer;
+        transition:background-color .2s, transform .15s;
+    }
+    .btn-nuevo svg { width:16px; height:16px; fill:currentColor; }
+    .btn-nuevo:hover { background-color:#cf5f22; transform:translateY(-1px); }
+
+    /* ── Buscador ── */
+    .prm-search-bar {
+        display:flex; align-items:center; gap:.6rem;
+        background:#fff; border:1.5px solid #e8ddd4; border-radius:8px;
+        padding:.45rem .85rem; margin-bottom:1.25rem; max-width:400px;
+    }
+    .prm-search-bar svg   { width:18px; height:18px; fill:var(--color-primario); opacity:.7; }
+    .prm-search-bar input { border:none; outline:none; font-size:.9rem; width:100%; background:transparent; color:var(--color-secundario); }
+
+    /* ── Cards ── */
+    .prm-list { display:flex; flex-direction:column; gap:1rem; }
+
+    .prm-card {
+        background:#fff; border-radius:12px;
+        box-shadow:0 2px 12px rgba(44,29,13,.07);
+        overflow:hidden; transition:box-shadow .2s;
+    }
+    .prm-card:hover { box-shadow:0 4px 20px rgba(44,29,13,.11); }
+
+    /* Cabecera de card */
+    .prm-card-head {
+        display:grid;
+        grid-template-columns: 1fr auto;
+        align-items:center;
+        padding:1rem 1.25rem;
+        gap:1rem;
+        cursor:pointer;
+        user-select:none;
+    }
+    .prm-card-head:hover { background:rgba(231,111,46,.02); }
+
+    .prm-card-info { display:flex; flex-wrap:wrap; align-items:center; gap:1.2rem; }
+    .prm-card-nombre { font-size:1rem; font-weight:700; color:var(--color-secundario); }
+    .prm-card-desc   { font-size:.83rem; color:#a89080; margin-top:.15rem; }
+
+    .prm-meta { display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; }
+    .prm-meta-item { display:flex; align-items:center; gap:.3rem; font-size:.82rem; color:#7a6050; }
+    .prm-meta-item svg { width:14px; height:14px; fill:var(--color-primario); }
+    .prm-meta-item strong { color:var(--color-secundario); }
+
+    /* Badges */
+    .badge { display:inline-flex; align-items:center; padding:.22rem .6rem; border-radius:20px; font-size:.74rem; font-weight:600; }
+    .badge.vigente   { background:rgba(34,197,94,.12); color:#16a34a; }
+    .badge.vencida   { background:rgba(239,68,68,.10); color:#dc2626; }
+    .badge.inactiva  { background:rgba(156,163,175,.15); color:#6b7280; }
+    .badge.proxima   { background:rgba(234,179,8,.12); color:#b45309; }
+
+    /* Botones de la cabecera */
+    .prm-card-actions { display:flex; align-items:center; gap:.5rem; flex-shrink:0; }
+
+    .btn-toggle-estado {
+        display:inline-flex; align-items:center; gap:.35rem;
+        padding:.35rem .75rem; border-radius:6px; border:none;
+        font-size:.78rem; font-weight:600; cursor:pointer; transition:background .15s;
+    }
+    .btn-toggle-estado.activo   { background:rgba(34,197,94,.12); color:#16a34a; }
+    .btn-toggle-estado.inactivo { background:rgba(239,68,68,.10); color:#dc2626; }
+    .btn-toggle-estado svg { width:14px; height:14px; fill:currentColor; }
+
+    .btn-editar-prm {
+        display:inline-flex; align-items:center; gap:.35rem;
+        padding:.35rem .75rem; background:rgba(231,111,46,.1); color:var(--color-primario);
+        border:none; border-radius:6px; font-size:.78rem; font-weight:600; cursor:pointer;
+        transition:background .15s;
+    }
+    .btn-editar-prm:hover { background:rgba(231,111,46,.2); }
+    .btn-editar-prm svg { width:14px; height:14px; fill:currentColor; }
+
+    .btn-expand {
+        width:30px; height:30px; border-radius:6px; border:none; background:transparent;
+        cursor:pointer; display:flex; align-items:center; justify-content:center;
+        color:#a89080; transition:background .15s, transform .2s;
+    }
+    .btn-expand:hover { background:#f5f0eb; }
+    .btn-expand svg { width:18px; height:18px; fill:currentColor; transition:transform .25s; }
+    .prm-card.expanded .btn-expand svg { transform:rotate(180deg); }
+
+    /* Cuerpo expandido */
+    .prm-card-body {
+        display:none; border-top:1px solid #f0ebe5;
+        padding:1rem 1.25rem 1.25rem;
+    }
+    .prm-card.expanded .prm-card-body { display:block; }
+
+    /* Tabla de productos en la card */
+    .prm-prod-header {
+        display:flex; align-items:center; justify-content:space-between;
+        margin-bottom:.75rem;
+    }
+    .prm-prod-title { font-size:.82rem; font-weight:700; text-transform:uppercase;
+        letter-spacing:.5px; color:#7a6050; }
+    .btn-agregar-prod {
+        display:inline-flex; align-items:center; gap:.35rem;
+        padding:.35rem .8rem; background:var(--color-primario); color:#fff;
+        border:none; border-radius:6px; font-size:.78rem; font-weight:600;
+        cursor:pointer; transition:background .15s;
+    }
+    .btn-agregar-prod:hover { background:#cf5f22; }
+    .btn-agregar-prod svg { width:14px; height:14px; fill:currentColor; }
+
+    .prm-prod-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+    .prm-prod-table thead tr { background:#f8f3ef; }
+    .prm-prod-table thead th { padding:.55rem .75rem; font-weight:600; font-size:.76rem;
+        letter-spacing:.4px; text-transform:uppercase; color:#7a6050; white-space:nowrap; }
+    .prm-prod-table tbody tr { border-bottom:1px solid #f5f0eb; }
+    .prm-prod-table tbody tr:last-child { border-bottom:none; }
+    .prm-prod-table tbody tr:hover { background:rgba(231,111,46,.03); }
+    .prm-prod-table td { padding:.6rem .75rem; color:var(--color-secundario); vertical-align:middle; }
+
+    .prod-mini-img { width:36px; height:36px; border-radius:6px; object-fit:cover;
+        border:1px solid #e8ddd4; background:#f5f0eb; }
+    .prod-mini-ph  { width:36px; height:36px; border-radius:6px; background:#f5f0eb;
+        border:1px solid #e8ddd4; display:flex; align-items:center; justify-content:center; }
+    .prod-mini-ph svg { width:18px; height:18px; fill:#c9b8a8; }
+
+    .td-precio-sm { font-weight:700; color:var(--color-primario); }
+
+    .btn-quitar-prod {
+        width:28px; height:28px; border-radius:6px; border:none;
+        background:rgba(239,68,68,.1); color:#dc2626;
+        display:flex; align-items:center; justify-content:center;
+        cursor:pointer; transition:background .15s;
+    }
+    .btn-quitar-prod:hover { background:rgba(239,68,68,.2); }
+    .btn-quitar-prod svg { width:14px; height:14px; fill:currentColor; }
+
+    .prm-prod-empty { text-align:center; padding:1.5rem; color:#b8a898; font-size:.85rem; }
+
+    /* ── Modal overlay ── */
+    .m-overlay {
+        display:none; position:fixed; inset:0;
+        background:rgba(0,0,0,.5); z-index:600;
+        align-items:flex-start; justify-content:center;
+        overflow-y:auto; padding:2rem 1rem;
+    }
+    .m-overlay.open { display:flex; animation:fadeOverlay .2s ease; }
+    @@keyframes fadeOverlay { from{opacity:0} to{opacity:1} }
+    .m-box {
+        background:#fff; border-radius:16px; width:100%; max-width:920px;
+        box-shadow:0 20px 60px rgba(0,0,0,.2);
+        animation:slideModal .25s ease; margin:auto; overflow:hidden;
+    }
+    @@keyframes slideModal { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+    .m-spinner {
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        padding:4rem 2rem; gap:1rem; color:#a89080;
+    }
+    .spinner-ring {
+        width:40px; height:40px; border:3px solid #f0ebe5;
+        border-top-color:var(--color-primario);
+        border-radius:50%; animation:spin .7s linear infinite;
+    }
+    @@keyframes spin { to{transform:rotate(360deg)} }
+
+    /* ── Toast ── */
+    .toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999;
+        display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
+    .toast-msg {
+        display:flex; align-items:center; gap:.6rem;
+        padding:.75rem 1.1rem; border-radius:10px; font-size:.88rem; font-weight:600;
+        box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease;
+    }
+    .toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
+    .toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
+    .toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
+    @@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+
+    .empty-page { text-align:center; padding:4rem 1rem; color:#a89080; }
+    .empty-page svg { width:60px; height:60px; fill:#ddd0c4; margin-bottom:.75rem; }
+</style>
+
+<!-- Toasts -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- CSRF token para llamadas sin form -->
+@Html.AntiForgeryToken()
+
+<!-- Modal overlay -->
+<div class="m-overlay" id="modalOverlay">
+    <div class="m-box" id="modalBox">
+        <div id="modalBody">
+            <div class="m-spinner"><div class="spinner-ring"></div><span>Cargando…</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- Encabezado -->
+<div class="prm-header">
+    <div class="prm-title">
+        <svg viewBox="0 0 24 24"><path d="M12.79 2.7 20.3 10.2a2 2 0 0 1 0 2.83l-6.36 6.36a2 2 0 0 1-2.83 0L3.6 11.9a2 2 0 0 1-.59-1.41V4a2 2 0 0 1 2-2h6.37a2 2 0 0 1 1.41.59zM7 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+        <h1>Gestión de Promociones</h1>
+    </div>
+    <button class="btn-nuevo" onclick="abrirModal('/Productos/Promociones/ModalCrear')">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        Nueva promoción
+    </button>
+</div>
+
+<!-- Buscador -->
+<div class="prm-search-bar">
+    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <input type="text" id="buscador" placeholder="Buscar por nombre o descripción…" oninput="filtrarCards()" />
+</div>
+
+<!-- Lista de cards -->
+<div class="prm-list" id="promoList">
+    @if (!Model.Any())
+    {
+        <div class="empty-page" id="emptyState">
+            <svg viewBox="0 0 24 24"><path d="M12.79 2.7 20.3 10.2a2 2 0 0 1 0 2.83l-6.36 6.36a2 2 0 0 1-2.83 0L3.6 11.9a2 2 0 0 1-.59-1.41V4a2 2 0 0 1 2-2h6.37a2 2 0 0 1 1.41.59zM7 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+            <p>No hay promociones registradas.</p>
+        </div>
+    }
+    else
+    {
+        foreach (var promo in Model)
+        {
+            @Html.Raw(CardHtml(promo))
+        }
+    }
+</div>
+
+@* ── REEMPLAZA el bloque @functions existente ── *@
+@functions {
+    string BadgeHtml(Infraestructura.Entities.BotiApp.ProPromocion p)
+    {
+        if (!p.Estado)
+            return "<span class=\"badge inactiva\">Inactiva</span>";
+        var hoy = DateTime.Today;
+        if (p.FechaInicio > hoy)
+            return "<span class=\"badge proxima\">Próxima</span>";
+        if (p.FechaFin.HasValue && p.FechaFin.Value.Date < hoy)
+            return "<span class=\"badge vencida\">Vencida</span>";
+        return "<span class=\"badge vigente\">Vigente</span>";
+    }
+
+    string FilaProductoHtml(Infraestructura.Entities.BotiApp.ProPromocionDetalle d, bool enGrupo = false)
+    {
+        var imgHtml = d.IdProductoNavigation.Imagen is { Length: > 0 }
+            ? $@"<img class=""prod-mini-img"" src=""/Productos/Productos/Imagen/{d.IdProducto}"" alt="""" />"
+            : @"<div class=""prod-mini-ph""><svg viewBox=""0 0 24 24""><path d=""M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z""/></svg></div>";
+        var nombre = System.Web.HttpUtility.JavaScriptStringEncode(d.IdProductoNavigation.NombreProducto);
+        var indent = enGrupo ? "padding-left:1.5rem" : "";
+        return $@"
+<tr id=""det-{d.IdPromocionDetalle}"" data-grupo=""{d.IdGrupo}"">
+  <td style=""{indent}"">{imgHtml}</td>
+  <td><span style=""font-weight:600"">{d.IdProductoNavigation.NombreProducto}</span></td>
+  <td>{d.IdProductoNavigation.IdMarcaNavigation?.NombreMarca ?? "—"}</td>
+  <td class=""td-precio-sm"">${d.IdProductoNavigation.Precio:N0}</td>
+  <td style=""text-align:center"">{d.Cantidad}</td>
+  <td>
+    <button class=""btn-quitar-prod edit-only"" style=""display:none""
+            onclick=""confirmarQuitarProducto({d.IdPromocionDetalle},'{nombre}')"" title=""Quitar"">
+      <svg viewBox=""0 0 24 24""><path d=""M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z""/></svg>
+    </button>
+  </td>
+</tr>";
+    }
+
+    string CardHtml(Infraestructura.Entities.BotiApp.ProPromocion p)
+    {
+        var badge       = BadgeHtml(p);
+        var fechaFin    = p.FechaFin.HasValue ? p.FechaFin.Value.ToString("dd/MM/yyyy") : "Sin límite";
+        var toggleClass = p.Estado ? "activo" : "inactivo";
+        var toggleLabel = p.Estado ? "Activa" : "Inactiva";
+        var toggleIcon  = p.Estado
+            ? "<path d=\"M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h10c1.65 0 3 1.35 3 3s-1.35 3-3 3zm0-4.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z\"/>"
+            : "<path d=\"M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-10 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z\"/>";
+
+        // ── Filas sin grupo ──
+        var sb = new System.Text.StringBuilder();
+        var sinGrupo = p.ProPromocionDetalle.Where(d => d.IdGrupo == null).ToList();
+        foreach (var d in sinGrupo)
+            sb.Append(FilaProductoHtml(d));
+
+        // ── Filas por grupo ──
+        foreach (var g in p.ProPromocionGrupo)
+        {
+            var exclBadge = g.EsExcluyente
+                ? "<span style=\"font-size:.7rem;font-weight:600;padding:.15rem .5rem;border-radius:20px;background:rgba(239,68,68,.1);color:#dc2626;margin-left:.5rem\">Excluyente</span>"
+                : "<span style=\"font-size:.7rem;font-weight:600;padding:.15rem .5rem;border-radius:20px;background:rgba(34,197,94,.12);color:#16a34a;margin-left:.5rem\">Libre</span>";
+            sb.Append($@"
+                <tr class=""grupo-header"" id=""grupo-row-{g.IdGrupo}"" data-grupo-id=""{g.IdGrupo}"">
+                  <td colspan=""5"" style=""padding:.5rem .75rem;background:#f8f3ef;font-size:.78rem;font-weight:700;color:#7a6050;letter-spacing:.3px;"">
+                    <svg width=""13"" height=""13"" fill=""var(--color-primario)"" viewBox=""0 0 24 24"" style=""vertical-align:middle;margin-right:.3rem""><path d=""M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5""/></svg>
+                    {g.Descripcion}{exclBadge}
+                  </td>
+                  <td style=""background:#f8f3ef;padding:.5rem .75rem;text-align:right"">
+                    <button class=""btn-quitar-prod edit-only"" style=""display:none;background:rgba(239,68,68,.08)""
+                            onclick=""confirmarEliminarGrupo({g.IdGrupo},'{System.Web.HttpUtility.JavaScriptStringEncode(g.Descripcion)}')"" title=""Eliminar grupo"">
+                      <svg viewBox=""0 0 24 24""><path d=""M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z""/></svg>
+                    </button>
+                  </td>
+                </tr>");
+            foreach (var d in p.ProPromocionDetalle.Where(d => d.IdGrupo == g.IdGrupo))
+                sb.Append(FilaProductoHtml(d, enGrupo: true));
+
+            // Fila "agregar al grupo" visible en modo edición
+            sb.Append($@"
+<tr class=""grupo-add-row edit-only"" id=""add-grupo-{g.IdGrupo}"" style=""display:none"">
+  <td colspan=""6"" style=""padding:.4rem .75rem"">
+    <button onclick=""abrirModalBuscar({p.IdPromocion},{g.IdGrupo})""
+      style=""background:none;border:1px dashed var(--color-primario);border-radius:6px;
+             padding:.3rem .85rem;font-size:.78rem;font-weight:600;color:var(--color-primario);
+             cursor:pointer;width:100%;text-align:left"">
+      + Agregar producto a «{g.Descripcion}»
+    </button>
+  </td>
+</tr>");
+        }
+
+        if (!p.ProPromocionDetalle.Any() && !p.ProPromocionGrupo.Any())
+            sb.Append(@"<tr id=""prod-empty-row""><td colspan=""6"" class=""prm-prod-empty"">Sin productos en esta promoción.</td></tr>");
+
+        return $@"
+<div class=""prm-card"" id=""card-{p.IdPromocion}""
+     data-nombre=""{System.Web.HttpUtility.HtmlAttributeEncode(p.Nombre)}""
+     data-desc=""{System.Web.HttpUtility.HtmlAttributeEncode(p.Descripcion ?? "")}"">
+  <div class=""prm-card-head"" onclick=""toggleCard({p.IdPromocion},event)"">
+    <div>
+      <div class=""prm-card-info"">
+        <span class=""prm-card-nombre"">{p.Nombre}</span>
+        {badge}
+        <div class=""prm-meta"">
+          <span class=""prm-meta-item""><strong>${p.PrecioPromocion:N0}</strong></span>
+          <span class=""prm-meta-item"">Inicio: <strong>{p.FechaInicio:dd/MM/yyyy}</strong></span>
+          <span class=""prm-meta-item"">Fin: <strong>{fechaFin}</strong></span>
+          <span class=""prm-meta-item"">{p.ProPromocionDetalle.Count} producto(s)</span>
+        </div>
+      </div>
+      {(string.IsNullOrWhiteSpace(p.Descripcion) ? "" : $@"<div class=""prm-card-desc"">{p.Descripcion}</div>")}
+    </div>
+    <div class=""prm-card-actions"" onclick=""event.stopPropagation()"">
+      <button class=""btn-toggle-estado {toggleClass}"" id=""toggle-{p.IdPromocion}""
+              onclick=""toggleEstado({p.IdPromocion})"">
+        <svg viewBox=""0 0 24 24"">{toggleIcon}</svg>{toggleLabel}
+      </button>
+      <button class=""btn-editar-prm"" id=""btnEdit-{p.IdPromocion}""
+              onclick=""activarEdicion({p.IdPromocion})"">
+        <svg viewBox=""0 0 24 24""><path d=""M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z""/></svg>
+        Editar
+      </button>
+      <button class=""btn-expand"" title=""Expandir"">
+        <svg viewBox=""0 0 24 24""><path d=""M7 10l5 5 5-5z""/></svg>
+      </button>
+    </div>
+  </div>
+  <div class=""prm-card-body"">
+    <div class=""prm-prod-header"">
+      <span class=""prm-prod-title"">Productos incluidos</span>
+      <div style=""display:flex;gap:.5rem;flex-wrap:wrap"">
+        <button class=""btn-agregar-prod edit-only"" id=""btnAdd-{p.IdPromocion}"" style=""display:none""
+                onclick=""abrirModalBuscar({p.IdPromocion},null)"">
+          <svg viewBox=""0 0 24 24""><path d=""M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z""/></svg>
+          Sin grupo
+        </button>
+        <button class=""btn-agregar-prod edit-only"" id=""btnNuevoGrupo-{p.IdPromocion}""
+                style=""display:none;background:rgba(99,102,241,.12);color:#6366f1""
+                onclick=""mostrarFormNuevoGrupo({p.IdPromocion})"">
+          <svg viewBox=""0 0 24 24""><path d=""M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z""/></svg>
+          Nuevo grupo
+        </button>
+      </div>
+    </div>
+
+    <!-- Mini-form para nuevo grupo (oculto por defecto) -->
+    <div class=""edit-only"" id=""formGrupo-{p.IdPromocion}""
+         style=""display:none;background:#f8f3ef;border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem"">
+      <div style=""display:flex;align-items:center;gap:.75rem;flex-wrap:wrap"">
+        <input type=""text"" id=""inputGrupoNombre-{p.IdPromocion}""
+               placeholder=""Nombre del grupo (ej: Elige el pisco)""
+               style=""flex:1;min-width:180px;padding:.45rem .75rem;border:1.5px solid #e0d5cc;
+                      border-radius:8px;font-size:.85rem;outline:none"" />
+        <label style=""display:flex;align-items:center;gap:.35rem;font-size:.82rem;font-weight:600;color:var(--color-secundario);white-space:nowrap;cursor:pointer"">
+          <input type=""checkbox"" id=""chkExcl-{p.IdPromocion}"" checked
+                 style=""width:15px;height:15px;accent-color:var(--color-primario)"" />
+          Excluyente
+        </label>
+        <button onclick=""crearGrupo({p.IdPromocion})""
+          style=""padding:.45rem 1rem;background:var(--color-primario);color:#fff;
+                 border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer"">
+          Crear grupo
+        </button>
+        <button onclick=""ocultarFormNuevoGrupo({p.IdPromocion})""
+          style=""padding:.45rem .75rem;background:#e8ddd4;color:var(--color-secundario);
+                 border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer"">
+          Cancelar
+        </button>
+      </div>
+    </div>
+
+    <table class=""prm-prod-table"">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Nombre</th>
+          <th>Marca</th>
+          <th>Precio unit.</th>
+          <th style=""text-align:center"">Cant.</th>
+          <th style=""width:48px""></th>
+        </tr>
+      </thead>
+      <tbody id=""tbody-{p.IdPromocion}"">
+        {sb}
+      </tbody>
+    </table>
+  </div>
+</div>";
+    }
+}
+
+@* ── REEMPLAZA el bloque @section Scripts existente ── *@
+@section Scripts {
+<style>
+    /* Estilos adicionales para grupos */
+    .grupo-header td { border-bottom: none !important; }
+    .grupo-add-row td { border-bottom: 1px dashed #f0ebe5 !important; }
+</style>
+<script>
+const csrf = () => document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
+const overlay = document.getElementById('modalOverlay');
+
+// ── Insertar HTML ejecutando scripts ──────────────────────────────────────
+function setHtmlConScripts(elemento, html) {
+    elemento.innerHTML = html;
+    elemento.querySelectorAll('script').forEach(s => {
+        const n = document.createElement('script');
+        n.textContent = s.textContent;
+        s.replaceWith(n);
+    });
+}
+
+// ── Modal genérico ────────────────────────────────────────────────────────
+async function abrirModal(url) {
+    overlay.classList.add('open');
+    document.getElementById('modalBody').innerHTML =
+        '<div class="m-spinner"><div class="spinner-ring"></div><span>Cargando…</span></div>';
+    try {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error();
+        setHtmlConScripts(document.getElementById('modalBody'), await r.text());
+    } catch {
+        cerrarModal();
+        toast('Error al cargar el contenido.', 'error');
+    }
+}
+
+function cerrarModal() {
+    overlay.classList.remove('open');
+    setTimeout(() => { document.getElementById('modalBody').innerHTML = ''; }, 250);
+}
+
+overlay.addEventListener('click', e => { if (e.target === overlay) cerrarModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+
+// ── Crear promo ───────────────────────────────────────────────────────────
+async function submitCrearPromo(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    const btn = form.querySelector('[type=submit]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+    limpiarErrores();
+    try {
+        const r    = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+        const data = await r.json();
+        if (data.ok) {
+            cerrarModal();
+            toast(data.mensaje, 'exito');
+            agregarCard(data.promo);
+        } else {
+            mostrarErrores(data.errores ?? {});
+            if (data.mensaje) toast(data.mensaje, 'error');
+        }
+    } catch { toast('Error de conexión.', 'error'); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = 'Guardar promoción'; } }
+}
+
+// ── Toggle estado ─────────────────────────────────────────────────────────
+async function toggleEstado(id) {
+    try {
+        const r    = await fetch(`/Productos/Promociones/ToggleEstadoAjax/${id}`,
+            { method: 'POST', headers: { 'RequestVerificationToken': csrf() } });
+        const data = await r.json();
+        if (data.ok) { toast(data.mensaje, 'exito'); actualizarToggleBtn(id, data.estado); }
+        else toast(data.mensaje, 'error');
+    } catch { toast('Error al cambiar estado.', 'error'); }
+}
+
+function actualizarToggleBtn(id, activo) {
+    const btn = document.getElementById(`toggle-${id}`);
+    if (!btn) return;
+    btn.className = `btn-toggle-estado ${activo ? 'activo' : 'inactivo'}`;
+    btn.innerHTML = activo
+        ? `<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h10c1.65 0 3 1.35 3 3s-1.35 3-3 3zm0-4.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/></svg>Activa`
+        : `<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-10 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/></svg>Inactiva`;
+}
+
+// ── Edición inline ────────────────────────────────────────────────────────
+const editando = new Set();
+
+function activarEdicion(id) {
+    const card = document.getElementById(`card-${id}`);
+    if (!card.classList.contains('expanded')) toggleCard(id, null, true);
+    if (editando.has(id)) {
+        editando.delete(id);
+        card.querySelectorAll('.edit-only').forEach(el => el.style.display = 'none');
+        ocultarFormNuevoGrupo(id);
+        document.getElementById(`btnEdit-${id}`).innerHTML =
+            `<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Editar`;
+    } else {
+        editando.add(id);
+        card.querySelectorAll('.edit-only').forEach(el => el.style.display = 'inline-flex');
+        // Las filas tipo bloque usan display:table-row
+        card.querySelectorAll('tr.edit-only').forEach(el => el.style.display = 'table-row');
+        document.getElementById(`btnEdit-${id}`).innerHTML =
+            `<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>Cerrar`;
+    }
+}
+
+function toggleCard(id, _e, forceOpen = false) {
+    const card = document.getElementById(`card-${id}`);
+    if (forceOpen) { card.classList.add('expanded'); return; }
+    card.classList.toggle('expanded');
+}
+
+// ── Gestión de grupos ─────────────────────────────────────────────────────
+function mostrarFormNuevoGrupo(idPromocion) {
+    const form = document.getElementById(`formGrupo-${idPromocion}`);
+    if (form) form.style.display = 'block';
+    document.getElementById(`inputGrupoNombre-${idPromocion}`)?.focus();
+}
+
+function ocultarFormNuevoGrupo(idPromocion) {
+    const form = document.getElementById(`formGrupo-${idPromocion}`);
+    if (form) { form.style.display = 'none'; }
+    const input = document.getElementById(`inputGrupoNombre-${idPromocion}`);
+    if (input) input.value = '';
+}
+
+async function crearGrupo(idPromocion) {
+    const input = document.getElementById(`inputGrupoNombre-${idPromocion}`);
+    const chk   = document.getElementById(`chkExcl-${idPromocion}`);
+    const desc  = input?.value.trim();
+    if (!desc) { input?.focus(); return; }
+
+    const fd = new FormData();
+    fd.append('idPromocion',  idPromocion);
+    fd.append('descripcion',  desc);
+    fd.append('esExcluyente', chk?.checked ?? true);
+
+    try {
+        const r    = await fetch('/Productos/Promociones/CrearGrupoAjax',
+            { method: 'POST', headers: { 'RequestVerificationToken': csrf() }, body: fd });
+        const data = await r.json();
+        if (data.ok) {
+            toast(data.mensaje, 'exito');
+            ocultarFormNuevoGrupo(idPromocion);
+            agregarGrupoEnCard(idPromocion, data.grupo);
+        } else { toast(data.mensaje, 'error'); }
+    } catch { toast('Error al crear el grupo.', 'error'); }
+}
+
+function agregarGrupoEnCard(idPromocion, g) {
+    const tbody = document.getElementById(`tbody-${idPromocion}`);
+    const exclBadge = g.esExcluyente
+        ? `<span style="font-size:.7rem;font-weight:600;padding:.15rem .5rem;border-radius:20px;background:rgba(239,68,68,.1);color:#dc2626;margin-left:.5rem">Excluyente</span>`
+        : `<span style="font-size:.7rem;font-weight:600;padding:.15rem .5rem;border-radius:20px;background:rgba(34,197,94,.12);color:#16a34a;margin-left:.5rem">Libre</span>`;
+    tbody.insertAdjacentHTML('beforeend', `
+<tr class="grupo-header" id="grupo-row-${g.idGrupo}" data-grupo-id="${g.idGrupo}">
+  <td colspan="5" style="padding:.5rem .75rem;background:#f8f3ef;font-size:.78rem;font-weight:700;color:#7a6050;">
+    <svg width="13" height="13" fill="var(--color-primario)" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:.3rem"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    ${esc(g.descripcion)}${exclBadge}
+  </td>
+  <td style="background:#f8f3ef;padding:.5rem .75rem;text-align:right">
+    <button class="btn-quitar-prod edit-only" style="display:inline-flex;background:rgba(239,68,68,.08)"
+            onclick="confirmarEliminarGrupo(${g.idGrupo},'${esc(g.descripcion).replace(/'/g,"\\'")}')">
+      <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+    </button>
+  </td>
+</tr>
+<tr class="grupo-add-row edit-only" id="add-grupo-${g.idGrupo}" style="display:table-row">
+  <td colspan="6" style="padding:.4rem .75rem">
+    <button onclick="abrirModalBuscar(${idPromocion},${g.idGrupo})"
+      style="background:none;border:1px dashed var(--color-primario);border-radius:6px;
+             padding:.3rem .85rem;font-size:.78rem;font-weight:600;color:var(--color-primario);
+             cursor:pointer;width:100%;text-align:left">
+      + Agregar producto a «${esc(g.descripcion)}»
+    </button>
+  </td>
+</tr>`);
+}
+
+// ── Eliminar grupo (confirm) ──────────────────────────────────────────────
+function confirmarEliminarGrupo(idGrupo, nombre) {
+    overlay.classList.add('open');
+    setHtmlConScripts(document.getElementById('modalBody'), `
+    <div style="padding:2.5rem 2rem;max-width:420px;margin:auto;text-align:center;">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,.1);
+                  display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+        <svg width="28" height="28" fill="#dc2626" viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <h3 style="font-size:1.05rem;font-weight:700;color:var(--color-secundario);margin-bottom:.5rem;">¿Eliminar grupo?</h3>
+      <p style="font-size:.88rem;color:#7a6050;margin-bottom:1.75rem;">
+        El grupo «${nombre}» será eliminado. Los productos del grupo quedarán sin grupo asignado.
+      </p>
+      <div style="display:flex;gap:.75rem;justify-content:center;">
+        <button onclick="cerrarModal()"
+          style="padding:.6rem 1.4rem;background:#f0ebe5;color:var(--color-secundario);border:none;border-radius:8px;font-weight:600;cursor:pointer;">
+          Cancelar
+        </button>
+        <button onclick="ejecutarEliminarGrupo(${idGrupo})"
+          style="padding:.6rem 1.4rem;background:#dc2626;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">
+          Sí, eliminar
+        </button>
+      </div>
+    </div>`);
+}
+
+async function ejecutarEliminarGrupo(idGrupo) {
+    cerrarModal();
+    try {
+        const r    = await fetch(`/Productos/Promociones/EliminarGrupoAjax/${idGrupo}`,
+            { method: 'POST', headers: { 'RequestVerificationToken': csrf() } });
+        const data = await r.json();
+        toast(data.mensaje, data.ok ? 'exito' : 'error');
+        if (data.ok) {
+            document.getElementById(`grupo-row-${idGrupo}`)?.remove();
+            document.getElementById(`add-grupo-${idGrupo}`)?.remove();
+            // Los productos del grupo quedan sin encabezado (IdGrupo null en BD)
+            document.querySelectorAll(`tr[data-grupo="${idGrupo}"]`)
+                    .forEach(tr => tr.removeAttribute('data-grupo'));
+        }
+    } catch { toast('Error al eliminar el grupo.', 'error'); }
+}
+
+// ── Quitar producto ───────────────────────────────────────────────────────
+function confirmarQuitarProducto(idDetalle, nombre) {
+    overlay.classList.add('open');
+    setHtmlConScripts(document.getElementById('modalBody'), `
+    <div style="padding:2.5rem 2rem;max-width:420px;margin:auto;text-align:center;">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,.1);
+                  display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+        <svg width="28" height="28" fill="#dc2626" viewBox="0 0 24 24">
+          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+        </svg>
+      </div>
+      <h3 style="font-size:1.05rem;font-weight:700;color:var(--color-secundario);margin-bottom:.5rem;">¿Quitar producto?</h3>
+      <p style="font-size:.88rem;color:#7a6050;margin-bottom:1.75rem;">«${nombre}» será quitado de esta promoción.</p>
+      <div style="display:flex;gap:.75rem;justify-content:center;">
+        <button onclick="cerrarModal()"
+          style="padding:.6rem 1.4rem;background:#f0ebe5;color:var(--color-secundario);border:none;border-radius:8px;font-weight:600;cursor:pointer;">
+          Cancelar
+        </button>
+        <button onclick="ejecutarQuitarProducto(${idDetalle})"
+          style="padding:.6rem 1.4rem;background:#dc2626;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">
+          Sí, quitar
+        </button>
+      </div>
+    </div>`);
+}
+
+async function ejecutarQuitarProducto(idDetalle) {
+    cerrarModal();
+    try {
+        const r    = await fetch(`/Productos/Promociones/QuitarProductoAjax/${idDetalle}`,
+            { method: 'POST', headers: { 'RequestVerificationToken': csrf() } });
+        const data = await r.json();
+        toast(data.mensaje, data.ok ? 'exito' : 'error');
+        if (data.ok) document.getElementById(`det-${idDetalle}`)?.remove();
+    } catch { toast('Error al quitar el producto.', 'error'); }
+}
+
+// ── Abrir modal buscador (idGrupo puede ser null) ─────────────────────────
+function abrirModalBuscar(idPromocion, idGrupo = null) {
+    const qs = idGrupo ? `?idPromocion=${idPromocion}&idGrupo=${idGrupo}`
+                       : `?idPromocion=${idPromocion}`;
+    abrirModal(`/Productos/Promociones/ModalBuscarProducto${qs}`);
+}
+
+// ── Agregar producto (llamado desde el partial) ───────────────────────────
+async function ejecutarAgregarProducto(idPromocion, idProducto, cantidad, idGrupo) {
+    cerrarModal();
+    try {
+        const fd = new FormData();
+        fd.append('idPromocion', idPromocion);
+        fd.append('idProducto',  idProducto);
+        fd.append('cantidad',    cantidad);
+        if (idGrupo) fd.append('idGrupo', idGrupo);
+
+        const r    = await fetch('/Productos/Promociones/AgregarProductoAjax',
+            { method: 'POST', headers: { 'RequestVerificationToken': csrf() }, body: fd });
+        const data = await r.json();
+        toast(data.mensaje, data.ok ? 'exito' : 'error');
+        if (data.ok) agregarFilaProducto(idPromocion, data.detalle);
+    } catch { toast('Error al agregar el producto.', 'error'); }
+}
+
+function agregarFilaProducto(idPromocion, d) {
+    const tbody   = document.getElementById(`tbody-${idPromocion}`);
+    const imgHtml = d.tieneImagen
+        ? `<img class="prod-mini-img" src="/Productos/Productos/Imagen/${d.idProducto}?t=${Date.now()}" alt="">`
+        : `<div class="prod-mini-ph"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></div>`;
+    const indent  = d.idGrupo ? 'padding-left:1.5rem' : '';
+    const fila    = `
+<tr id="det-${d.idPromocionDetalle}" data-grupo="${d.idGrupo ?? ''}">
+  <td style="${indent}">${imgHtml}</td>
+  <td><span style="font-weight:600">${esc(d.nombreProducto)}</span></td>
+  <td>${esc(d.nombreMarca)}</td>
+  <td class="td-precio-sm">$${Number(d.precio).toLocaleString('es-CL')}</td>
+  <td style="text-align:center">${d.cantidad}</td>
+  <td>
+    <button class="btn-quitar-prod edit-only" style="display:inline-flex"
+            onclick="confirmarQuitarProducto(${d.idPromocionDetalle},'${esc(d.nombreProducto).replace(/'/g,"\\'")}')">
+      <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+    </button>
+  </td>
+</tr>`;
+
+    if (d.idGrupo) {
+        // Insertar antes de la fila "agregar al grupo"
+        const addRow = document.getElementById(`add-grupo-${d.idGrupo}`);
+        addRow ? addRow.insertAdjacentHTML('beforebegin', fila)
+               : tbody.insertAdjacentHTML('beforeend', fila);
+    } else {
+        // Producto sin grupo → insertar al inicio del tbody
+        const primerGrupo = tbody.querySelector('.grupo-header');
+        primerGrupo ? primerGrupo.insertAdjacentHTML('beforebegin', fila)
+                    : tbody.insertAdjacentHTML('beforeend', fila);
+    }
+    tbody.querySelector('#prod-empty-row')?.remove();
+}
+
+// ── agregarCard (nueva promo desde modal crear) ───────────────────────────
+function agregarCard(p) {
+    document.getElementById('emptyState')?.remove();
+    const badge = p.vigente ? '<span class="badge vigente">Vigente</span>'
+        : (!p.estado ? '<span class="badge inactiva">Inactiva</span>'
+                     : '<span class="badge proxima">Próxima</span>');
+    document.getElementById('promoList').insertAdjacentHTML('afterbegin', `
+<div class="prm-card" id="card-${p.idPromocion}"
+     data-nombre="${esc(p.nombre)}" data-desc="${esc(p.descripcion)}">
+  <div class="prm-card-head" onclick="toggleCard(${p.idPromocion},event)">
+    <div>
+      <div class="prm-card-info">
+        <span class="prm-card-nombre">${esc(p.nombre)}</span>${badge}
+        <div class="prm-meta">
+          <span class="prm-meta-item"><strong>$${Number(p.precioPromocion).toLocaleString('es-CL')}</strong></span>
+          <span class="prm-meta-item">Inicio: <strong>${p.fechaInicio}</strong></span>
+          <span class="prm-meta-item">Fin: <strong>${p.fechaFin || 'Sin límite'}</strong></span>
+          <span class="prm-meta-item">0 producto(s)</span>
+        </div>
+      </div>
+      ${p.descripcion ? `<div class="prm-card-desc">${esc(p.descripcion)}</div>` : ''}
+    </div>
+    <div class="prm-card-actions" onclick="event.stopPropagation()">
+      <button class="btn-toggle-estado ${p.estado ? 'activo' : 'inactivo'}" id="toggle-${p.idPromocion}"
+              onclick="toggleEstado(${p.idPromocion})">
+        ${p.estado
+          ? `<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h10c1.65 0 3 1.35 3 3s-1.35 3-3 3zm0-4.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/></svg>Activa`
+          : `<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-10 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/></svg>Inactiva`}
+      </button>
+      <button class="btn-editar-prm" id="btnEdit-${p.idPromocion}" onclick="activarEdicion(${p.idPromocion})">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Editar
+      </button>
+      <button class="btn-expand"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></button>
+    </div>
+  </div>
+  <div class="prm-card-body">
+    <div class="prm-prod-header">
+      <span class="prm-prod-title">Productos incluidos</span>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn-agregar-prod edit-only" id="btnAdd-${p.idPromocion}" style="display:none"
+                onclick="abrirModalBuscar(${p.idPromocion},null)">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Sin grupo
+        </button>
+        <button class="btn-agregar-prod edit-only" id="btnNuevoGrupo-${p.idPromocion}"
+                style="display:none;background:rgba(99,102,241,.12);color:#6366f1"
+                onclick="mostrarFormNuevoGrupo(${p.idPromocion})">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Nuevo grupo
+        </button>
+      </div>
+    </div>
+    <div class="edit-only" id="formGrupo-${p.idPromocion}"
+         style="display:none;background:#f8f3ef;border-radius:8px;padding:.85rem 1rem;margin-bottom:.75rem">
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+        <input type="text" id="inputGrupoNombre-${p.idPromocion}" placeholder="Nombre del grupo"
+               style="flex:1;min-width:180px;padding:.45rem .75rem;border:1.5px solid #e0d5cc;border-radius:8px;font-size:.85rem;outline:none" />
+        <label style="display:flex;align-items:center;gap:.35rem;font-size:.82rem;font-weight:600;color:var(--color-secundario);cursor:pointer">
+          <input type="checkbox" id="chkExcl-${p.idPromocion}" checked style="width:15px;height:15px;accent-color:var(--color-primario)" />
+          Excluyente
+        </label>
+        <button onclick="crearGrupo(${p.idPromocion})"
+          style="padding:.45rem 1rem;background:var(--color-primario);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer">
+          Crear grupo
+        </button>
+        <button onclick="ocultarFormNuevoGrupo(${p.idPromocion})"
+          style="padding:.45rem .75rem;background:#e8ddd4;color:var(--color-secundario);border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer">
+          Cancelar
+        </button>
+      </div>
+    </div>
+    <table class="prm-prod-table">
+      <thead><tr><th></th><th>Nombre</th><th>Marca</th><th>Precio unit.</th><th style="text-align:center">Cant.</th><th style="width:48px"></th></tr></thead>
+      <tbody id="tbody-${p.idPromocion}">
+        <tr id="prod-empty-row"><td colspan="6" class="prm-prod-empty">Sin productos en esta promoción.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>`);
+}
+
+// ── Errores / Filtrado / Toast / Utils ────────────────────────────────────
+function mostrarErrores(errores) {
+    Object.entries(errores).forEach(([campo, msg]) => {
+        const input = document.querySelector(`[name="${campo}"]`);
+        if (!input) return;
+        input.classList.add('input-error');
+        let span = input.parentElement.querySelector('.field-error');
+        if (!span) { span = document.createElement('span'); span.className = 'field-error'; input.after(span); }
+        span.textContent = msg;
+    });
+}
+function limpiarErrores() {
+    document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+    document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+}
+function filtrarCards() {
+    const q = document.getElementById('buscador').value.toLowerCase();
+    document.querySelectorAll('.prm-card').forEach(c => {
+        c.style.display = (c.dataset.nombre + ' ' + c.dataset.desc).toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+function toast(msg, tipo) {
+    const iconos = {
+        exito: '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>',
+        error: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>'
+    };
+    const w = document.getElementById('toastWrap');
+    const t = document.createElement('div');
+    t.className = `toast-msg ${tipo}`;
+    t.innerHTML = `${iconos[tipo]}<span>${msg}</span>`;
+    w.appendChild(t);
+    setTimeout(() => t.style.opacity = '0', 3500);
+    setTimeout(() => t.remove(), 3800);
+}
+function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+}

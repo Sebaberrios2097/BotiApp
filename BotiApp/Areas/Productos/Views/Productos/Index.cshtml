@@ -1,0 +1,443 @@
+﻿@model IEnumerable<Infraestructura.Entities.BotiApp.ProProductos>
+@{
+    ViewData["Title"] = "Productos";
+}
+
+<style>
+    /* ── Encabezado ── */
+    .pro-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.75rem; }
+    .pro-title  { display:flex; align-items:center; gap:0.65rem; }
+    .pro-title svg { width:28px; height:28px; fill:var(--color-primario); }
+    .pro-title h1  { font-size:1.45rem; font-weight:700; color:var(--color-secundario); margin:0; }
+
+    .btn-nuevo {
+        display:inline-flex; align-items:center; gap:0.45rem;
+        padding:0.55rem 1.1rem; background-color:var(--color-primario);
+        color:var(--blanco); border:none; border-radius:8px;
+        font-size:0.88rem; font-weight:600; cursor:pointer;
+        transition:background-color 0.2s, transform 0.15s;
+    }
+    .btn-nuevo svg { width:16px; height:16px; fill:currentColor; }
+    .btn-nuevo:hover { background-color:#cf5f22; transform:translateY(-1px); }
+
+    /* ── Buscador ── */
+    .pro-search-bar {
+        display:flex; align-items:center; gap:0.6rem;
+        background:#fff; border:1.5px solid #e8ddd4; border-radius:8px;
+        padding:0.45rem 0.85rem; margin-bottom:1.25rem; max-width:400px;
+    }
+    .pro-search-bar svg   { width:18px; height:18px; fill:var(--color-primario); opacity:0.7; }
+    .pro-search-bar input { border:none; outline:none; font-size:0.9rem; width:100%; background:transparent; color:var(--color-secundario); }
+
+    /* ── Tabla ── */
+    .pro-card  { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; }
+    .pro-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+    .pro-table thead tr { background-color:var(--color-secundario); color:var(--crema); }
+    .pro-table thead th { padding:0.85rem 1rem; font-weight:600; font-size:0.79rem; letter-spacing:0.5px; text-transform:uppercase; white-space:nowrap; }
+    .pro-table tbody tr { border-bottom:1px solid #f0ebe5; transition:background-color 0.15s; }
+    .pro-table tbody tr:last-child { border-bottom:none; }
+    .pro-table tbody tr:hover { background-color:rgba(231,111,46,.04); }
+    .pro-table td { padding:0.75rem 1rem; color:var(--color-secundario); vertical-align:middle; }
+
+    .prod-img { width:44px; height:44px; border-radius:8px; object-fit:cover; border:1.5px solid #e8ddd4; background:#f5f0eb; }
+    .prod-img-ph { width:44px; height:44px; border-radius:8px; background:#f5f0eb; display:flex; align-items:center; justify-content:center; border:1.5px solid #e8ddd4; }
+    .prod-img-ph svg { width:22px; height:22px; fill:#c9b8a8; }
+
+    .badge-estado { display:inline-flex; align-items:center; padding:0.25rem 0.65rem; border-radius:20px; font-size:0.75rem; font-weight:600; }
+    .badge-estado.activo   { background:rgba(34,197,94,.12); color:#16a34a; }
+    .badge-estado.inactivo { background:rgba(239,68,68,.10); color:#dc2626; }
+
+    .td-precio { font-weight:700; color:var(--color-primario); font-variant-numeric:tabular-nums; }
+    .td-stock { font-weight:600; }
+    .td-stock.bajo { color:#dc2626; }
+    .td-stock.ok   { color:#16a34a; }
+
+    .acc-btns { display:flex; gap:0.4rem; }
+    .btn-acc  { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:6px; border:none; cursor:pointer; text-decoration:none; transition:background-color 0.15s, transform 0.12s; }
+    .btn-acc svg { width:16px; height:16px; fill:currentColor; }
+    .btn-acc.ver     { background:rgba(99,102,241,.1); color:#6366f1; }
+    .btn-acc.ver:hover     { background:rgba(99,102,241,.2); transform:scale(1.1); }
+    .btn-acc.editar  { background:rgba(231,111,46,.1); color:var(--color-primario); }
+    .btn-acc.editar:hover  { background:rgba(231,111,46,.2); transform:scale(1.1); }
+    .btn-acc.eliminar{ background:rgba(239,68,68,.1); color:#dc2626; }
+    .btn-acc.eliminar:hover{ background:rgba(239,68,68,.2); transform:scale(1.1); }
+
+    .empty-state { text-align:center; padding:3.5rem 1rem; color:#a89080; }
+    .empty-state svg { width:56px; height:56px; fill:#ddd0c4; margin-bottom:0.75rem; }
+
+    /* ── Modal overlay ── */
+    .m-overlay {
+        display:none; position:fixed; inset:0;
+        background:rgba(0,0,0,.5); z-index:600;
+        align-items:flex-start; justify-content:center;
+        overflow-y:auto; padding:2rem 1rem;
+    }
+    .m-overlay.open { display:flex; animation:fadeOverlay .2s ease; }
+    @@keyframes fadeOverlay { from{opacity:0} to{opacity:1} }
+
+    .m-box {
+        background:#fff; border-radius:16px; width:100%; max-width:920px;
+        box-shadow:0 20px 60px rgba(0,0,0,.2);
+        animation:slideModal .25s ease; margin:auto;
+        overflow:hidden;
+    }
+    @@keyframes slideModal { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+
+    /* Spinner */
+    .m-spinner {
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        padding:4rem 2rem; gap:1rem; color:#a89080;
+    }
+    .spinner-ring {
+        width:40px; height:40px; border:3px solid #f0ebe5;
+        border-top-color:var(--color-primario);
+        border-radius:50%; animation:spin .7s linear infinite;
+    }
+    @@keyframes spin { to{transform:rotate(360deg)} }
+
+    /* ── Toast ── */
+    .toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:0.5rem; pointer-events:none; }
+    .toast-msg {
+        display:flex; align-items:center; gap:0.6rem;
+        padding:0.75rem 1.1rem; border-radius:10px; font-size:0.88rem; font-weight:600;
+        box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease;
+    }
+    .toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
+    .toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
+    .toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
+    @@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+</style>
+
+<!-- Toasts -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Token CSRF para llamadas sin form (eliminar) -->
+@Html.AntiForgeryToken()
+
+<!-- Modal overlay -->
+<div class="m-overlay" id="modalOverlay">
+    <div class="m-box" id="modalBox">
+        <div id="modalBody">
+            <div class="m-spinner">
+                <div class="spinner-ring"></div>
+                <span>Cargando…</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Encabezado -->
+<div class="pro-header">
+    <div class="pro-title">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+        <h1>Gestión de Productos</h1>
+    </div>
+    <button class="btn-nuevo" onclick="abrirModal('/Productos/Productos/ModalCrear')">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        Nuevo producto
+    </button>
+</div>
+
+<!-- Buscador -->
+<div class="pro-search-bar">
+    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <input type="text" id="buscador" placeholder="Buscar por nombre, marca o tipo…" oninput="filtrarTabla()" />
+</div>
+
+<!-- Tabla -->
+<div class="pro-card">
+    <table class="pro-table" id="tablaProductos">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Marca</th>
+                <th>Precio</th>
+                <th>Stock</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="tbodyProductos">
+            @if (!Model.Any())
+            {
+                <tr id="fila-empty">
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+                            <p>No hay productos registrados.</p>
+                        </div>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                foreach (var p in Model)
+                {
+                    @Html.Raw(FilaHtml(p))
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@functions {
+    string FilaHtml(Infraestructura.Entities.BotiApp.ProProductos p)
+    {
+        var imgSrc = p.Imagen is { Length: > 0 }
+            ? $"/Productos/Productos/Imagen/{p.IdProducto}"
+            : null;
+        var imgHtml = imgSrc is not null
+            ? $@"<img class=""prod-img"" src=""{imgSrc}"" alt=""{p.NombreProducto}"" />"
+            : @"<div class=""prod-img-ph""><svg viewBox=""0 0 24 24""><path d=""M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z""/></svg></div>";
+        var desc = string.IsNullOrWhiteSpace(p.Descripción) ? "" : $@"<br/><small style=""color:#a89080;font-size:.78rem;"">{p.Descripción}</small>";
+        var badgeClass = p.Estado ? "activo" : "inactivo";
+        var badgeText  = p.Estado ? "Activo" : "Inactivo";
+        var stockClass = p.Stock <= 5 ? "bajo" : "ok";
+        var nombre = System.Web.HttpUtility.JavaScriptStringEncode(p.NombreProducto);
+        return $@"
+<tr id=""fila-{p.IdProducto}"" data-id=""{p.IdProducto}"">
+  <td>{imgHtml}</td>
+  <td><span style=""font-weight:600"">{p.NombreProducto}</span>{desc}</td>
+  <td>{p.IdTipoProductoNavigation?.NombreTipoProducto ?? "—"}</td>
+  <td>{p.IdMarcaNavigation?.NombreMarca ?? "—"}</td>
+  <td class=""td-precio"">${p.Precio:N0}</td>
+  <td class=""td-stock {stockClass}"">{p.Stock}</td>
+  <td><span class=""badge-estado {badgeClass}"">{badgeText}</span></td>
+  <td>
+    <div class=""acc-btns"">
+      <button class=""btn-acc ver"" title=""Ver detalle"" onclick=""abrirModal('/Productos/Productos/ModalDetalle/{p.IdProducto}')"">
+        <svg viewBox=""0 0 24 24""><path d=""M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z""/></svg>
+      </button>
+      <button class=""btn-acc editar"" title=""Editar"" onclick=""abrirModal('/Productos/Productos/ModalEditar/{p.IdProducto}')"">
+        <svg viewBox=""0 0 24 24""><path d=""M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z""/></svg>
+      </button>
+      <button class=""btn-acc eliminar"" title=""Eliminar"" onclick=""confirmarEliminar({p.IdProducto}, '{nombre}')"">
+        <svg viewBox=""0 0 24 24""><path d=""M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z""/></svg>
+      </button>
+    </div>
+  </td>
+</tr>";
+    }
+}
+
+@section Scripts {
+<script>
+// ── Estado global ──────────────────────────────────────────────────────────
+const overlay  = document.getElementById('modalOverlay');
+const modalBox = document.getElementById('modalBox');
+const tbody    = document.getElementById('tbodyProductos');
+const csrfToken = () => document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
+
+// ── Modal: abrir / cerrar ──────────────────────────────────────────────────
+async function abrirModal(url) {
+    overlay.classList.add('open');
+    document.getElementById('modalBody').innerHTML = `
+        <div class="m-spinner"><div class="spinner-ring"></div><span>Cargando…</span></div>`;
+
+    try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error();
+        const html = await resp.text();
+        document.getElementById('modalBody').innerHTML = html;
+    } catch {
+        cerrarModal();
+        mostrarToast('Error al cargar el contenido.', 'error');
+    }
+}
+
+function cerrarModal() {
+    overlay.classList.remove('open');
+    setTimeout(() => { document.getElementById('modalBody').innerHTML = ''; }, 250);
+}
+
+// Cerrar al hacer clic fuera del box
+overlay.addEventListener('click', e => { if (e.target === overlay) cerrarModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+
+// ── Formulario AJAX (Crear / Editar) ──────────────────────────────────────
+async function submitFormAjax(formId, esNuevo) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+
+    const btn = form.querySelector('[type=submit]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+    limpiarErroresModal();
+
+    try {
+        const resp = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+        const data = await resp.json();
+
+        if (data.ok) {
+            cerrarModal();
+            mostrarToast(data.mensaje, 'exito');
+            esNuevo ? agregarFila(data.producto) : actualizarFila(data.producto);
+        } else {
+            mostrarErroresModal(data.errores ?? {});
+            if (data.mensaje) mostrarToast(data.mensaje, 'error');
+        }
+    } catch {
+        mostrarToast('Error de conexión. Inténtalo de nuevo.', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = esNuevo ? 'Guardar producto' : 'Guardar cambios'; }
+    }
+}
+
+// ── Eliminar con confirmación inline ─────────────────────────────────────
+function confirmarEliminar(id, nombre) {
+    // Reutilizamos el overlay del modal con un contenido de confirmación pequeño
+    overlay.classList.add('open');
+    document.getElementById('modalBody').innerHTML = `
+    <div style="padding:2.5rem 2rem; max-width:420px; margin:auto; text-align:center;">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,.1);
+                  display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+        <svg width="28" height="28" fill="#dc2626" viewBox="0 0 24 24">
+          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+        </svg>
+      </div>
+      <h3 style="font-size:1.05rem;font-weight:700;color:var(--color-secundario);margin-bottom:.5rem;">
+        ¿Eliminar producto?
+      </h3>
+      <p style="font-size:.88rem;color:#7a6050;margin-bottom:1.75rem;">
+        «${nombre}» será eliminado permanentemente. Esta acción no se puede deshacer.
+      </p>
+      <div style="display:flex;gap:.75rem;justify-content:center;">
+        <button onclick="cerrarModal()"
+          style="padding:.6rem 1.4rem;background:#f0ebe5;color:var(--color-secundario);
+                 border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.9rem;">
+          Cancelar
+        </button>
+        <button onclick="ejecutarEliminar(${id})"
+          style="padding:.6rem 1.4rem;background:#dc2626;color:#fff;
+                 border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.9rem;">
+          Sí, eliminar
+        </button>
+      </div>
+    </div>`;
+}
+
+async function ejecutarEliminar(id) {
+    cerrarModal();
+    try {
+        const resp = await fetch(`/Productos/Productos/EliminarAjax/${id}`, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': csrfToken() }
+        });
+        const data = await resp.json();
+        mostrarToast(data.mensaje, data.ok ? 'exito' : 'error');
+        if (data.ok) eliminarFila(id);
+    } catch {
+        mostrarToast('Error al eliminar el producto.', 'error');
+    }
+}
+
+// ── Manipulación de filas ─────────────────────────────────────────────────
+function agregarFila(p) {
+    document.getElementById('fila-empty')?.remove();
+    tbody.insertAdjacentHTML('afterbegin', buildFila(p));
+}
+
+function actualizarFila(p) {
+    const fila = document.getElementById(`fila-${p.idProducto}`);
+    if (fila) {
+        const tmp = document.createElement('tbody');
+        tmp.innerHTML = buildFila(p);
+        fila.replaceWith(tmp.firstElementChild);
+    }
+}
+
+function eliminarFila(id) {
+    document.getElementById(`fila-${id}`)?.remove();
+    if (!tbody.querySelector('tr')) {
+        tbody.innerHTML = `
+        <tr id="fila-empty"><td colspan="8">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" style="width:56px;height:56px;fill:#ddd0c4;margin-bottom:.75rem;">
+              <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/>
+            </svg>
+            <p>No hay productos registrados.</p>
+          </div>
+        </td></tr>`;
+    }
+}
+
+function buildFila(p) {
+    const imgHtml = p.tieneImagen
+        ? `<img class="prod-img" src="/Productos/Productos/Imagen/${p.idProducto}?t=${Date.now()}" alt="${esc(p.nombreProducto)}">`
+        : `<div class="prod-img-ph"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></div>`;
+    const desc  = p.descripcion ? `<br><small style="color:#a89080;font-size:.78rem;">${esc(p.descripcion)}</small>` : '';
+    const badge = p.estado ? '<span class="badge-estado activo">Activo</span>' : '<span class="badge-estado inactivo">Inactivo</span>';
+    const stock = `<span class="td-stock ${p.stock <= 5 ? 'bajo' : 'ok'}">${p.stock}</span>`;
+    const nom   = esc(p.nombreProducto).replace(/'/g, "\\'");
+    return `
+<tr id="fila-${p.idProducto}" data-id="${p.idProducto}">
+  <td>${imgHtml}</td>
+  <td><span style="font-weight:600">${esc(p.nombreProducto)}</span>${desc}</td>
+  <td>${esc(p.nombreTipo)}</td>
+  <td>${esc(p.nombreMarca)}</td>
+  <td class="td-precio">$${Number(p.precio).toLocaleString('es-CL')}</td>
+  <td>${stock}</td>
+  <td>${badge}</td>
+  <td>
+    <div class="acc-btns">
+      <button class="btn-acc ver"      onclick="abrirModal('/Productos/Productos/ModalDetalle/${p.idProducto}')" title="Ver detalle">
+        <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+      </button>
+      <button class="btn-acc editar"   onclick="abrirModal('/Productos/Productos/ModalEditar/${p.idProducto}')" title="Editar">
+        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+      </button>
+      <button class="btn-acc eliminar" onclick="confirmarEliminar(${p.idProducto},'${nom}')" title="Eliminar">
+        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>
+    </div>
+  </td>
+</tr>`;
+}
+
+// ── Errores inline en modals ──────────────────────────────────────────────
+function mostrarErroresModal(errores) {
+    Object.entries(errores).forEach(([campo, msg]) => {
+        const input = document.querySelector(`[name="${campo}"]`);
+        if (!input) return;
+        input.classList.add('input-error');
+        let span = input.parentElement.querySelector('.field-error');
+        if (!span) { span = document.createElement('span'); span.className = 'field-error'; input.after(span); }
+        span.textContent = msg;
+    });
+}
+function limpiarErroresModal() {
+    document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+    document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+}
+
+// ── Toasts ────────────────────────────────────────────────────────────────
+function mostrarToast(msg, tipo) {
+    const iconos = {
+        exito: '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>',
+        error: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>'
+    };
+    const w = document.getElementById('toastWrap');
+    const t = document.createElement('div');
+    t.className = `toast-msg ${tipo}`;
+    t.innerHTML = `${iconos[tipo]}<span>${msg}</span>`;
+    w.appendChild(t);
+    setTimeout(() => t.style.opacity = '0', 3500);
+    setTimeout(() => t.remove(), 3800);
+}
+
+// ── Filtrado ─────────────────────────────────────────────────────────────
+function filtrarTabla() {
+    const q = document.getElementById('buscador').value.toLowerCase();
+    tbody.querySelectorAll('tr[data-id]').forEach(tr => {
+        tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+
+// ── Utilidades ────────────────────────────────────────────────────────────
+function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+}

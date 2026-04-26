@@ -1,0 +1,172 @@
+﻿@model Infraestructura.Entities.BotiApp.ProPromocion
+@{
+    var ultimas = ViewBag.UltimasPromos as IEnumerable<Infraestructura.Entities.BotiApp.ProPromocion>
+                  ?? Enumerable.Empty<Infraestructura.Entities.BotiApp.ProPromocion>();
+}
+<style>
+    .mc-header {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:1.25rem 1.5rem; border-bottom:1px solid #f0ebe5;
+        background:var(--color-secundario); border-radius:16px 16px 0 0;
+    }
+    .mc-header-left { display:flex; align-items:center; gap:.65rem; }
+    .mc-header-left svg { width:22px; height:22px; fill:var(--color-primario); }
+    .mc-header-left h2 { font-size:1.05rem; font-weight:700; color:#fff; margin:0; }
+    .mc-close {
+        width:32px; height:32px; border-radius:8px; border:none; cursor:pointer;
+        background:rgba(255,255,255,.08); color:rgba(255,255,255,.7);
+        display:flex; align-items:center; justify-content:center; transition:background .2s;
+    }
+    .mc-close:hover { background:rgba(255,255,255,.15); color:#fff; }
+    .mc-close svg { width:18px; height:18px; fill:currentColor; }
+
+    .mc-body { display:grid; grid-template-columns:1fr 260px; }
+
+    .mc-main { padding:1.5rem; overflow-y:auto; max-height:72vh; }
+
+    .mc-aside { border-left:1px solid #f0ebe5; background:#faf7f5;
+        display:flex; flex-direction:column; overflow:hidden; }
+    .mc-aside-header { padding:.9rem 1rem; border-bottom:1px solid #f0ebe5;
+        display:flex; align-items:center; gap:.5rem; }
+    .mc-aside-header svg { width:15px; height:15px; fill:var(--color-primario); }
+    .mc-aside-header span { font-size:.75rem; font-weight:700; text-transform:uppercase;
+        letter-spacing:.8px; color:#7a6050; }
+    .mc-aside-body { padding:.75rem; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:.6rem; }
+
+    .recent-card {
+        background:#fff; border-radius:8px; padding:.7rem .85rem;
+        border:1px solid #ede5df; transition:box-shadow .15s;
+    }
+    .recent-card:hover { box-shadow:0 2px 8px rgba(44,29,13,.08); }
+    .rc-nombre { font-size:.8rem; font-weight:600; color:var(--color-secundario);
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rc-meta   { font-size:.72rem; color:#a89080; margin-top:.15rem; }
+    .rc-precio { font-size:.8rem; font-weight:700; color:var(--color-primario); }
+
+    .aside-empty { text-align:center; padding:2rem .5rem; color:#b8a898; font-size:.82rem; }
+
+    /* Formulario */
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:.9rem 1.2rem; }
+    .form-group { display:flex; flex-direction:column; gap:.3rem; }
+    .form-group.full { grid-column:1/-1; }
+    .form-label { font-size:.8rem; font-weight:600; color:var(--color-secundario); }
+    .form-label .req { color:var(--color-primario); margin-left:2px; }
+    .form-control {
+        padding:.55rem .8rem; border:1.5px solid #e0d5cc; border-radius:8px;
+        font-size:.88rem; color:var(--color-secundario); background:#fff;
+        transition:border-color .2s, box-shadow .2s; outline:none; width:100%;
+    }
+    .form-control:focus { border-color:var(--color-primario); box-shadow:0 0 0 3px rgba(231,111,46,.12); }
+    .form-control.input-error { border-color:#dc2626; }
+    .field-error { font-size:.75rem; color:#dc2626; margin-top:.15rem; }
+
+    .mc-footer {
+        padding:1rem 1.5rem; border-top:1px solid #f0ebe5;
+        display:flex; justify-content:flex-end; gap:.75rem; background:#faf7f5;
+    }
+    .btn-cancelar {
+        padding:.55rem 1.2rem; background:#f0ebe5; color:var(--color-secundario);
+        border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:.88rem;
+    }
+    .btn-guardar {
+        padding:.55rem 1.4rem; background:var(--color-primario); color:#fff;
+        border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:.88rem;
+        transition:background .2s;
+    }
+    .btn-guardar:hover { background:#cf5f22; }
+    .btn-guardar:disabled { opacity:.6; cursor:not-allowed; }
+</style>
+
+<!-- Header -->
+<div class="mc-header">
+    <div class="mc-header-left">
+        <svg viewBox="0 0 24 24"><path d="M12.79 2.7 20.3 10.2a2 2 0 0 1 0 2.83l-6.36 6.36a2 2 0 0 1-2.83 0L3.6 11.9a2 2 0 0 1-.59-1.41V4a2 2 0 0 1 2-2h6.37a2 2 0 0 1 1.41.59zM7 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+        <h2>Nueva Promoción</h2>
+    </div>
+    <button class="mc-close" onclick="cerrarModal()">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+</div>
+
+<div class="mc-body">
+    <!-- Formulario -->
+    <div class="mc-main">
+        <form id="formCrearPromo"
+              action="/Productos/Promociones/CrearAjax"
+              method="post"
+              onsubmit="submitCrearPromo('formCrearPromo'); return false;">
+            @Html.AntiForgeryToken()
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label class="form-label" for="Nombre">Nombre <span class="req">*</span></label>
+                    <input class="form-control" id="Nombre" name="Nombre"
+                           value="@Model.Nombre" maxlength="100" required placeholder="Ej: Promo Invierno 2025" />
+                    <span class="field-error"></span>
+                </div>
+                <div class="form-group full">
+                    <label class="form-label" for="Descripcion">Descripción</label>
+                    <textarea class="form-control" id="Descripcion" name="Descripcion"
+                              rows="2" maxlength="150" placeholder="Breve descripción (opcional)">@Model.Descripcion</textarea>
+                    <span class="field-error"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="PrecioPromocion">Precio promocional <span class="req">*</span></label>
+                    <input class="form-control" id="PrecioPromocion" name="PrecioPromocion"
+                           type="number" min="0" value="@Model.PrecioPromocion" required />
+                    <span class="field-error"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="Estado">Estado inicial</label>
+                    <select class="form-control" id="Estado" name="Estado">
+                        <option value="true"  selected="@(Model.Estado ? "selected" : null)">Activa</option>
+                        <option value="false" selected="@(!Model.Estado ? "selected" : null)">Inactiva</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="FechaInicio">Fecha inicio <span class="req">*</span></label>
+                    <input class="form-control" id="FechaInicio" name="FechaInicio"
+                           type="date" value="@Model.FechaInicio.ToString("yyyy-MM-dd")" required />
+                    <span class="field-error"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="FechaFin">Fecha fin <small style="color:#a89080;font-weight:400">(opcional)</small></label>
+                    <input class="form-control" id="FechaFin" name="FechaFin"
+                           type="date" value="@Model.FechaFin?.ToString("yyyy-MM-dd")" />
+                    <span class="field-error"></span>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Aside: últimas promos -->
+    <aside class="mc-aside">
+        <div class="mc-aside-header">
+            <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 0 18A9 9 0 0 0 13 3zm0 16a7 7 0 1 1 0-14 7 7 0 0 1 0 14zm.5-11H12v6l5.25 3.15.75-1.23-4.5-2.67V8z"/></svg>
+            <span>Últimas creadas</span>
+        </div>
+        <div class="mc-aside-body">
+            @if (!ultimas.Any())
+            {
+                <div class="aside-empty">No hay promociones aún.</div>
+            }
+            else
+            {
+                foreach (var u in ultimas)
+                {
+                    var fechaFin = u.FechaFin.HasValue ? u.FechaFin.Value.ToString("dd/MM/yyyy") : "Sin límite";
+                    <div class="recent-card">
+                        <div class="rc-nombre">@u.Nombre</div>
+                        <div class="rc-meta">@u.FechaInicio.ToString("dd/MM/yyyy") → @fechaFin</div>
+                        <div class="rc-precio">$@u.PrecioPromocion.ToString("N0")</div>
+                    </div>
+                }
+            }
+        </div>
+    </aside>
+</div>
+
+<!-- Footer -->
+<div class="mc-footer">
+    <button class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
+    <button class="btn-guardar" onclick="submitCrearPromo('formCrearPromo')">Guardar promoción</button>
+</div>

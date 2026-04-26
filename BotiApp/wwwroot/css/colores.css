@@ -1,0 +1,29 @@
+/* =============================================
+   CAPA 1: Paleta de colores disponibles
+   ============================================= */
+:root {
+    --naranja: #E76F2E;
+    --cafe: #3E2C23;
+    --crema: #F5E9D8;
+    --negro: #2C2C2C;
+    --morado-oscuro: #612D53;
+    --amarillo: #FCBF49;
+    --rojo: #FF3737;
+    --verde: #5CB338;
+    --blanco: #FBF6F6;
+}
+
+/* =============================================
+   CAPA 2: Roles semánticos del tema activo
+   ============================================= */
+:root {
+    --color-primario: var(--naranja);
+    --color-secundario: var(--negro);
+    --color-terciario: var(--crema);
+    /* Variantes útiles para hover, bordes, texto sobre color, etc. */
+    --color-warning: var(--amarillo);
+    --color-success: var(--verde);
+    --color-danger: var(--rojo);
+    --color-texto: var(--negro);
+    --color-fondo: var(--blanco);
+}

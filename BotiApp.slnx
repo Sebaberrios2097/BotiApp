@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="BotiApp/BotiApp.csproj" />
+  <Project Path="Infraestructura/Infraestructura.csproj" />
+</Solution>

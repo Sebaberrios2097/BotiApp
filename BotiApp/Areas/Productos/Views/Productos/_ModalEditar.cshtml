@@ -1,0 +1,279 @@
+﻿@model Infraestructura.Entities.BotiApp.ProProductos
+@{
+    var auditoria = ViewBag.Auditoria as IEnumerable<Infraestructura.Entities.BotiApp.AudProProductos>
+                    ?? Enumerable.Empty<Infraestructura.Entities.BotiApp.AudProProductos>();
+}
+<style>
+    /* Reutiliza los estilos de _ModalCrear excepto specifics */
+    .me-header {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:1.25rem 1.5rem; border-bottom:1px solid #f0ebe5;
+        background:var(--color-secundario); border-radius:16px 16px 0 0;
+    }
+    .me-header-left { display:flex; align-items:center; gap:.65rem; }
+    .me-header-left svg { width:22px; height:22px; fill:var(--color-primario); }
+    .me-header-left h2 { font-size:1.05rem; font-weight:700; color:#fff; margin:0; line-height:1.3; }
+    .me-header-left small { display:block; font-size:.72rem; font-weight:400; color:rgba(255,255,255,.5); margin-top:.05rem; }
+    .me-close {
+        width:32px; height:32px; border-radius:8px; border:none; cursor:pointer;
+        background:rgba(255,255,255,.08); color:rgba(255,255,255,.7);
+        display:flex; align-items:center; justify-content:center; transition:background .2s;
+    }
+    .me-close:hover { background:rgba(255,255,255,.15); color:#fff; }
+    .me-close svg { width:18px; height:18px; fill:currentColor; }
+
+    .me-body { display:grid; grid-template-columns:1fr 260px; }
+    .me-main { padding:1.5rem; overflow-y:auto; max-height:72vh; }
+
+    .me-aside {
+        border-left:1px solid #f0ebe5; background:#faf7f5;
+        display:flex; flex-direction:column; overflow:hidden;
+    }
+    .me-aside-header {
+        padding:.9rem 1rem; border-bottom:1px solid #f0ebe5;
+        display:flex; align-items:center; gap:.5rem;
+    }
+    .me-aside-header svg { width:15px; height:15px; fill:var(--color-primario); }
+    .me-aside-header span { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#7a6050; }
+    .me-aside-body { padding:.75rem 1rem; overflow-y:auto; flex:1; }
+
+    /* Timeline de auditoría */
+    .audit-timeline { position:relative; }
+    .audit-timeline::before {
+        content:""; position:absolute; left:11px; top:0; bottom:0;
+        width:2px; background:#e8ddd4;
+    }
+    .audit-item { display:flex; gap:.75rem; margin-bottom:1rem; position:relative; }
+    .audit-dot {
+        width:24px; height:24px; border-radius:50%; flex-shrink:0;
+        background:var(--color-primario); display:flex; align-items:center; justify-content:center;
+        z-index:1;
+    }
+    .audit-dot svg { width:12px; height:12px; fill:#fff; }
+    .audit-info { flex:1; min-width:0; }
+    .audit-motivo { font-size:.8rem; font-weight:600; color:var(--color-secundario); line-height:1.3; }
+    .audit-fecha  { font-size:.72rem; color:#a89080; margin-top:.15rem; }
+    .audit-chips  { display:flex; flex-wrap:wrap; gap:.3rem; margin-top:.35rem; }
+    .audit-chip {
+        padding:.15rem .5rem; border-radius:20px; font-size:.7rem; font-weight:600;
+        background:rgba(231,111,46,.1); color:var(--color-primario);
+    }
+    .audit-chip.estado-on  { background:rgba(34,197,94,.1); color:#16a34a; }
+    .audit-chip.estado-off { background:rgba(239,68,68,.1); color:#dc2626; }
+    .aside-empty { text-align:center; padding:2rem .5rem; color:#b8a898; font-size:.82rem; }
+    .aside-empty svg { width:32px; height:32px; fill:#ddd0c4; display:block; margin:0 auto .5rem; }
+
+    /* Form (mismos estilos que _ModalCrear) */
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:.9rem 1.2rem; }
+    .form-group { display:flex; flex-direction:column; gap:.3rem; }
+    .form-group.full { grid-column:1/-1; }
+    .form-label { font-size:.8rem; font-weight:600; color:var(--color-secundario); }
+    .form-label .req { color:var(--color-primario); margin-left:2px; }
+    .form-control { padding:.55rem .8rem; border:1.5px solid #e0d5cc; border-radius:8px; font-size:.88rem; color:var(--color-secundario); background:#faf7f5; transition:border-color .2s, box-shadow .2s; outline:none; width:100%; }
+    .form-control:focus { border-color:var(--color-primario); box-shadow:0 0 0 3px rgba(231,111,46,.13); background:#fff; }
+    .form-control.input-error { border-color:#dc2626; }
+    .field-error { font-size:.76rem; color:#dc2626; }
+
+    .img-drop { border:2px dashed #e0d5cc; border-radius:10px; padding:1rem; text-align:center; background:#faf7f5; cursor:pointer; transition:border-color .2s; }
+    .img-drop:hover { border-color:var(--color-primario); }
+    .img-drop svg { width:28px; height:28px; fill:#c9b8a8; }
+    .img-drop p { font-size:.78rem; color:#a89080; margin:.3rem 0 0; }
+    .img-actual-wrap { display:flex; align-items:center; gap:.75rem; background:#f0ebe5; border-radius:8px; padding:.6rem .8rem; margin-bottom:.6rem; }
+    .img-actual-wrap img { width:48px; height:48px; border-radius:6px; object-fit:cover; border:1px solid #e0d5cc; }
+    .img-actual-wrap p { font-size:.78rem; color:#a89080; margin:0; }
+    #imgPreviewEditar { max-width:100%; max-height:100px; border-radius:8px; margin-top:.5rem; display:none; object-fit:cover; }
+
+    .toggle-w { display:flex; align-items:center; gap:.6rem; padding:.55rem 0; }
+    .toggle-sw { position:relative; width:42px; height:23px; flex-shrink:0; }
+    .toggle-sw input { opacity:0; width:0; height:0; }
+    .toggle-sl { position:absolute; inset:0; background:#ccc; border-radius:24px; cursor:pointer; transition:background .2s; }
+    .toggle-sl:before { content:""; position:absolute; width:17px; height:17px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .2s; }
+    .toggle-sw input:checked + .toggle-sl { background:var(--color-primario); }
+    .toggle-sw input:checked + .toggle-sl:before { transform:translateX(19px); }
+    .toggle-label { font-size:.86rem; font-weight:600; color:var(--color-secundario); }
+
+    .me-footer {
+        padding:1rem 1.5rem; border-top:1px solid #f0ebe5;
+        display:flex; gap:.65rem; background:#fff; border-radius:0 0 0 16px;
+    }
+    .btn-save { display:inline-flex; align-items:center; gap:.4rem; padding:.58rem 1.3rem; background:var(--color-primario); color:#fff; border:none; border-radius:8px; font-size:.88rem; font-weight:600; cursor:pointer; transition:background .2s, transform .15s; }
+    .btn-save svg { width:16px; height:16px; fill:currentColor; }
+    .btn-save:hover { background:#cf5f22; transform:translateY(-1px); }
+    .btn-cancel { display:inline-flex; align-items:center; gap:.4rem; padding:.58rem 1.1rem; background:#f0ebe5; color:var(--color-secundario); border:none; border-radius:8px; font-size:.88rem; font-weight:600; cursor:pointer; transition:background .15s; }
+    .btn-cancel:hover { background:#e0d5cc; }
+
+    @@media (max-width:650px) {
+        .me-body  { grid-template-columns:1fr; }
+        .me-aside { border-left:none; border-top:1px solid #f0ebe5; max-height:180px; }
+        .me-main  { max-height:none; }
+        .form-grid { grid-template-columns:1fr; }
+        .form-group.full { grid-column:1; }
+    }
+</style>
+
+<!-- Header -->
+<div class="me-header">
+    <div class="me-header-left">
+        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        <h2>
+            Editar Producto
+            <small>@Model.NombreProducto</small>
+        </h2>
+    </div>
+    <button class="me-close" onclick="cerrarModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+</div>
+
+<div class="me-body">
+
+    <!-- Formulario principal -->
+    <div class="me-main">
+        <form id="formEditar"
+              asp-area="Productos" asp-controller="Productos" asp-action="EditarAjax"
+              asp-route-id="@Model.IdProducto"
+              method="post" enctype="multipart/form-data" novalidate
+              onsubmit="event.preventDefault(); submitFormAjax('formEditar', false)">
+            @Html.AntiForgeryToken()
+            <input asp-for="IdProducto" type="hidden" />
+            <input asp-for="FechaIngreso" type="hidden" />
+
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label class="form-label" asp-for="NombreProducto">Nombre <span class="req">*</span></label>
+                    <input asp-for="NombreProducto" class="form-control" />
+                    <span asp-validation-for="NombreProducto" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" asp-for="Codigo">Código / SKU</label>
+                    <input asp-for="Codigo" class="form-control" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" asp-for="IdTipoProducto">Tipo <span class="req">*</span></label>
+                    <select asp-for="IdTipoProducto" asp-items="ViewBag.Tipos" class="form-control">
+                        <option value="">— Selecciona —</option>
+                    </select>
+                    <span asp-validation-for="IdTipoProducto" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" asp-for="IdMarca">Marca <span class="req">*</span></label>
+                    <select asp-for="IdMarca" asp-items="ViewBag.Marcas" class="form-control">
+                        <option value="">— Selecciona —</option>
+                    </select>
+                    <span asp-validation-for="IdMarca" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" asp-for="Precio">Precio ($) <span class="req">*</span></label>
+                    <input asp-for="Precio" type="number" min="0" class="form-control" />
+                    <span asp-validation-for="Precio" class="field-error"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" asp-for="Stock">Stock <span class="req">*</span></label>
+                    <input asp-for="Stock" type="number" min="0" class="form-control" />
+                    <span asp-validation-for="Stock" class="field-error"></span>
+                </div>
+
+                <div class="form-group full">
+                    <label class="form-label" asp-for="Descripción">Descripción</label>
+                    <textarea asp-for="Descripción" class="form-control" rows="2"></textarea>
+                </div>
+
+                <div class="form-group full">
+                    <label class="form-label">Imagen</label>
+                    @if (Model.Imagen is { Length: > 0 })
+                    {
+                        <div class="img-actual-wrap">
+                            <img src="/Productos/Productos/Imagen/@Model.IdProducto" alt="@Model.NombreProducto" />
+                            <p>Imagen actual — selecciona una nueva para reemplazarla</p>
+                        </div>
+                    }
+                    <div class="img-drop" onclick="document.getElementById('imgFileEditar').click()">
+                        <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                        <p>Clic para cambiar la imagen</p>
+                    </div>
+                    <input type="file" id="imgFileEditar" name="imagenFile" accept="image/*"
+                           style="display:none" onchange="prevImg(this,'imgPreviewEditar')" />
+                    <img id="imgPreviewEditar" alt="Vista previa" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" asp-for="Estado">Estado</label>
+                    <div class="toggle-w">
+                        <label class="toggle-sw">
+                            <input asp-for="Estado" type="checkbox" />
+                            <span class="toggle-sl"></span>
+                        </label>
+                        <span class="toggle-label">Activo</span>
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+    <!-- Aside: historial de cambios -->
+    <aside class="me-aside">
+        <div class="me-aside-header">
+            <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 0 18A9 9 0 0 0 13 3zm0 16c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7zm.5-11H12v6l5.25 3.15.75-1.23-4.5-2.67V8z"/></svg>
+            <span>Historial de cambios</span>
+        </div>
+        <div class="me-aside-body">
+            @if (!auditoria.Any())
+            {
+                <div class="aside-empty">
+                    <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 0 18A9 9 0 0 0 13 3zm0 16c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7zm.5-11H12v6l5.25 3.15.75-1.23-4.5-2.67V8z"/></svg>
+                    Sin modificaciones registradas
+                </div>
+            }
+            else
+            {
+                <div class="audit-timeline">
+                    @foreach (var a in auditoria)
+                    {
+                        <div class="audit-item">
+                            <div class="audit-dot">
+                                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg>
+                            </div>
+                            <div class="audit-info">
+                                <div class="audit-motivo">@a.Motivo</div>
+                                <div class="audit-fecha">@a.FechaModificacion.ToString("dd/MM/yyyy HH:mm")</div>
+                                <div class="audit-chips">
+                                    <span class="audit-chip">$@a.Precio.ToString("N0")</span>
+                                    <span class="audit-chip @(a.Estado ? "estado-on" : "estado-off")">
+                                        @(a.Estado ? "Activo" : "Inactivo")
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </aside>
+</div>
+
+<!-- Footer -->
+<div class="me-footer">
+    <button type="submit" form="formEditar" class="btn-save">
+        <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+        Guardar cambios
+    </button>
+    <button type="button" class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+</div>
+
+<script>
+function prevImg(input, previewId) {
+    const p = document.getElementById(previewId);
+    if (input.files?.[0]) {
+        const r = new FileReader();
+        r.onload = e => { p.src = e.target.result; p.style.display = 'block'; };
+        r.readAsDataURL(input.files[0]);
+    }
+}
+</script>
