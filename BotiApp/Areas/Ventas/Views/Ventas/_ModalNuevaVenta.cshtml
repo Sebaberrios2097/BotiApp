@@ -1,0 +1,443 @@
+﻿@{
+    var metodosPago = ViewBag.MetodosPago as IEnumerable<Infraestructura.Entities.BotiApp.VenMetodosPago>
+                      ?? Enumerable.Empty<Infraestructura.Entities.BotiApp.VenMetodosPago>();
+}
+<style>
+    /* ── Header ── */
+    .nv-header {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:1.1rem 1.5rem; background:var(--color-secundario);
+        border-radius:16px 16px 0 0;
+    }
+    .nv-header-left { display:flex; align-items:center; gap:.6rem; }
+    .nv-header-left svg { width:20px; height:20px; fill:var(--color-primario); }
+    .nv-header-left h2  { font-size:1rem; font-weight:700; color:#fff; margin:0; }
+    .nv-close {
+        width:30px; height:30px; border-radius:7px; border:none; cursor:pointer;
+        background:rgba(255,255,255,.08); color:rgba(255,255,255,.7);
+        display:flex; align-items:center; justify-content:center; transition:background .2s;
+    }
+    .nv-close:hover { background:rgba(255,255,255,.16); color:#fff; }
+    .nv-close svg { width:17px; height:17px; fill:currentColor; }
+
+    /* ── Layout dos columnas ── */
+    .nv-body {
+        display:grid; grid-template-columns:1fr 340px;
+        max-height:78vh; overflow:hidden;
+    }
+
+    /* ── Panel izquierdo: buscador + resultados ── */
+    .nv-left {
+        display:flex; flex-direction:column; gap:0;
+        border-right:1px solid #f0ebe5; overflow:hidden;
+    }
+    .nv-search-wrap {
+        padding:1rem 1.25rem; border-bottom:1px solid #f0ebe5; background:#faf7f5;
+    }
+    .nv-search {
+        display:flex; align-items:center; gap:.55rem;
+        background:#fff; border:1.5px solid #e0d5cc; border-radius:8px;
+        padding:.45rem .8rem;
+    }
+    .nv-search svg   { width:17px; height:17px; fill:var(--color-primario); opacity:.7; flex-shrink:0; }
+    .nv-search input { border:none; outline:none; font-size:.88rem; width:100%; background:transparent; color:var(--color-secundario); }
+
+    .nv-results {
+        flex:1; overflow-y:auto; padding:.6rem .75rem; display:flex; flex-direction:column; gap:.4rem;
+    }
+
+    /* Tarjeta de producto en resultados */
+    .prod-res-card {
+        display:flex; align-items:center; gap:.75rem;
+        background:#fff; border:1.5px solid #ede5df; border-radius:10px;
+        padding:.6rem .85rem; cursor:pointer;
+        transition:border-color .15s, box-shadow .15s;
+    }
+    .prod-res-card:hover { border-color:var(--color-primario); box-shadow:0 2px 8px rgba(231,111,46,.12); }
+    .prod-res-img {
+        width:42px; height:42px; border-radius:8px; object-fit:cover;
+        border:1px solid #e0d5cc; background:#f5f0eb; flex-shrink:0;
+    }
+    .prod-res-img-ph {
+        width:42px; height:42px; border-radius:8px; background:#f5f0eb;
+        border:1px solid #e0d5cc; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .prod-res-img-ph svg { width:20px; height:20px; fill:#c9b8a8; }
+    .prod-res-info { flex:1; min-width:0; }
+    .prod-res-nombre { font-size:.85rem; font-weight:600; color:var(--color-secundario); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .prod-res-meta   { font-size:.74rem; color:#a89080; margin-top:.1rem; }
+    .prod-res-precio { font-size:.88rem; font-weight:700; color:var(--color-primario); white-space:nowrap; }
+    .prod-res-stock  { font-size:.72rem; color:#a89080; text-align:right; }
+    .prod-res-add {
+        width:28px; height:28px; border-radius:6px; border:none; cursor:pointer;
+        background:rgba(231,111,46,.12); color:var(--color-primario);
+        display:flex; align-items:center; justify-content:center; flex-shrink:0;
+        transition:background .15s, transform .12s;
+    }
+    .prod-res-add:hover { background:rgba(231,111,46,.25); transform:scale(1.1); }
+    .prod-res-add svg { width:16px; height:16px; fill:currentColor; }
+
+    .res-empty { text-align:center; padding:2.5rem .5rem; color:#b8a898; font-size:.84rem; }
+    .res-empty svg { width:44px; height:44px; fill:#ddd0c4; margin-bottom:.5rem; display:block; margin-inline:auto; }
+
+    /* ── Panel derecho: resumen de boleta ── */
+    .nv-right {
+        display:flex; flex-direction:column; overflow:hidden; background:#faf7f5;
+    }
+    .nv-cart-header {
+        padding:.85rem 1.1rem; border-bottom:1px solid #ede5df;
+        display:flex; align-items:center; gap:.5rem;
+    }
+    .nv-cart-header svg { width:16px; height:16px; fill:var(--color-primario); }
+    .nv-cart-header span { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:#7a6050; }
+    .nv-cart-header .cart-count {
+        margin-left:auto; background:var(--color-primario); color:#fff;
+        border-radius:20px; font-size:.7rem; font-weight:700; padding:.1rem .55rem;
+    }
+
+    .nv-cart-items { flex:1; overflow-y:auto; padding:.6rem .75rem; display:flex; flex-direction:column; gap:.4rem; }
+
+    /* Ítem del carrito */
+    .cart-item {
+        background:#fff; border:1px solid #ede5df; border-radius:9px;
+        padding:.55rem .75rem; display:flex; align-items:center; gap:.6rem;
+    }
+    .cart-item-nombre { flex:1; min-width:0; font-size:.82rem; font-weight:600; color:var(--color-secundario); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cart-item-precio { font-size:.78rem; color:#a89080; }
+    .cart-qty {
+        display:flex; align-items:center; gap:.3rem;
+    }
+    .cart-qty button {
+        width:22px; height:22px; border-radius:5px; border:1px solid #e0d5cc;
+        background:#f5f0eb; cursor:pointer; display:flex; align-items:center;
+        justify-content:center; font-size:.85rem; line-height:1;
+        transition:background .12s;
+    }
+    .cart-qty button:hover { background:#e8ddd4; }
+    .cart-qty span { font-size:.85rem; font-weight:700; min-width:20px; text-align:center; color:var(--color-secundario); }
+    .cart-item-sub { font-size:.82rem; font-weight:700; color:var(--color-primario); white-space:nowrap; min-width:64px; text-align:right; }
+    .cart-item-del {
+        width:22px; height:22px; border-radius:5px; border:none; cursor:pointer;
+        background:rgba(239,68,68,.08); color:#dc2626;
+        display:flex; align-items:center; justify-content:center;
+        transition:background .12s;
+    }
+    .cart-item-del:hover { background:rgba(239,68,68,.18); }
+    .cart-item-del svg { width:13px; height:13px; fill:currentColor; }
+
+    .cart-empty { text-align:center; padding:2rem .5rem; color:#b8a898; font-size:.82rem; }
+    .cart-empty svg { width:44px; height:44px; fill:#ddd0c4; display:block; margin:0 auto .5rem; }
+
+    /* ── Totales y footer ── */
+    .nv-totales {
+        padding:.85rem 1.1rem; border-top:1px solid #ede5df; background:#fff;
+        display:flex; flex-direction:column; gap:.4rem;
+    }
+    .tot-row { display:flex; justify-content:space-between; font-size:.85rem; color:#7a6050; }
+    .tot-row.total { font-size:1.05rem; font-weight:700; color:var(--color-secundario); padding-top:.35rem; border-top:1.5px solid #f0ebe5; }
+    .tot-row.total span:last-child { color:var(--color-primario); }
+
+    .nv-footer {
+        padding:.9rem 1.1rem; border-top:1px solid #ede5df;
+        display:flex; flex-direction:column; gap:.6rem; background:#fff;
+        border-radius:0 0 16px 0;
+    }
+    .btn-generar {
+        display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
+        width:100%; padding:.65rem; background:var(--color-primario); color:#fff;
+        border:none; border-radius:8px; font-size:.9rem; font-weight:600;
+        cursor:pointer; transition:background .2s, transform .15s;
+    }
+    .btn-generar svg { width:16px; height:16px; fill:currentColor; }
+    .btn-generar:hover:not(:disabled) { background:#cf5f22; transform:translateY(-1px); }
+    .btn-generar:disabled { opacity:.55; cursor:not-allowed; }
+    .btn-cancelar-nv {
+        display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
+        width:100%; padding:.58rem; background:#f0ebe5; color:var(--color-secundario);
+        border:none; border-radius:8px; font-size:.88rem; font-weight:600;
+        cursor:pointer; transition:background .15s;
+    }
+    .btn-cancelar-nv:hover { background:#e0d5cc; }
+
+    @@media (max-width:680px) {
+        .nv-body { grid-template-columns:1fr; max-height:none; }
+        .nv-left { border-right:none; border-bottom:1px solid #f0ebe5; max-height:50vh; }
+        .nv-right { max-height:55vh; }
+        .nv-footer { border-radius:0 0 16px 16px; }
+    }
+</style>
+
+<!-- Header -->
+<div class="nv-header">
+    <div class="nv-header-left">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        <h2>Nueva Venta</h2>
+    </div>
+    <button class="nv-close" onclick="cerrarModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+</div>
+
+<div class="nv-body">
+
+    <!-- ── Columna izquierda: buscador de productos ── -->
+    <div class="nv-left">
+        <div class="nv-search-wrap">
+            <div class="nv-search">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" id="nvBuscador" placeholder="Buscar producto por nombre o marca…" oninput="nvBuscar()" autocomplete="off" />
+            </div>
+        </div>
+        <div class="nv-results" id="nvResultados">
+            <div class="res-empty">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                Escribe para buscar productos disponibles
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Columna derecha: carrito / resumen ── -->
+    <div class="nv-right">
+        <div class="nv-cart-header">
+            <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h14v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.46 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/></svg>
+            <span>Resumen de boleta</span>
+            <span class="cart-count" id="cartCount">0</span>
+        </div>
+
+        <div class="nv-cart-items" id="cartItems">
+            <div class="cart-empty" id="cartEmpty">
+                <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h14v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.46 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/></svg>
+                Aún no hay productos en la boleta
+            </div>
+        </div>
+
+        <div class="nv-totales">
+            <div class="tot-row">
+                <span>Subtotal</span>
+                <span id="totSubtotal">$0</span>
+            </div>
+            <div class="tot-row total">
+                <span>Total</span>
+                <span id="totTotal">$0</span>
+            </div>
+        </div>
+
+        <div class="nv-footer">
+            <button class="btn-generar" id="btnGenerarBoleta" disabled onclick="nvGenerarBoleta()">
+                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                Generar boleta
+            </button>
+            <button class="btn-cancelar-nv" onclick="cerrarModal()">Cancelar</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+(function () {
+    // ── Estado del carrito ─────────────────────────────────────────────────
+    // { idProducto → { id, nombre, precio, cantidad, stock } }
+    const carrito = new Map();
+    let buscarTimeout = null;
+
+    // ── Buscador ───────────────────────────────────────────────────────────
+    window.nvBuscar = function () {
+        clearTimeout(buscarTimeout);
+        buscarTimeout = setTimeout(async () => {
+            const q = document.getElementById('nvBuscador').value.trim();
+            const contenedor = document.getElementById('nvResultados');
+
+            if (q.length < 1) {
+                contenedor.innerHTML = `<div class="res-empty">
+                    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    Escribe para buscar productos disponibles</div>`;
+                return;
+            }
+
+            contenedor.innerHTML = `<div class="res-empty">Buscando…</div>`;
+            try {
+                const resp = await fetch(`/Ventas/BuscarProductos?q=${encodeURIComponent(q)}`);
+                const data = await resp.json();
+                renderResultados(data);
+            } catch {
+                contenedor.innerHTML = `<div class="res-empty">Error al buscar.</div>`;
+            }
+        }, 300);
+    };
+
+    function renderResultados(productos) {
+        const cont = document.getElementById('nvResultados');
+        if (!productos.length) {
+            cont.innerHTML = `<div class="res-empty">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                Sin resultados para la búsqueda</div>`;
+            return;
+        }
+        cont.innerHTML = productos.map(p => {
+            const imgHtml = p.tieneImagen
+                ? `<img class="prod-res-img" src="/Productos/Productos/Imagen/${p.idProducto}" alt="${escNv(p.nombreProducto)}">`
+                : `<div class="prod-res-img-ph"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></div>`;
+            return `
+            <div class="prod-res-card" onclick="nvAgregarProducto(${p.idProducto},'${escNv(p.nombreProducto).replace(/'/g,"\\'")}',${p.precio},${p.stock})">
+                ${imgHtml}
+                <div class="prod-res-info">
+                    <div class="prod-res-nombre">${escNv(p.nombreProducto)}</div>
+                    <div class="prod-res-meta">${escNv(p.marca)} · ${escNv(p.tipo)}</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;">
+                    <div class="prod-res-precio">$${Number(p.precio).toLocaleString('es-CL')}</div>
+                    <div class="prod-res-stock">Stock: ${p.stock}</div>
+                </div>
+                <button class="prod-res-add" title="Agregar" tabindex="-1">
+                    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                </button>
+            </div>`;
+        }).join('');
+    }
+
+    // ── Carrito ─────────────────────────────────────────────────────────────
+    window.nvAgregarProducto = function (id, nombre, precio, stock) {
+        if (carrito.has(id)) {
+            const item = carrito.get(id);
+            if (item.cantidad >= stock) return; // no superar stock
+            item.cantidad++;
+        } else {
+            carrito.set(id, { id, nombre, precio, cantidad: 1, stock });
+        }
+        renderCarrito();
+    };
+
+    function nvCambiarCantidad(id, delta) {
+        if (!carrito.has(id)) return;
+        const item = carrito.get(id);
+        const nueva = item.cantidad + delta;
+        if (nueva <= 0) { carrito.delete(id); }
+        else if (nueva > item.stock) { return; }
+        else { item.cantidad = nueva; }
+        renderCarrito();
+    }
+
+    function nvQuitarItem(id) {
+        carrito.delete(id);
+        renderCarrito();
+    }
+
+    function renderCarrito() {
+        const cont  = document.getElementById('cartItems');
+        const empty = document.getElementById('cartEmpty');
+        const count = document.getElementById('cartCount');
+        const btnGenerar = document.getElementById('btnGenerarBoleta');
+
+        if (carrito.size === 0) {
+            cont.innerHTML = `<div class="cart-empty" id="cartEmpty">
+                <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h14v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.46 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/></svg>
+                Aún no hay productos en la boleta</div>`;
+            count.textContent = '0';
+            btnGenerar.disabled = true;
+            actualizarTotales();
+            return;
+        }
+
+        let html = '';
+        carrito.forEach(item => {
+            const sub = item.precio * item.cantidad;
+            html += `
+            <div class="cart-item">
+                <div style="flex:1;min-width:0;">
+                    <div class="cart-item-nombre" title="${escNv(item.nombre)}">${escNv(item.nombre)}</div>
+                    <div class="cart-item-precio">$${Number(item.precio).toLocaleString('es-CL')} c/u</div>
+                </div>
+                <div class="cart-qty">
+                    <button onclick="nvCambiarCantidad(${item.id}, -1)">−</button>
+                    <span>${item.cantidad}</span>
+                    <button onclick="nvCambiarCantidad(${item.id}, +1)">+</button>
+                </div>
+                <div class="cart-item-sub">$${Number(sub).toLocaleString('es-CL')}</div>
+                <button class="cart-item-del" onclick="nvQuitarItem(${item.id})" title="Quitar">
+                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                </button>
+            </div>`;
+        });
+        cont.innerHTML = html;
+        count.textContent = carrito.size;
+        btnGenerar.disabled = false;
+        actualizarTotales();
+    }
+
+    // Exponer funciones al scope global para los onclick inline del carrito
+    window.nvCambiarCantidad = nvCambiarCantidad;
+    window.nvQuitarItem      = nvQuitarItem;
+
+    function actualizarTotales() {
+        let total = 0;
+        carrito.forEach(item => { total += item.precio * item.cantidad; });
+        const fmt = v => `$${Number(v).toLocaleString('es-CL')}`;
+        document.getElementById('totSubtotal').textContent = fmt(total);
+        document.getElementById('totTotal').textContent    = fmt(total);
+    }
+
+    // ── Generar boleta ──────────────────────────────────────────────────────
+    window.nvGenerarBoleta = async function () {
+        if (carrito.size === 0) return;
+
+        const btn = document.getElementById('btnGenerarBoleta');
+        btn.disabled  = true;
+        btn.innerHTML = `<div class="spinner-ring" style="width:18px;height:18px;border-width:2px;"></div> Generando…`;
+
+        const items = [];
+        carrito.forEach(item => items.push({
+            idProducto:     item.id,
+            cantidad:       item.cantidad,
+            precioUnitario: item.precio
+        }));
+
+        try {
+            const resp = await fetch('/Ventas/CrearBoletaAjax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('[name=__RequestVerificationToken]')?.value ?? ''
+                },
+                body: JSON.stringify({ items })
+            });
+            const data = await resp.json();
+
+            if (data.ok) {
+                cerrarModal();
+                mostrarToast(data.mensaje, 'exito');
+                agregarFilaBoleta(data.boleta);
+                // Actualizar métricas en página
+                actualizarMetricas(data.boleta.montoTotal);
+            } else {
+                mostrarToast(data.mensaje ?? 'Error al generar la boleta.', 'error');
+                btn.disabled  = false;
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Generar boleta`;
+            }
+        } catch {
+            mostrarToast('Error de conexión. Inténtalo de nuevo.', 'error');
+            btn.disabled  = false;
+            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Generar boleta`;
+        }
+    };
+
+    function escNv(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Actualizar las métricas de la página sin recargar
+    function actualizarMetricas(monto) {
+        try {
+            const metricCards = document.querySelectorAll('.metric-val');
+            if (metricCards.length >= 3) {
+                // Boletas hoy
+                metricCards[0].textContent = (parseInt(metricCards[0].textContent) || 0) + 1;
+                // Recaudado hoy
+                const actual = parseInt((metricCards[1].textContent ?? '').replace(/\D/g,'')) || 0;
+                metricCards[1].textContent = `$${(actual + monto).toLocaleString('es-CL')}`;
+                // Total boletas
+                metricCards[2].textContent = (parseInt(metricCards[2].textContent) || 0) + 1;
+            }
+        } catch { /* silenciar */ }
+    }
+})();
+</script>

@@ -1,0 +1,974 @@
+﻿@using System.Text.Json
+@model BotiApp.Areas.Ventas.Models.GenerarVentaViewModel
+@{
+    ViewData["Title"] = "Generar Venta";
+
+    // Mapa idProducto → mejor precio oferta activa
+    var ofertasMap = Model.Ofertas
+        .GroupBy(o => o.IdProducto)
+        .ToDictionary(g => g.Key, g => g.Min(o => o.PrecioOferta));
+
+    var catalogoJson = JsonSerializer.Serialize(Model.Productos.Select(p => new
+    {
+        id          = p.IdProducto,
+        nombre      = p.NombreProducto,
+        descripcion = p.Descripción ?? "",
+        precio      = p.Precio,
+        stock       = p.Stock,
+        idTipo      = p.IdTipoProducto,
+        idMarca     = p.IdMarca,
+        marca       = p.IdMarcaNavigation?.NombreMarca ?? "",
+        tipo        = p.IdTipoProductoNavigation?.NombreTipoProducto ?? "",
+        tieneImagen = p.Imagen is { Length: > 0 },
+        ofertaPrecio = ofertasMap.TryGetValue(p.IdProducto, out var op) ? (int?)op : null
+    }));
+
+    var tipoMarcasJson = JsonSerializer.Serialize(
+        Model.Tipos.ToDictionary(
+            t => t.IdTipoProducto,
+            t => Model.Productos
+                      .Where(p => p.IdTipoProducto == t.IdTipoProducto)
+                      .Select(p => p.IdMarca).Distinct().ToList()
+        )
+    );
+
+    var promosJson = JsonSerializer.Serialize(Model.Promociones.Select(p => new
+    {
+        id     = p.IdPromocion,
+        nombre = p.Nombre,
+        precio = p.PrecioPromocion,
+        // Productos sin grupo → siempre requeridos
+        productosBase = p.ProPromocionDetalle
+            .Where(d => d.IdGrupo == null)
+            .Select(d => new { idProducto = d.IdProducto, cantidad = d.Cantidad }),
+        // Grupos con su flag de exclusividad y sus productos
+        grupos = p.ProPromocionGrupo.Select(g => new
+        {
+            idGrupo      = g.IdGrupo,
+            esExcluyente = g.EsExcluyente,
+            productos    = p.ProPromocionDetalle
+                .Where(d => d.IdGrupo == g.IdGrupo)
+                .Select(d => new { idProducto = d.IdProducto, cantidad = d.Cantidad })
+        })
+    }));
+
+    var urlImagen = Url.Action("Imagen", "Productos", new { area = "Productos", id = 0 })!.Replace("/0", "");
+    var urlCrear  = Url.Action("CrearBoletaAjax", "Ventas", new { area = "Ventas" });
+}
+
+<style>
+/* ══════════════════════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════════════════════ */
+.gv-wrap { display:grid; grid-template-columns:1fr 330px; gap:1.25rem; align-items:start; }
+@@media (max-width:980px) { .gv-wrap { grid-template-columns:1fr; } }
+.gv-page-header { display:flex; align-items:center; gap:.7rem; margin-bottom:1.4rem; }
+.gv-page-header svg { width:26px; height:26px; fill:var(--color-primario); }
+.gv-page-header h1 { font-size:1.35rem; font-weight:700; color:var(--color-secundario); margin:0; }
+
+/* ══════════════════════════════════════════════════════
+   CATÁLOGO
+══════════════════════════════════════════════════════ */
+.cat-panel { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; display:flex; flex-direction:column; }
+.cat-panel-header { display:flex; align-items:center; gap:.55rem; padding:.85rem 1.15rem; background:var(--color-secundario); color:#fff; flex-shrink:0; }
+.cat-panel-header svg { width:17px; height:17px; fill:var(--color-primario); }
+.cat-panel-header span { font-size:.85rem; font-weight:700; }
+.cat-panel-header .cnt-badge { margin-left:auto; background:var(--color-primario); color:#fff; border-radius:20px; padding:.1rem .55rem; font-size:.7rem; font-weight:700; }
+.filtros-wrap { padding:.85rem 1rem; border-bottom:1px solid #f0ebe5; background:#faf7f5; display:flex; flex-direction:column; gap:.65rem; flex-shrink:0; }
+.search-bar { display:flex; align-items:center; gap:.5rem; background:#fff; border:1.5px solid #e0d5cc; border-radius:8px; padding:.45rem .8rem; }
+.search-bar svg { width:16px; height:16px; fill:var(--color-primario); opacity:.7; flex-shrink:0; }
+.search-bar input { border:none; outline:none; font-size:.88rem; width:100%; background:transparent; color:var(--color-secundario); }
+.search-bar .clr { background:none; border:none; cursor:pointer; color:#c9b8a8; font-size:1rem; display:none; flex-shrink:0; line-height:1; }
+.search-bar .clr.on { display:block; }
+.pills-row { display:flex; flex-wrap:wrap; gap:.35rem; }
+.pill { padding:.3rem .75rem; border-radius:20px; font-size:.75rem; font-weight:600; border:1.5px solid #e0d5cc; background:#fff; color:#7a6050; cursor:pointer; transition:border-color .15s,background .15s,color .15s; white-space:nowrap; }
+.pill:hover { border-color:var(--color-primario); color:var(--color-primario); }
+.pill.active { background:var(--color-primario); border-color:var(--color-primario); color:#fff; }
+.marcas-row { display:flex; flex-wrap:wrap; gap:.3rem; max-height:0; overflow:hidden; transition:max-height .3s ease; }
+.marcas-row.open { max-height:200px; }
+.pill-m { padding:.22rem .6rem; border-radius:20px; font-size:.71rem; font-weight:600; border:1.5px solid #e8e0d8; background:#fff; color:#a89080; cursor:pointer; transition:border-color .15s,background .15s,color .15s; }
+.pill-m:hover { border-color:var(--color-primario); color:var(--color-primario); }
+.pill-m.active { background:var(--color-primario); border-color:var(--color-primario); color:#fff; }
+.productos-grid { padding:.85rem 1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); gap:.75rem; overflow-y:auto; max-height:calc(100vh - 330px); min-height:200px; }
+.prod-card { border:1.5px solid #ede5df; border-radius:11px; background:#fff; cursor:pointer; transition:border-color .15s,box-shadow .15s,transform .12s; overflow:hidden; display:flex; flex-direction:column; user-select:none; min-height:230px; }
+.prod-card:hover { border-color:var(--color-primario); box-shadow:0 3px 12px rgba(231,111,46,.12); transform:translateY(-2px); }
+.prod-card.en-carrito { border-color:#16a34a; background:#f0fdf4; }
+.prod-card.tiene-oferta { border-color:#7c3aed; }
+.prod-img-wrap { width:100%; height:110px; background:#f5f0eb; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; }
+.prod-img-wrap img { width:100%; height:100%; object-fit:cover; }
+.prod-img-wrap svg { width:36px; height:36px; fill:#c9b8a8; flex-shrink:0; }
+.prod-card-body { padding:.55rem .65rem; flex:1; display:flex; flex-direction:column; gap:.12rem; }
+.prod-card-nombre { font-size:.78rem; font-weight:700; color:var(--color-secundario); line-height:1.25; }
+.prod-card-meta { font-size:.68rem; color:#a89080; }
+.prod-card-footer { display:flex; align-items:center; justify-content:space-between; padding:.4rem .65rem; border-top:1px solid #f0ebe5; flex-shrink:0; flex-wrap:wrap; gap:.2rem; }
+.prod-card-precio { font-size:.8rem; font-weight:700; color:var(--color-primario); }
+.prod-card-precio.tachado { text-decoration:line-through; color:#a89080; font-size:.7rem; }
+.prod-card-oferta { font-size:.8rem; font-weight:700; color:#7c3aed; }
+.prod-card-stock { font-size:.67rem; color:#a89080; }
+.prod-card-en { font-size:.67rem; font-weight:700; color:#16a34a; }
+.grid-empty { grid-column:1/-1; text-align:center; padding:3rem 1rem; color:#b8a898; font-size:.85rem; }
+.grid-empty svg { width:48px; height:48px; fill:#ddd0c4; display:block; margin:0 auto .6rem; }
+
+/* ══════════════════════════════════════════════════════
+   PANEL BOLETA
+══════════════════════════════════════════════════════ */
+.boleta-panel { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; display:flex; flex-direction:column; position:sticky; top:1rem; }
+.boleta-header { display:flex; align-items:center; gap:.55rem; padding:.85rem 1.1rem; background:var(--color-secundario); color:#fff; flex-shrink:0; }
+.boleta-header svg { width:17px; height:17px; fill:var(--color-primario); }
+.boleta-header span { font-size:.85rem; font-weight:700; flex:1; }
+.boleta-header .cart-cnt { background:var(--color-primario); color:#fff; border-radius:20px; padding:.1rem .5rem; font-size:.7rem; font-weight:700; }
+.cart-items { overflow-y:auto; max-height:300px; padding:.5rem .65rem; display:flex; flex-direction:column; gap:.35rem; }
+.ci-item { background:#faf7f5; border:1px solid #ede5df; border-radius:9px; padding:.5rem .65rem; }
+.ci-top { display:flex; align-items:center; gap:.4rem; }
+.ci-nombre { flex:1; min-width:0; font-size:.79rem; font-weight:600; color:var(--color-secundario); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ci-del { width:20px; height:20px; border-radius:4px; border:none; cursor:pointer; background:rgba(239,68,68,.08); color:#dc2626; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .12s; }
+.ci-del:hover { background:rgba(239,68,68,.2); }
+.ci-del svg { width:12px; height:12px; fill:currentColor; }
+.ci-bottom { display:flex; align-items:center; justify-content:space-between; margin-top:.35rem; gap:.3rem; flex-wrap:wrap; }
+.ci-qty { display:flex; align-items:center; gap:.25rem; }
+.ci-qty button { width:22px; height:22px; border-radius:5px; border:1px solid #e0d5cc; background:#f5f0eb; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.88rem; font-weight:700; transition:background .1s; }
+.ci-qty button:hover { background:#e8ddd4; }
+.ci-qty span { font-size:.82rem; font-weight:700; min-width:22px; text-align:center; color:var(--color-secundario); }
+.ci-sub { font-size:.82rem; font-weight:700; color:var(--color-primario); }
+.ci-oferta-badge { font-size:.63rem; font-weight:700; background:#ede9fe; color:#7c3aed; border-radius:4px; padding:.1rem .35rem; flex-shrink:0; }
+
+/* Promo group */
+.ci-promo-group { border:1.5px solid #d97706; border-radius:10px; overflow:hidden; }
+.ci-promo-header { display:flex; align-items:center; gap:.4rem; padding:.45rem .65rem; background:#fffbeb; flex-wrap:wrap; }
+.ci-promo-tag { font-size:.63rem; font-weight:700; background:#fef3c7; color:#d97706; border-radius:4px; padding:.1rem .35rem; flex-shrink:0; }
+.ci-promo-nombre { flex:1; font-size:.78rem; font-weight:700; color:#92400e; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ci-promo-precio { font-size:.82rem; font-weight:700; color:#d97706; flex-shrink:0; }
+.ci-promo-ahorro { font-size:.68rem; color:#16a34a; font-weight:600; padding:.1rem .65rem .3rem; background:#fffbeb; }
+.ci-promo-item { display:flex; align-items:center; justify-content:space-between; padding:.3rem .65rem; border-top:1px dashed #fde68a; background:#fff; }
+.ci-promo-item .ci-nombre { font-size:.74rem; color:#78716c; font-weight:500; }
+.ci-promo-item-qty { font-size:.7rem; color:#a89080; flex-shrink:0; }
+.ci-promo-item-del { background:none; border:none; cursor:pointer; color:#dc2626; opacity:.7; padding:0; margin-left:.3rem; display:flex; align-items:center; flex-shrink:0; }
+.ci-promo-item-del:hover { opacity:1; }
+.ci-promo-item-del svg { width:12px; height:12px; fill:currentColor; }
+
+.cart-empty { text-align:center; padding:1.75rem .5rem; color:#b8a898; font-size:.8rem; }
+.cart-empty svg { width:36px; height:36px; fill:#ddd0c4; display:block; margin:0 auto .4rem; }
+
+/* Info boleta */
+.boleta-info-sec { padding:.65rem 1rem; border-top:1px solid #f0ebe5; display:flex; flex-direction:column; gap:.28rem; flex-shrink:0; }
+.bi-row { display:flex; justify-content:space-between; font-size:.78rem; }
+.bi-row .lbl { color:#a89080; font-weight:600; }
+.bi-row .val { color:var(--color-secundario); font-weight:600; text-align:right; }
+
+/* Totales */
+.boleta-totales { padding:.6rem 1rem; border-top:1px solid #f0ebe5; flex-shrink:0; }
+.tot-line { display:flex; justify-content:space-between; font-size:.82rem; color:#7a6050; padding:.12rem 0; }
+.tot-line.descuento      { font-size:.78rem; color:#16a34a; }
+.tot-line.descuento-total{ font-size:.8rem; font-weight:700; color:#16a34a; border-top:1px dashed #d1fae5; padding-top:.35rem; margin-top:.2rem; }
+.tot-line.gran { font-size:1rem; font-weight:700; color:var(--color-secundario); padding-top:.45rem; border-top:1.5px solid #f0ebe5; margin-top:.3rem; }
+.tot-line.gran span:last-child { color:var(--color-primario); }
+
+.boleta-footer { padding:.85rem 1rem; border-top:1px solid #f0ebe5; flex-shrink:0; }
+.btn-generar { display:flex; align-items:center; justify-content:center; gap:.45rem; width:100%; padding:.7rem; background:var(--color-primario); color:#fff; border:none; border-radius:9px; font-size:.9rem; font-weight:700; cursor:pointer; transition:background .2s,transform .15s; }
+.btn-generar svg { width:16px; height:16px; fill:currentColor; }
+.btn-generar:hover:not(:disabled) { background:#cf5f22; transform:translateY(-1px); }
+.btn-generar:disabled { opacity:.5; cursor:not-allowed; }
+.spin-sm { width:15px; height:15px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spinR .65s linear infinite; display:inline-block; flex-shrink:0; }
+@@keyframes spinR { to { transform:rotate(360deg); } }
+
+/* Toast */
+.toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
+.toast-msg { display:flex; align-items:center; gap:.6rem; padding:.75rem 1.1rem; border-radius:10px; font-size:.88rem; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease; }
+.toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
+.toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
+.toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
+@@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+
+/* ══════════════════════════════════════════════════════
+   MODAL TICKET POS
+══════════════════════════════════════════════════════ */
+.ticket-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.55);
+    z-index:10000; display:flex; align-items:center; justify-content:center;
+    animation:fadeIn .2s ease;
+}
+@@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.ticket-wrap {
+    background:#fff; width:300px; max-height:92vh;
+    overflow-y:auto; border-radius:8px;
+    box-shadow:0 8px 32px rgba(0,0,0,.25);
+    display:flex; flex-direction:column;
+}
+.ticket-actions {
+    display:flex; gap:.5rem; padding:.65rem .8rem;
+    border-bottom:1px solid #eee; flex-shrink:0; background:#fff;
+    position:sticky; top:0; z-index:1;
+}
+.ticket-actions button {
+    flex:1; padding:.5rem; border-radius:7px; border:none;
+    font-size:.82rem; font-weight:700; cursor:pointer; transition:opacity .15s;
+}
+.ticket-actions button:hover { opacity:.85; }
+.btn-print  { background:var(--color-secundario); color:#fff; }
+.btn-cerrar { background:#f0ebe5; color:var(--color-secundario); }
+
+/* El ticket propiamente (fuente monoespaciada, estilo impresora POS) */
+.ticket { 
+    font-family:'Courier New', Courier, monospace;
+    font-size:11px; 
+    line-height:1.25;       /* antes: 1.4 */
+    padding:.5rem .6rem; 
+    color:#000;
+}
+.ticket-hr     { border:none; border-top:1px dashed #555; margin:.25rem 0; }
+.ticket-hr-sol { border:none; border-top:1px solid #555;  margin:.25rem 0; }
+.ticket-row { 
+    display:flex; 
+    justify-content:space-between; 
+    margin-bottom:1px;      /* antes no tenía, el line-height lo inflaba */
+}
+.ticket-row .tk-l { flex:1; min-width:0; overflow:hidden; text-overflow:clip; }
+.ticket-row .tk-r { flex-shrink:0; padding-left:.5rem; text-align:right; }
+.ticket-total  { font-size:14px; font-weight:700; }
+.ticket-desc   { color:#000; }
+.ticket-promo-tag { font-size:10px; font-weight:700; }
+
+/* Impresión POS (80 mm — cambiar a 58mm si tu impresora es de ese ancho) */
+@@page {
+    size: 80mm auto;   /* ancho fijo, alto = lo que ocupe el contenido */
+    margin: 0;
+}
+@@media print {
+    html, body { margin:0 !important; padding:0 !important; background:#fff !important; }
+    body > *          { display:none !important; }
+    .ticket-overlay   {
+        display:block !important; position:static !important;
+        background:none !important; inset:auto !important;
+        animation:none !important;
+    }
+    .ticket-actions   { display:none !important; }
+    .ticket-wrap      {
+        box-shadow:none !important; border-radius:0 !important;
+        max-height:none !important; overflow:visible !important;
+        width:80mm !important;
+
+    }
+    .ticket {
+        padding:2mm !important;
+        font-size:9pt !important;
+        line-height:1.35 !important;
+    }
+    .ticket-total { font-size:11pt !important; }
+}
+</style>
+
+<div class="toast-wrap" id="toastWrap"></div>
+@Html.AntiForgeryToken()
+
+<div class="gv-page-header">
+    <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+    <h1>Generar Venta</h1>
+</div>
+
+<div class="gv-wrap">
+
+    <!-- ══ CATÁLOGO ══ -->
+    <div class="cat-panel">
+        <div class="cat-panel-header">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+            <span>Productos disponibles</span>
+            <span class="cnt-badge" id="cntProductos">@Model.Productos.Count()</span>
+        </div>
+
+        <div class="filtros-wrap">
+            <div class="search-bar">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" id="txtBuscar" placeholder="Buscar por nombre, marca…"
+                       oninput="aplicarFiltros()" autocomplete="off" />
+                <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">✕</button>
+            </div>
+            <div class="pills-row" id="pillsTipos">
+                <button class="pill active" data-tipo="0" onclick="selTipo(0)">Todos</button>
+                @foreach (var t in Model.Tipos)
+                {
+                    <button class="pill" data-tipo="@t.IdTipoProducto" onclick="selTipo(@t.IdTipoProducto)">@t.NombreTipoProducto</button>
+                }
+            </div>
+            <div class="marcas-row" id="marcasRow">
+                @foreach (var m in Model.Marcas)
+                {
+                    <button class="pill-m" data-marca="@m.IdMarca" onclick="selMarca(@m.IdMarca)">@m.NombreMarca</button>
+                }
+            </div>
+        </div>
+
+        <div class="productos-grid" id="productosGrid"></div>
+    </div>
+
+    <!-- ══ BOLETA ══ -->
+    <div class="boleta-panel">
+        <div class="boleta-header">
+            <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h14v-2H7.42a.25.25 0 0 1-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.46 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/></svg>
+            <span>Detalle boleta</span>
+            <span class="cart-cnt" id="cartCnt">0</span>
+        </div>
+
+        <div class="cart-items" id="cartItems">
+            <div class="cart-empty">
+                <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h14v-2H7.42a.25.25 0 0 1-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.46 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/></svg>
+                Selecciona productos del catálogo
+            </div>
+        </div>
+
+        <div class="boleta-info-sec">
+            <div class="bi-row"><span class="lbl">Cajero</span><span class="val">@Model.NombreCajero</span></div>
+            <div class="bi-row"><span class="lbl">Fecha emisión</span><span class="val" id="infoFecha">—</span></div>
+            <div class="bi-row"><span class="lbl">Productos distintos</span><span class="val" id="infoDistintos">0</span></div>
+            <div class="bi-row"><span class="lbl">Unidades totales</span><span class="val" id="infoUnidades">0</span></div>
+            <div class="bi-row"><span class="lbl">Estado</span><span class="val" style="color:#16a34a;font-weight:700;">● Generada</span></div>
+        </div>
+
+        <!-- Totales -->
+        <div class="boleta-totales">
+            <div class="tot-line">
+                <span>Subtotal</span>
+                <span id="totSub">$0</span>
+            </div>
+            <!-- Líneas de descuento generadas dinámicamente por JS -->
+            <div id="descuentosContainer"></div>
+            <div class="tot-line descuento-total">
+                <span>Total descuentos</span>
+                <span id="totDescTotal">-$0</span>
+            </div>
+            <div class="tot-line gran">
+                <span>Total</span>
+                <span id="totTotal">$0</span>
+            </div>
+        </div>
+
+        <div class="boleta-footer">
+            <button class="btn-generar" id="btnGenerar" disabled onclick="generarBoleta()">
+                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                Generar boleta
+            </button>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+<script>
+(function () {
+
+    /* ── Datos del servidor ──────────────────────────────────────────────── */
+    const CATALOGO    = @Html.Raw(catalogoJson);
+    const TIPO_MARCAS = @Html.Raw(tipoMarcasJson);
+    const PROMOS      = @Html.Raw(promosJson);
+    const URL_CREAR   = '@urlCrear';
+    const URL_IMG     = '@urlImagen';
+    const CSRF        = () => document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
+
+    const OFERTAS_MAP = {};                     // idProducto → precioOferta
+    CATALOGO.forEach(p => { if (p.ofertaPrecio != null) OFERTAS_MAP[p.id] = p.ofertaPrecio; });
+
+    const NOMBRE_MAP = {};                      // idProducto → nombre
+    CATALOGO.forEach(p => { NOMBRE_MAP[p.id] = p.nombre; });
+
+    /* ── Estado ──────────────────────────────────────────────────────────── */
+    const carrito = new Map();                  // id → {id, nombre, precio, cantidad, stock}
+    let tipoActivo  = 0;
+    let marcaActiva = 0;
+
+    /* ══════════════════════════════════════════════════════════════════════
+       FILTROS
+    ══════════════════════════════════════════════════════════════════════ */
+    window.selTipo = function (id) {
+        tipoActivo  = id;
+        marcaActiva = 0;
+        document.querySelectorAll('#pillsTipos .pill')
+            .forEach(p => p.classList.toggle('active', +p.dataset.tipo === id));
+        const row   = document.getElementById('marcasRow');
+        const pills = row.querySelectorAll('.pill-m');
+        let vis = 0;
+        pills.forEach(p => {
+            p.classList.remove('active');
+            if (id === 0) { p.hidden = false; vis++; return; }
+            const ok = (TIPO_MARCAS[id] ?? []).includes(+p.dataset.marca);
+            p.hidden = !ok;
+            if (ok) vis++;
+        });
+        row.classList.toggle('open', vis > 0);
+        aplicarFiltros();
+    };
+
+    window.selMarca = function (id) {
+        marcaActiva = marcaActiva === id ? 0 : id;
+        document.querySelectorAll('.pill-m')
+            .forEach(p => p.classList.toggle('active', +p.dataset.marca === marcaActiva));
+        aplicarFiltros();
+    };
+
+    window.aplicarFiltros = function () {
+        const q = document.getElementById('txtBuscar').value.trim().toLowerCase();
+        document.getElementById('btnClr').classList.toggle('on', q.length > 0);
+        const f = CATALOGO.filter(p => {
+            const okTipo  = tipoActivo  === 0 || p.idTipo  === tipoActivo;
+            const okMarca = marcaActiva === 0 || p.idMarca === marcaActiva;
+            const okQ     = q === ''
+                || p.nombre.toLowerCase().includes(q)
+                || p.marca.toLowerCase().includes(q)
+                || p.descripcion.toLowerCase().includes(q);
+            return okTipo && okMarca && okQ;
+        });
+        renderGrid(f);
+    };
+
+    window.limpiarQ = function () {
+        document.getElementById('txtBuscar').value = '';
+        aplicarFiltros();
+    };
+
+    /* ══════════════════════════════════════════════════════════════════════
+       GRID DE PRODUCTOS
+    ══════════════════════════════════════════════════════════════════════ */
+    function renderGrid(lista) {
+        const grid = document.getElementById('productosGrid');
+        document.getElementById('cntProductos').textContent = lista.length;
+        if (!lista.length) {
+            grid.innerHTML = `<div class="grid-empty">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                Sin productos para los filtros aplicados</div>`;
+            return;
+        }
+        grid.innerHTML = lista.map(p => {
+            const enCart  = carrito.has(p.id);
+            const cant    = enCart ? carrito.get(p.id).cantidad : 0;
+            const oferta  = OFERTAS_MAP[p.id];
+            const imgHtml = p.tieneImagen
+                ? `<img src="${URL_IMG}/${p.id}" alt="${x(p.nombre)}" loading="lazy">`
+                : `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`;
+            const nomSafe = p.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+            const precioHtml = oferta != null
+                ? `<span class="prod-card-precio tachado">$${fmt(p.precio)}</span>
+                   <span class="prod-card-oferta">$${fmt(oferta)}</span>`
+                : `<span class="prod-card-precio">$${fmt(p.precio)}</span>`;
+            const badgeHtml = enCart
+                ? `<span class="prod-card-en">✓ ${cant} u.</span>`
+                : `<span class="prod-card-stock">Stock: ${p.stock}</span>`;
+            const extraClass = enCart ? ' en-carrito' : (oferta != null ? ' tiene-oferta' : '');
+            return `
+            <div class="prod-card${extraClass}" id="pc-${p.id}"
+                 onclick="toggleProducto(${p.id},'${nomSafe}',${p.precio},${p.stock})">
+                <div class="prod-img-wrap">${imgHtml}</div>
+                <div class="prod-card-body">
+                    <div class="prod-card-nombre">${x(p.nombre)}</div>
+                    <div class="prod-card-meta">${x(p.marca)}</div>
+                </div>
+                <div class="prod-card-footer">
+                    ${precioHtml}
+                    ${badgeHtml}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       CARRITO
+    ══════════════════════════════════════════════════════════════════════ */
+    window.toggleProducto = function (id, nombre, precio, stock) {
+        if (carrito.has(id)) {
+            const it = carrito.get(id);
+            if (it.cantidad < stock) it.cantidad++;
+        } else {
+            carrito.set(id, { id, nombre, precio, cantidad: 1, stock });
+        }
+        renderCarrito();
+        actualizarTarjeta(id);
+    };
+
+    window.cambiarCantidad = function (id, delta) {
+        if (!carrito.has(id)) return;
+        const it    = carrito.get(id);
+        const nueva = it.cantidad + delta;
+        if (nueva <= 0)            { carrito.delete(id); }
+        else if (nueva > it.stock) { return; }
+        else                       { it.cantidad = nueva; }
+        renderCarrito();
+        actualizarTarjeta(id);
+    };
+
+    window.quitarItem = function (id) {
+        carrito.delete(id);
+        renderCarrito();
+        actualizarTarjeta(id);
+    };
+
+    window.quitarDePromo = function (id, cantReq) {
+        if (!carrito.has(id)) return;
+        const it    = carrito.get(id);
+        const nueva = it.cantidad - cantReq;
+        if (nueva <= 0) carrito.delete(id);
+        else            it.cantidad = nueva;
+        renderCarrito();
+        actualizarTarjeta(id);
+    };
+
+    function actualizarTarjeta(id) {
+        const card = document.getElementById(`pc-${id}`);
+        if (!card) return;
+        const enCart = carrito.has(id);
+        const cant   = enCart ? carrito.get(id).cantidad : 0;
+        const p      = CATALOGO.find(c => c.id === id);
+        if (!p) return;
+        const oferta = OFERTAS_MAP[id];
+        card.classList.remove('en-carrito', 'tiene-oferta');
+        if (enCart) card.classList.add('en-carrito');
+        else if (oferta != null) card.classList.add('tiene-oferta');
+        const footer   = card.querySelector('.prod-card-footer');
+        const oldBadge = footer.querySelector('.prod-card-stock, .prod-card-en');
+        if (oldBadge) oldBadge.remove();
+        const badge       = document.createElement('span');
+        badge.className   = enCart ? 'prod-card-en' : 'prod-card-stock';
+        badge.textContent = enCart ? `✓ ${cant} u.` : `Stock: ${p.stock}`;
+        footer.appendChild(badge);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       MOTOR DE PROMOCIONES
+       ─────────────────────────────────────────────────────────────────────
+       Algoritmo: para cada promo se itera en bucle consumiendo unidades del
+       "saldo restante" hasta que ya no se pueda formar otra instancia.
+       Esto permite promos acumulables y mezcla de opciones excluyentes por
+       instancia (ej.: instancia 1 → jamón; instancia 2 → queso).
+
+       Retorna:
+         instancias         → [{promoNombre, promoPrecio, itemsActivos:[{id,nombre,precio,cantReq}], ahorro}]
+         consumidoEnPromo   → Map<id, cantidadTotalConsumida>
+         remaining          → Map<id, cantidadRestante>  (= carrito - consumido)
+         descuentosPromoLines  → [{nombre, ahorro}]  (una línea por instancia)
+         descuentosOfertaLines → [{nombre, ahorro}]  (una línea por producto con oferta)
+         descTotal          → number
+    ══════════════════════════════════════════════════════════════════════ */
+    function calcularDescuentos() {
+        // Saldo disponible para asignar (se va consumiendo por instancias de promo)
+        const remaining = new Map();
+        carrito.forEach((it, id) => remaining.set(id, it.cantidad));
+
+        const instancias = [];
+
+        for (const promo of PROMOS) {
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+                // ── 1. Productos base (sin grupo) ─────────────────────────
+                const baseOk = promo.productosBase.every(
+                    req => (remaining.get(req.idProducto) ?? 0) >= req.cantidad
+                );
+                if (!baseOk) break;
+
+                // ── 2. Grupos ─────────────────────────────────────────────
+                let gruposOk = true;
+                const gruposResueltos = []; // array de arrays de {idProducto, cantidad}
+                for (const grupo of promo.grupos) {
+                    if (grupo.esExcluyente) {
+                        // Primer producto del grupo con saldo suficiente gana
+                        const ganador = grupo.productos.find(
+                            req => (remaining.get(req.idProducto) ?? 0) >= req.cantidad
+                        );
+                        if (!ganador) { gruposOk = false; break; }
+                        gruposResueltos.push([ganador]);
+                    } else {
+                        const todosOk = grupo.productos.every(
+                            req => (remaining.get(req.idProducto) ?? 0) >= req.cantidad
+                        );
+                        if (!todosOk) { gruposOk = false; break; }
+                        gruposResueltos.push([...grupo.productos]);
+                    }
+                }
+                if (!gruposOk) break;
+
+                // ── 3. Consumir y registrar ───────────────────────────────
+                const itemsActivos = [];
+
+                const consumir = req => {
+                    remaining.set(req.idProducto, remaining.get(req.idProducto) - req.cantidad);
+                    const it = carrito.get(req.idProducto);
+                    if (it) itemsActivos.push({ id: it.id, nombre: it.nombre, precio: it.precio, cantReq: req.cantidad });
+                };
+
+                promo.productosBase.forEach(consumir);
+                gruposResueltos.forEach(ganadores => ganadores.forEach(consumir));
+
+                const sumaNormal = itemsActivos.reduce((acc, { precio, cantReq }) => acc + precio * cantReq, 0);
+                const ahorro     = Math.max(0, sumaNormal - promo.precio);
+
+                instancias.push({
+                    promoId:     promo.id,
+                    promoNombre: promo.nombre,
+                    promoPrecio: promo.precio,
+                    itemsActivos,
+                    ahorro
+                });
+            }
+        }
+
+        // ── Mapa de unidades totales consumidas por promo ─────────────────
+        const consumidoEnPromo = new Map();
+        instancias.forEach(inst =>
+            inst.itemsActivos.forEach(({ id, cantReq }) =>
+                consumidoEnPromo.set(id, (consumidoEnPromo.get(id) ?? 0) + cantReq)
+            )
+        );
+
+        // ── Líneas de descuento para el panel de totales ──────────────────
+        const descuentosPromoLines = instancias.map(inst => ({
+            nombre: inst.promoNombre,
+            ahorro: inst.ahorro
+        }));
+
+        const descuentosOfertaLines = [];
+        carrito.forEach((it, id) => {
+            if (OFERTAS_MAP[id] == null) return;
+            const cantFuera = it.cantidad - (consumidoEnPromo.get(id) ?? 0);
+            if (cantFuera <= 0) return;
+            const ahorro = (it.precio - OFERTAS_MAP[id]) * cantFuera;
+            if (ahorro > 0) descuentosOfertaLines.push({ nombre: it.nombre, ahorro });
+        });
+
+        const descuentoPromos  = descuentosPromoLines.reduce((a, l) => a + l.ahorro, 0);
+        const descuentoOfertas = descuentosOfertaLines.reduce((a, l) => a + l.ahorro, 0);
+        const descTotal        = descuentoPromos + descuentoOfertas;
+
+        return { instancias, consumidoEnPromo, remaining, descuentosPromoLines, descuentosOfertaLines, descTotal };
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       RENDER CARRITO
+    ══════════════════════════════════════════════════════════════════════ */
+    function renderCarrito() {
+        const cont   = document.getElementById('cartItems');
+        const cnt    = document.getElementById('cartCnt');
+        const btnGen = document.getElementById('btnGenerar');
+
+        if (carrito.size === 0) {
+            cont.innerHTML = `<div class="cart-empty">
+                <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h14v-2H7.42a.25.25 0 0 1-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.46 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/></svg>
+                Selecciona productos del catálogo</div>`;
+            cnt.textContent = '0';
+            btnGen.disabled = true;
+            actualizarTotales();
+            return;
+        }
+
+        const { instancias, remaining } = calcularDescuentos();
+        let html = '';
+
+        // ── 1. Bloques de cada instancia de promo ─────────────────────────
+        instancias.forEach((inst, idx) => {
+            html += `
+            <div class="ci-promo-group">
+                <div class="ci-promo-header">
+                    <span class="ci-promo-tag">🏷️ Promo</span>
+                    <span class="ci-promo-nombre" title="${x(inst.promoNombre)}">${x(inst.promoNombre)}</span>
+                    <span class="ci-promo-precio">$${fmt(inst.promoPrecio)}</span>
+                </div>
+                <div class="ci-promo-ahorro">Ahorro: $${fmt(inst.ahorro)}</div>`;
+
+            inst.itemsActivos.forEach(({ id, nombre, cantReq }) => {
+                html += `
+                <div class="ci-promo-item">
+                    <span class="ci-nombre" style="flex:1;">${x(nombre)}</span>
+                    <span class="ci-promo-item-qty">${cantReq} u.</span>
+                    <button class="ci-promo-item-del" onclick="quitarDePromo(${id},${cantReq})" title="Quitar">
+                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                </div>`;
+            });
+            html += `</div>`;
+        });
+
+        // ── 2. Ítems individuales: unidades que quedaron en "remaining" ────
+        carrito.forEach(it => {
+            const cantRest = remaining.get(it.id) ?? 0;
+            if (cantRest <= 0) return;                      // todo consumido por promos
+            const tieneOferta    = OFERTAS_MAP[it.id] != null;
+            const precioEfectivo = tieneOferta ? OFERTAS_MAP[it.id] : it.precio;
+            html += `
+            <div class="ci-item">
+                <div class="ci-top">
+                    <span class="ci-nombre" title="${x(it.nombre)}">${x(it.nombre)}</span>
+                    ${tieneOferta ? '<span class="ci-oferta-badge">Oferta</span>' : ''}
+                    <button class="ci-del" onclick="quitarDePromo(${it.id},${cantRest})" title="Quitar">
+                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                </div>
+                <div class="ci-bottom">
+                    <div class="ci-qty">
+                        <button onclick="cambiarCantidad(${it.id},-1)">−</button>
+                        <span>${cantRest}</span>
+                        <button onclick="cambiarCantidad(${it.id},+1)">+</button>
+                    </div>
+                    ${tieneOferta
+                        ? `<span style="font-size:.7rem;color:#a89080;text-decoration:line-through;">$${fmt(it.precio)}</span>
+                           <span style="font-size:.7rem;color:#7c3aed;font-weight:700;">$${fmt(OFERTAS_MAP[it.id])} c/u</span>`
+                        : `<span style="font-size:.7rem;color:#a89080;">$${fmt(it.precio)} c/u</span>`}
+                    <span class="ci-sub">$${fmt(precioEfectivo * cantRest)}</span>
+                </div>
+            </div>`;
+        });
+
+        cont.innerHTML  = html;
+        cnt.textContent = carrito.size;
+        btnGen.disabled = false;
+        actualizarTotales();
+        actualizarInfoFecha();
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       TOTALES (siempre visibles, líneas dinámicas)
+    ══════════════════════════════════════════════════════════════════════ */
+    function actualizarTotales() {
+        let subtotal = 0, unidades = 0;
+        carrito.forEach(it => { subtotal += it.precio * it.cantidad; unidades += it.cantidad; });
+
+        const { descuentosPromoLines, descuentosOfertaLines, descTotal } = calcularDescuentos();
+
+        document.getElementById('totSub').textContent   = `$${fmt(subtotal)}`;
+        document.getElementById('totTotal').textContent = `$${fmt(Math.max(0, subtotal - descTotal))}`;
+        document.getElementById('infoDistintos').textContent = carrito.size;
+        document.getElementById('infoUnidades').textContent  = unidades;
+
+        // Construir líneas de descuento individuales
+        let linesHtml = '';
+        for (const { nombre, ahorro } of descuentosPromoLines) {
+            linesHtml += `
+            <div class="tot-line descuento">
+                <span>Promo: ${x(nombre)}</span>
+                <span>-$${fmt(ahorro)}</span>
+            </div>`;
+        }
+        for (const { nombre, ahorro } of descuentosOfertaLines) {
+            linesHtml += `
+            <div class="tot-line descuento">
+                <span>Oferta: ${x(nombre)}</span>
+                <span>-$${fmt(ahorro)}</span>
+            </div>`;
+        }
+        document.getElementById('descuentosContainer').innerHTML = linesHtml;
+        document.getElementById('totDescTotal').textContent = `-$${fmt(descTotal)}`;
+    }
+
+    function actualizarInfoFecha() {
+        const n   = new Date();
+        const pad = v => String(v).padStart(2, '0');
+        document.getElementById('infoFecha').textContent =
+            `${pad(n.getDate())}/${pad(n.getMonth()+1)}/${n.getFullYear()} ${pad(n.getHours())}:${pad(n.getMinutes())}`;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       GENERAR BOLETA
+    ══════════════════════════════════════════════════════════════════════ */
+    window.generarBoleta = async function () {
+        if (carrito.size === 0) return;
+
+        const btn     = document.getElementById('btnGenerar');
+        btn.disabled  = true;
+        btn.innerHTML = `<span class="spin-sm"></span> Generando…`;
+
+        const { instancias, remaining, descuentosPromoLines, descuentosOfertaLines, descTotal } = calcularDescuentos();
+
+        // ── Snapshot del carrito para el ticket (antes de limpiar) ────────
+        const snapshotInstancias    = instancias;
+        const snapshotRemaining     = new Map(remaining);
+        const snapshotCarrito       = new Map(carrito);
+        const snapshotDescPromos    = descuentosPromoLines;
+        const snapshotDescOfertas   = descuentosOfertaLines;
+        const snapshotDescTotal     = descTotal;
+
+        let subtotalSnapshot = 0;
+        carrito.forEach(it => { subtotalSnapshot += it.precio * it.cantidad; });
+
+        // ── Construir items para el servidor ──────────────────────────────
+        const items = [];
+        instancias.forEach(inst => {
+            const sumaNormal = inst.itemsActivos.reduce(
+                (acc, { precio, cantReq }) => acc + precio * cantReq, 0
+            );
+            inst.itemsActivos.forEach(({ id, precio, cantReq }) => {
+                const precioUnitario = sumaNormal > 0
+                    ? Math.round((precio * cantReq / sumaNormal) * inst.promoPrecio / cantReq)
+                    : precio;
+                items.push({ idProducto: id, cantidad: cantReq, precioUnitario });
+            });
+        });
+        carrito.forEach((it, id) => {
+            const cantRest = remaining.get(id) ?? 0;
+            if (cantRest <= 0) return;
+            const precioUnitario = OFERTAS_MAP[id] != null ? OFERTAS_MAP[id] : it.precio;
+            items.push({ idProducto: id, cantidad: cantRest, precioUnitario });
+        });
+
+        try {
+            const resp = await fetch(URL_CREAR, {
+                method : 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': CSRF() },
+                body   : JSON.stringify({ items })
+            });
+            const data = await resp.json();
+
+            if (data.ok) {
+                // Limpiar carrito
+                const ids = [...carrito.keys()];
+                carrito.clear();
+                renderCarrito();
+                ids.forEach(id => actualizarTarjeta(id));
+
+                // Mostrar ticket con el snapshot
+                mostrarTicket({
+                    idBoleta:     data.boleta.idBoleta,
+                    cajero:       data.boleta.cajero,
+                    fechaEmision: data.boleta.fechaEmision,
+                    instancias:   snapshotInstancias,
+                    remaining:    snapshotRemaining,
+                    carritoSnap:  snapshotCarrito,
+                    descPromos:   snapshotDescPromos,
+                    descOfertas:  snapshotDescOfertas,
+                    descTotal:    snapshotDescTotal,
+                    subtotal:     subtotalSnapshot
+                });
+            } else {
+                toast(data.mensaje ?? 'Error al generar la boleta.', 'error');
+            }
+        } catch {
+            toast('Error de conexión. Inténtalo de nuevo.', 'error');
+        } finally {
+            btn.disabled  = false;
+            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Generar boleta`;
+        }
+    };
+
+    /* ══════════════════════════════════════════════════════════════════════
+       TICKET POS
+    ══════════════════════════════════════════════════════════════════════ */
+    function mostrarTicket({ idBoleta, cajero, fechaEmision, instancias, remaining, carritoSnap, descPromos, descOfertas, descTotal, subtotal }) {
+        const NOMBRE_LOCAL = 'Botillería Cuatro Ases';
+        const total = Math.max(0, subtotal - descTotal);
+        const pad58  = (l, r) => {
+            const lStr = String(l ?? '');
+            const rStr = String(r ?? '');
+            const dots = Math.max(1, 28 - lStr.length - rStr.length);
+            return `${lStr}${' '.repeat(dots)}${rStr}`;
+        };
+
+        let lineas = '';
+
+        // ── Ítems de promo ────────────────────────────────────────────────
+        instancias.forEach(inst => {
+            lineas += `
+            <hr class="ticket-hr">
+            <div class="ticket-row ticket-promo-tag">
+                <span class="tk-l">${x(inst.promoNombre)}</span>
+                <span class="tk-r ticket-bold">$${fmt(inst.promoPrecio)}</span>
+            </div>`;
+            inst.itemsActivos.forEach(({ nombre, cantReq, precio }) => {
+                lineas += `
+            <div class="ticket-row" style="padding-left:.8rem;">
+                <span class="tk-l">${x(nombre)}</span>
+                <span class="tk-r">${cantReq} x $${fmt(precio)}</span>
+            </div>`;
+            });
+            if (inst.ahorro > 0) {
+                lineas += `
+            <div class="ticket-row ticket-desc" style="padding-left:.8rem;font-size:10px;">
+                <span class="tk-l">Ahorro promo</span>
+                <span class="tk-r">-$${fmt(inst.ahorro)}</span>
+            </div>`;
+            }
+        });
+
+        // ── Ítems individuales ────────────────────────────────────────────
+        let hayIndiv = false;
+        carritoSnap.forEach((it, id) => {
+            const cantRest = remaining.get(id) ?? 0;
+            if (cantRest <= 0) return;
+            if (!hayIndiv) { lineas += `<hr class="ticket-hr">`; hayIndiv = true; }
+            const tieneOferta = OFERTAS_MAP[id] != null;
+            const precioFinal = tieneOferta ? OFERTAS_MAP[id] : it.precio;
+            const precioHtml  = tieneOferta
+                ? `<span style="text-decoration:line-through;font-size:9px;">$${fmt(it.precio)}</span> $${fmt(precioFinal)}`
+                : `$${fmt(precioFinal)}`;
+            lineas += `
+            <div class="ticket-row">
+                <span class="tk-l">${x(it.nombre)}${tieneOferta ? ' <em>(oferta)</em>' : ''}</span>
+                <span class="tk-r">${cantRest} x ${precioHtml}</span>
+            </div>`;
+        });
+
+        // ── Totales ───────────────────────────────────────────────────────
+        lineas += `<hr class="ticket-hr-sol">`;
+        lineas += `<div class="ticket-row"><span class="tk-l">Subtotal</span><span class="tk-r">$${fmt(subtotal)}</span></div>`;
+
+        descPromos.forEach(({ nombre, ahorro }) => {
+            lineas += `<div class="ticket-row ticket-desc"><span class="tk-l">Promo: ${x(nombre)}</span><span class="tk-r">-$${fmt(ahorro)}</span></div>`;
+        });
+        descOfertas.forEach(({ nombre, ahorro }) => {
+            lineas += `<div class="ticket-row ticket-desc"><span class="tk-l">Oferta: ${x(nombre)}</span><span class="tk-r">-$${fmt(ahorro)}</span></div>`;
+        });
+        if (descTotal > 0) {
+            lineas += `<div class="ticket-row ticket-desc ticket-bold"><span class="tk-l">Total descuentos</span><span class="tk-r">-$${fmt(descTotal)}</span></div>`;
+        }
+        lineas += `<hr class="ticket-hr-sol">`;
+        lineas += `<div class="ticket-row ticket-total"><span class="tk-l">TOTAL</span><span class="tk-r">$${fmt(total)}</span></div>`;
+
+        const html = `
+        <div class="ticket-overlay" id="ticketOverlay">
+            <div class="ticket-wrap">
+                <div class="ticket-actions">
+                    <button class="btn-print" onclick="window.print()">Imprimir</button>
+                    <button class="btn-cerrar" onclick="document.getElementById('ticketOverlay').remove()">✕ Cerrar</button>
+                </div>
+                <div class="ticket">
+                    <div class="ticket-center ticket-bold" style="font-size:14px;">${x(NOMBRE_LOCAL)}</div>
+                    <div class="ticket-center" style="font-size:10px;">TICKET INTERNO</div>
+                    <hr class="ticket-hr-sol">
+                    <div class="ticket-row"><span class="tk-l">N° Boleta</span><span class="tk-r ticket-bold">${idBoleta}</span></div>
+                    <div class="ticket-row"><span class="tk-l">Cajero</span><span class="tk-r">${x(cajero)}</span></div>
+                    <div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">${fechaEmision}</span></div>
+                    <hr class="ticket-hr-sol">
+                    <div class="ticket-row ticket-bold"><span class="tk-l">ARTÍCULO</span><span class="tk-r">VALOR</span></div>
+                    ${lineas}
+                    <hr class="ticket-hr">
+                    <div class="ticket-center" style="margin-top:.5rem;font-size:10px;">¡Gracias por su compra!</div>
+                </div>
+            </div>
+        </div>`;
+
+        // Quitar ticket anterior si existe
+        document.getElementById('ticketOverlay')?.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       UTILIDADES
+    ══════════════════════════════════════════════════════════════════════ */
+    function fmt(n) { return Number(n).toLocaleString('es-CL'); }
+    function x(s) {
+        return String(s ?? '')
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function toast(msg, tipo) {
+        const ico = {
+            exito: '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>',
+            error: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>'
+        };
+        const w = document.getElementById('toastWrap');
+        const t = document.createElement('div');
+        t.className = `toast-msg ${tipo}`;
+        t.innerHTML = `${ico[tipo]}<span>${msg}</span>`;
+        w.appendChild(t);
+        setTimeout(() => t.style.opacity = '0', 3500);
+        setTimeout(() => t.remove(), 3800);
+    }
+
+    renderGrid(CATALOGO);
+    actualizarTotales(); // Mostrar $0 desde el inicio
+
+})();
+</script>
+}

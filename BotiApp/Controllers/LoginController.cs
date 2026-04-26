@@ -47,7 +47,8 @@ namespace BotiApp.Controllers
                 var rutEmpleado = usuario.IdEmpleadoNavigation.Rut;
                 var tipoUsuario = usuario.IdTipoUsuarioNavigation.NombreTipoUsuario;
 
-                var principal = ClaimHelper.BuildPrincipal(model.Usuario, nombreEmpleado, rutEmpleado, tipoUsuario);
+                var principal = ClaimHelper.BuildPrincipal(
+                    model.Usuario, nombreEmpleado, rutEmpleado, tipoUsuario, usuario.IdUsuario);
                 var authProperties = ClaimHelper.BuildAuthProperties(model.Recordar);
 
                 await HttpContext.SignInAsync(
