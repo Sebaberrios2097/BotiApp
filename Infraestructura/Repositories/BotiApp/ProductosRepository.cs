@@ -16,6 +16,7 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
 
     public async Task<ProProductos?> ObtenerPorIdAsync(int id)
         => await context.ProProductos
+            .AsNoTracking()  // 👈 evita el tracking
             .Include(p => p.IdMarcaNavigation)
             .Include(p => p.IdTipoProductoNavigation)
             .FirstOrDefaultAsync(p => p.IdProducto == id);
