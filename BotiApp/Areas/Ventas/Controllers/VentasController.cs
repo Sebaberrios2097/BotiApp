@@ -273,7 +273,8 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
             idPromocion      = d.IdPromocion,
             nombrePromocion  = d.IdPromocionNavigation?.Nombre,
             idOferta         = d.IdOfertaProducto,
-            tieneOferta      = d.IdOfertaProducto != null
+            tieneOferta      = d.IdOfertaProducto != null,
+            esEnvase         = d.PrecioNormal == 0 && d.IdPromocion == null && d.IdOfertaProducto == null
         })
     };
 }

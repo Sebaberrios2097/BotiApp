@@ -17,7 +17,10 @@
         precio   = p.Precio,
         stock    = p.Stock,
         ofertaId     = Model.Ofertas.FirstOrDefault(o => o.IdProducto == p.IdProducto)?.IdOfertaProducto,
-        ofertaPrecio = Model.Ofertas.FirstOrDefault(o => o.IdProducto == p.IdProducto)?.PrecioOferta
+        ofertaPrecio = Model.Ofertas.FirstOrDefault(o => o.IdProducto == p.IdProducto)?.PrecioOferta,
+        retornable   = p.ProProductosRetornables != null
+                       ? new { valorEnvase = p.ProProductosRetornables.ValorEnvase, soloEfectivo = p.ProProductosRetornables.SoloEfectivo }
+                       : (object?)null
     }));
 
     var urlBuscar   = Url.Action("BuscarBoletaAjax",   "Ventas", new { area = "Ventas" });
@@ -30,9 +33,19 @@
 /* ══════════════════════════════════════════════════════ LAYOUT */
 .cj-wrap { display:grid; grid-template-columns:1fr 380px; gap:1.25rem; align-items:start; }
 @@media (max-width:1050px) { .cj-wrap { grid-template-columns:1fr; } }
-.cj-page-header { display:flex; align-items:center; gap:.7rem; margin-bottom:1.4rem; }
-.cj-page-header svg { width:26px; height:26px; fill:var(--color-primario); }
-.cj-page-header h1  { font-size:1.35rem; font-weight:700; color:var(--color-secundario); margin:0; }
+
+/* ── Header card ──────────────────────────────────────────── */
+.page-header-card { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); padding:1.1rem 1.5rem; margin-bottom:1.4rem; display:flex; align-items:center; gap:1rem; }
+.phc-icon { width:46px; height:46px; background:rgba(231,111,46,.1); border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.phc-icon svg { width:24px; height:24px; fill:var(--color-primario); }
+.phc-title { font-size:1.15rem; font-weight:700; color:var(--color-secundario); margin:0 0 .15rem; }
+.phc-sub { font-size:.8rem; color:#a89080; margin:0; }
+.phc-badges { margin-left:auto; display:flex; gap:.5rem; flex-shrink:0; flex-wrap:wrap; }
+.phc-badge { display:flex; align-items:center; gap:.35rem; padding:.35rem .75rem; border-radius:20px; font-size:.75rem; font-weight:700; }
+.phc-badge.verde   { background:rgba(34,197,94,.1);   color:#16a34a; }
+.phc-badge.naranja { background:rgba(231,111,46,.1);  color:var(--color-primario); }
+.phc-badge.azul    { background:rgba(99,102,241,.1);  color:#4f46e5; }
+.phc-badge svg { width:13px; height:13px; fill:currentColor; }
 
 /* ══════════════════════════════════════════════════════ PANEL */
 .cj-panel { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; display:flex; flex-direction:column; }
@@ -57,7 +70,7 @@
 .bol-info-item .lbl { color:#a89080; font-weight:600; margin-right:.25rem; }
 .bol-info-item .val { color:var(--color-secundario); font-weight:700; }
 .estado-badge { display:inline-block; padding:.15rem .55rem; border-radius:12px; font-size:.73rem; font-weight:700; }
-.est-1 { background:#fef3c7; color:#d97706; }
+.est-1 { background:#dbeafe; color:#1d4ed8; }
 .est-2 { background:#fee2e2; color:#dc2626; }
 .est-3 { background:#dcfce7; color:#16a34a; }
 
@@ -160,6 +173,10 @@
 .btn-quitar-metodo { width:22px; height:22px; border:none; border-radius:4px; background:rgba(239,68,68,.08); color:#dc2626; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .12s; }
 .btn-quitar-metodo:hover { background:rgba(239,68,68,.2); }
 .btn-quitar-metodo svg { width:12px; height:12px; fill:currentColor; }
+.cobro-item.bloqueado { background:rgba(239,68,68,.04); border-color:rgba(239,68,68,.2); }
+.cobro-item-lock { display:flex; align-items:center; justify-content:center; width:22px; height:22px; color:#dc2626; flex-shrink:0; }
+.cobro-item-lock svg { width:13px; height:13px; fill:currentColor; }
+.cobro-item-envase-tag { font-size:.67rem; font-weight:700; background:#fef2f2; color:#dc2626; border-radius:4px; padding:.05rem .25rem; margin-left:.3rem; }
 
 /* Resumen */
 .cobro-resumen { border-top:1px solid #f0ebe5; padding-top:.7rem; display:flex; flex-direction:column; gap:.25rem; }
@@ -171,8 +188,8 @@
 .diferencia-err { color:#dc2626 !important; }
 
 /* Vuelto (dentro del resumen) */
-.cobro-vuelto-row { display:flex; justify-content:space-between; align-items:center; background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:8px; padding:.45rem .75rem; font-size:.86rem; font-weight:700; color:#15803d; }
-.cobro-vuelto-label { font-weight:600; color:#15803d; }
+.cobro-vuelto-row { display:flex; justify-content:space-between; align-items:center; background:rgba(231,111,46,.08); border:1.5px solid rgba(231,111,46,.28); border-radius:8px; padding:.5rem .75rem; font-size:.9rem; font-weight:700; color:var(--color-primario); }
+.cobro-vuelto-label { font-weight:600; color:var(--color-primario); }
 .cobro-recibido-row { display:flex; align-items:center; gap:.55rem; font-size:.83rem; }
 .cobro-recibido-row label { font-weight:600; color:#a89080; flex-shrink:0; }
 .cobro-recibido-row input { flex:1; padding:.4rem .5rem; border:1.5px solid #e0d5cc; border-radius:6px; font-size:.87rem; text-align:right; background:#fff; color:var(--color-secundario); outline:none; }
@@ -194,6 +211,16 @@
 .estado-final.pagada  p   { color:#15803d; }
 .estado-final.anulada svg { fill:#dc2626; }
 .estado-final.anulada p   { color:#b91c1c; }
+
+/* ══════════════════════════════════════════════════════ FILAS ENVASE */
+.tr-envase td { background:rgba(231,111,46,.035); font-size:.78rem; border-bottom:1px dashed rgba(231,111,46,.18) !important; }
+.td-envase-lbl { display:inline-flex; align-items:center; gap:.3rem; color:var(--color-primario); font-weight:600; }
+.td-envase-lbl svg { width:12px; height:12px; fill:var(--color-primario); }
+.td-envase-ef { background:#fef2f2; color:#dc2626; border-radius:4px; padding:.05rem .28rem; font-size:.65rem; font-weight:700; margin-left:.3rem; }
+
+/* ── Alerta envase en cobro ───────────────────────────────── */
+.cobro-envase-alerta { display:flex; align-items:flex-start; gap:.45rem; background:rgba(239,68,68,.06); border:1px solid rgba(239,68,68,.22); border-radius:9px; padding:.6rem .75rem; font-size:.78rem; color:#dc2626; font-weight:600; line-height:1.4; }
+.cobro-envase-alerta svg { width:14px; height:14px; fill:#dc2626; flex-shrink:0; margin-top:.1rem; }
 
 /* ══════════════════════════════════════════════════════ TOAST */
 .toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
@@ -240,9 +267,20 @@
 <div class="toast-wrap" id="toastWrap"></div>
 @Html.AntiForgeryToken()
 
-<div class="cj-page-header">
-    <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
-    <h1>Caja</h1>
+<div class="page-header-card">
+    <div class="phc-icon">
+        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+    </div>
+    <div>
+        <h1 class="phc-title">Caja</h1>
+        <p class="phc-sub">Busca una boleta por número y procesa el cobro</p>
+    </div>
+    <div class="phc-badges">
+        <span class="phc-badge azul">
+            <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1H6.6c.12 2.19 1.76 3.42 3.7 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+            @(Model.PuedeCobrar ? "Cajero autorizado" : "Solo lectura")
+        </span>
+    </div>
 </div>
 
 <div class="cj-wrap">
@@ -355,6 +393,12 @@
 
                 <div id="cobroForm" style="display:none; flex-direction:column; gap:.8rem;">
 
+                    <!-- Alerta envase solo efectivo -->
+                    <div class="cobro-envase-alerta" id="cobroEnvaseAlerta" style="display:none;">
+                        <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                        <span id="cobroEnvaseAlertaMsg">Esta boleta incluye envases que deben pagarse en efectivo.</span>
+                    </div>
+
                     <!-- Método principal: selecciona y ya queda listo para cobrar -->
                     <div>
                         <div style="font-size:.78rem; font-weight:700; color:#a89080; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.45rem;">Método de pago</div>
@@ -444,6 +488,7 @@
 </div>
 
 @section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 <script>
 (function () {
     /* ── Datos del servidor ──────────────────────────────────────────────── */
@@ -456,6 +501,10 @@
     const URL_MODIFICA = '@Html.Raw(urlModifica)';
     const URL_COBRAR   = '@Html.Raw(urlCobrar)';
     const URL_ANULAR   = '@Html.Raw(urlAnular)';
+
+    /* ── Mapa de retornables ─────────────────────────────────────────────── */
+    const RETORNABLES_MAP = {};
+    CATALOGO.forEach(p => { if (p.retornable) RETORNABLES_MAP[p.id] = p.retornable; });
 
     /* ── Estado ──────────────────────────────────────────────────────────── */
     let boletaActual  = null;
@@ -664,6 +713,13 @@
        COBRO
     ════════════════════════════════════════════════════ */
 
+    /* Retorna el monto total que DEBE pagarse en efectivo (soloEfectivo) */
+    function calcMontoSoloEfectivo() {
+        return detalleActual
+            .filter(d => d.esEnvase && RETORNABLES_MAP[d.idProducto]?.soloEfectivo)
+            .reduce((s, d) => s + d.subtotal, 0);
+    }
+
     /* Al cargar boleta, seleccionar automáticamente el primer método por el total */
     function inicializarCobro(montoTotal) {
         metodosCobro = [];
@@ -679,15 +735,38 @@
         const id     = parseInt(sel.value);
         const nombre = sel.selectedOptions[0].dataset.nombre;
         const efec   = METODOS_PAGO.find(m => m.id === id)?.esEfectivo ?? false;
-        const monto  = montoForzado ?? boletaActual?.montoTotal ?? 0;
 
-        /* Reemplazar el primer método (el principal) */
+        // Quitar entradas bloqueadas previas para recalcular
+        metodosCobro = metodosCobro.filter(m => !m.bloqueado);
+
+        const extrasNoP = metodosCobro.filter(m => !m.esPrincipal).reduce((s, m) => s + m.monto, 0);
+        const totalBol  = boletaActual?.montoTotal ?? 0;
+        const montoBase = montoForzado !== undefined ? montoForzado : Math.max(0, totalBol - extrasNoP);
+
+        // Si el método principal no es efectivo, reservar soloEfectivo automáticamente
+        const montoSoloEf = efec ? 0 : calcMontoSoloEfectivo();
+        const montoPrinc  = Math.max(0, montoBase - montoSoloEf);
+
+        /* Actualizar/insertar principal */
         if (metodosCobro.length > 0 && metodosCobro[0].esPrincipal) {
-            metodosCobro[0] = { idMetodoPago: id, nombre, monto, esEfectivo: efec, esPrincipal: true };
+            metodosCobro[0] = { idMetodoPago: id, nombre, monto: montoPrinc, esEfectivo: efec, esPrincipal: true };
         } else {
-            metodosCobro = [{ idMetodoPago: id, nombre, monto, esEfectivo: efec, esPrincipal: true },
+            metodosCobro = [{ idMetodoPago: id, nombre, monto: montoPrinc, esEfectivo: efec, esPrincipal: true },
                              ...metodosCobro.filter(m => !m.esPrincipal)];
         }
+
+        /* Agregar entrada bloqueada de efectivo para soloEfectivo si aplica */
+        if (montoSoloEf > 0) {
+            const metEfec = METODOS_PAGO.find(m => m.esEfectivo);
+            if (metEfec) {
+                metodosCobro.push({
+                    idMetodoPago: metEfec.id, nombre: metEfec.nombre,
+                    monto: montoSoloEf, esEfectivo: true,
+                    esPrincipal: false, bloqueado: true
+                });
+            }
+        }
+
         renderMetodosCobro();
     };
 
@@ -720,6 +799,7 @@
     };
 
     window.quitarMetodo = function (i) {
+        if (metodosCobro[i]?.bloqueado) return;  // pago obligatorio, no se puede quitar
         const quitado = metodosCobro[i];
         metodosCobro.splice(i, 1);
         /* Si quita uno adicional, devolver su monto al principal */
@@ -741,14 +821,17 @@
             totalReg += m.monto;
             if (m.esEfectivo) hayEfec = true;
             const div = document.createElement('div');
-            div.className = 'cobro-item';
+            div.className = 'cobro-item' + (m.bloqueado ? ' bloqueado' : '');
+            const envaseTag = m.bloqueado ? '<span class="cobro-item-envase-tag">envase</span>' : '';
             div.innerHTML =
-                `<span class="cobro-item-nombre">${x(m.nombre)}</span>` +
+                `<span class="cobro-item-nombre">${x(m.nombre)}${envaseTag}</span>` +
                 `<span class="cobro-item-monto">${fmt(m.monto)}</span>` +
-                (!m.esPrincipal
-                    ? `<button class="btn-quitar-metodo" onclick="quitarMetodo(${i})" title="Quitar">` +
-                      `<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>`
-                    : '');
+                (m.bloqueado
+                    ? `<span class="cobro-item-lock" title="Pago obligatorio en efectivo"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></span>`
+                    : (!m.esPrincipal
+                        ? `<button class="btn-quitar-metodo" onclick="quitarMetodo(${i})" title="Quitar">` +
+                          `<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>`
+                        : ''));
             list.appendChild(div);
         });
 
@@ -771,21 +854,48 @@
         document.getElementById('cobroVueltoRow').style.display   = hayEfec ? 'flex' : 'none';
         if (!hayEfec) document.getElementById('inputRecibido').value = '';
         recalcVuelto();
-
-        document.getElementById('btnFinalizar').disabled =
-            diff !== 0 || metodosCobro.length === 0 || metodosCobro.every(m => m.monto <= 0);
     }
 
     window.recalcVuelto = function () {
         const montoEfec = metodosCobro.filter(m => m.esEfectivo).reduce((s, m) => s + m.monto, 0);
+        const hayEfec   = montoEfec > 0;
         const recibido  = parseInt(document.getElementById('inputRecibido')?.value) || 0;
         const vuelto    = Math.max(0, recibido - montoEfec);
         const lbl       = document.getElementById('lblVuelto');
         if (lbl) lbl.textContent = fmt(vuelto);
+
+        // Actualizar habilitación del botón Finalizar
+        const totalReg   = metodosCobro.reduce((s, m) => s + m.monto, 0);
+        const total      = boletaActual?.montoTotal ?? 0;
+        const diff       = totalReg - total;
+        const recibidoOk = !hayEfec || recibido > 0;  // si hay efectivo, exigir monto recibido
+        const btnFin = document.getElementById('btnFinalizar');
+        if (btnFin) btnFin.disabled = diff !== 0 || metodosCobro.length === 0
+            || metodosCobro.every(m => m.monto <= 0) || !recibidoOk;
     };
 
     window.finalizarCobro = async function () {
         if (!boletaActual || boletaActual.idEstado !== 1) return;
+
+        const montoEfec  = metodosCobro.filter(m => m.esEfectivo).reduce((s, m) => s + m.monto, 0);
+        const recibido   = parseInt(document.getElementById('inputRecibido')?.value) || 0;
+        const vuelto     = montoEfec > 0 ? Math.max(0, recibido - montoEfec) : 0;
+        const vueltoHtml = montoEfec > 0 ? `<br><span style="font-size:.85em;">Vuelto: <strong>${fmt(vuelto)}</strong></span>` : '';
+
+        const result = await Swal.fire({
+            title: '¿Finalizar cobro?',
+            html: `Boleta N° <strong>${boletaActual.idBoleta}</strong><br>` +
+                  `Total: <strong>${fmt(boletaActual.montoTotal)}</strong>${vueltoHtml}`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, finalizar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#e76f2e',
+            cancelButtonColor: '#6b7280',
+            reverseButtons: true
+        });
+        if (!result.isConfirmed) return;
+
         const btn = document.getElementById('btnFinalizar');
         setBotonCargando(btn, true);
         const pagos = metodosCobro.filter(m => m.monto > 0).map(m => ({ idMetodoPago: m.idMetodoPago, monto: m.monto }));
@@ -805,8 +915,33 @@
         tbody.innerHTML = '';
         let total = 0;
 
+        // Verificar si hay envases soloEfectivo para la alerta
+        let haySoloEfectivo = false;
+
         detalleActual.forEach((d, i) => {
             total += d.subtotal;
+
+            if (d.esEnvase) {
+                // ── Fila de envase (solo lectura) ──────────────────────────
+                const retornable = RETORNABLES_MAP[d.idProducto];
+                const soloEf = retornable?.soloEfectivo ?? false;
+                if (soloEf) haySoloEfectivo = true;
+                const efBadge = soloEf
+                    ? `<span class="td-envase-ef">solo efectivo</span>`
+                    : '';
+                const tr = document.createElement('tr');
+                tr.className = 'tr-envase';
+                tr.innerHTML =
+                    `<td><span class="td-envase-lbl"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>Envase: ${x(d.nombre)}</span>${efBadge}</td>` +
+                    `<td style="color:var(--color-primario);font-weight:700;">${fmt(d.precioUnitario)}</td>` +
+                    `<td>${d.cantidad}</td>` +
+                    `<td style="color:var(--color-primario);font-weight:700;">${fmt(d.subtotal)}</td>` +
+                    `<td></td>`;
+                tbody.appendChild(tr);
+                return;
+            }
+
+            // ── Fila normal ─────────────────────────────────────────────────
             const tieneDesc  = d.precioNormal && d.precioNormal !== d.precioUnitario;
             const precioHtml = tieneDesc
                 ? `<span class="td-precio-normal">${fmt(d.precioNormal)}</span><br><span class="td-precio-descuento">${fmt(d.precioUnitario)}</span>`
@@ -831,6 +966,10 @@
 
         document.getElementById('totalDisplay').textContent = fmt(total);
 
+        // Mostrar/ocultar alerta de envase solo efectivo
+        const alertaEl = document.getElementById('cobroEnvaseAlerta');
+        if (alertaEl) alertaEl.style.display = haySoloEfectivo ? 'flex' : 'none';
+
         /* Actualizar el total en el panel cobro si está visible */
         if (PUEDE_COBRAR && boletaActual && boletaActual.idEstado === 1) {
             document.getElementById('resTotalBoleta').textContent = fmt(total);
@@ -852,7 +991,13 @@
     };
 
     window.eliminarFila = function (i) {
+        const idProd = detalleActual[i]?.idProducto;
         detalleActual.splice(i, 1);
+        // Si había una fila de envase para el mismo producto, eliminarla también
+        if (idProd != null) {
+            const idxEnvase = detalleActual.findIndex(d => d.esEnvase && d.idProducto === idProd);
+            if (idxEnvase >= 0) detalleActual.splice(idxEnvase, 1);
+        }
         renderDetalle();
     };
 

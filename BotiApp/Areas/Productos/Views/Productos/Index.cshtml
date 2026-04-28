@@ -4,104 +4,113 @@
 }
 
 <style>
-    /* ── Encabezado ── */
-    .pro-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.75rem; }
-    .pro-title  { display:flex; align-items:center; gap:0.65rem; }
-    .pro-title svg { width:28px; height:28px; fill:var(--color-primario); }
-    .pro-title h1  { font-size:1.45rem; font-weight:700; color:var(--color-secundario); margin:0; }
-
-    .btn-nuevo {
-        display:inline-flex; align-items:center; gap:0.45rem;
-        padding:0.55rem 1.1rem; background-color:var(--color-primario);
-        color:var(--blanco); border:none; border-radius:8px;
-        font-size:0.88rem; font-weight:600; cursor:pointer;
-        transition:background-color 0.2s, transform 0.15s;
+    /* ── Header card ── */
+    .page-header-card {
+        background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.08);
+        padding:1.25rem 1.5rem; margin-bottom:1.5rem;
+        display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;
     }
+    .page-header-left { display:flex; align-items:center; gap:.85rem; }
+    .page-header-icon { width:46px; height:46px; background:rgba(231,111,46,.12); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .page-header-icon svg { width:24px; height:24px; fill:var(--color-primario); }
+    .page-header-title { font-size:1.3rem; font-weight:700; color:var(--color-secundario); margin:0; }
+    .page-header-sub   { font-size:.82rem; color:#9a8070; margin:.1rem 0 0; }
+
+    .btn-nuevo { display:inline-flex; align-items:center; gap:.45rem; padding:.55rem 1.1rem; background:var(--color-primario); color:#fff; border:none; border-radius:8px; font-size:.88rem; font-weight:600; cursor:pointer; transition:background .2s, transform .15s; }
     .btn-nuevo svg { width:16px; height:16px; fill:currentColor; }
-    .btn-nuevo:hover { background-color:#cf5f22; transform:translateY(-1px); }
+    .btn-nuevo:hover { background:#cf5f22; transform:translateY(-1px); }
 
-    /* ── Buscador ── */
-    .pro-search-bar {
-        display:flex; align-items:center; gap:0.6rem;
-        background:#fff; border:1.5px solid #e8ddd4; border-radius:8px;
-        padding:0.45rem 0.85rem; margin-bottom:1.25rem; max-width:400px;
-    }
-    .pro-search-bar svg   { width:18px; height:18px; fill:var(--color-primario); opacity:0.7; }
-    .pro-search-bar input { border:none; outline:none; font-size:0.9rem; width:100%; background:transparent; color:var(--color-secundario); }
+    /* ── Tabs ── */
+    .tabs-nav { display:flex; gap:0; background:#fff; border-radius:12px 12px 0 0; border:1.5px solid #ede5dc; border-bottom:none; overflow:hidden; width:fit-content; }
+    .tab-btn { display:inline-flex; align-items:center; gap:.5rem; padding:.75rem 1.4rem; font-size:.88rem; font-weight:600; color:#9a8070; background:transparent; border:none; cursor:pointer; border-bottom:3px solid transparent; transition:color .15s, background .15s, border-color .15s; white-space:nowrap; }
+    .tab-btn svg { width:16px; height:16px; fill:currentColor; }
+    .tab-btn:hover { color:var(--color-primario); background:rgba(231,111,46,.04); }
+    .tab-btn.active { color:var(--color-primario); background:rgba(231,111,46,.06); border-bottom-color:var(--color-primario); }
+    .tab-badge { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; border-radius:10px; font-size:.7rem; font-weight:700; padding:0 5px; background:rgba(231,111,46,.15); color:var(--color-primario); }
+    .tab-btn.active .tab-badge { background:var(--color-primario); color:#fff; }
+    .tab-panel { display:none; background:#f9f5f2; border-radius:0 12px 12px 12px; padding:1.5rem; border:1.5px solid #ede5dc; }
+    .tab-panel.active { display:block; }
+
+    /* ── Toolbar ── */
+    .pro-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem; margin-bottom:1.25rem; }
+    .pro-search-bar { display:flex; align-items:center; gap:.6rem; background:#fff; border:1.5px solid #e8ddd4; border-radius:8px; padding:.45rem .85rem; flex:1; min-width:220px; max-width:360px; transition:border-color .15s; }
+    .pro-search-bar:focus-within { border-color:var(--color-primario); }
+    .pro-search-bar svg   { width:17px; height:17px; fill:var(--color-primario); opacity:.7; flex-shrink:0; }
+    .pro-search-bar input { border:none; outline:none; font-size:.9rem; width:100%; background:transparent; color:var(--color-secundario); }
+    .pro-filter-select { padding:.46rem .75rem; border:1.5px solid #e8ddd4; border-radius:8px; font-size:.86rem; color:var(--color-secundario); background:#fff; outline:none; cursor:pointer; transition:border-color .15s; }
+    .pro-filter-select:focus { border-color:var(--color-primario); }
+    .pro-results-info { font-size:.8rem; color:#9a8070; margin-left:auto; white-space:nowrap; }
 
     /* ── Tabla ── */
     .pro-card  { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; }
-    .pro-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
-    .pro-table thead tr { background-color:var(--color-secundario); color:var(--crema); }
-    .pro-table thead th { padding:0.85rem 1rem; font-weight:600; font-size:0.79rem; letter-spacing:0.5px; text-transform:uppercase; white-space:nowrap; }
-    .pro-table tbody tr { border-bottom:1px solid #f0ebe5; transition:background-color 0.15s; }
+    .pro-table { width:100%; border-collapse:collapse; font-size:.88rem; }
+    .pro-table thead tr { background:var(--color-secundario); color:var(--crema); }
+    .pro-table thead th { padding:.85rem 1rem; font-weight:600; font-size:.79rem; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+    .pro-table thead th.sortable { cursor:pointer; user-select:none; }
+    .pro-table thead th.sortable:hover { background:rgba(255,255,255,.08); }
+    .pro-table thead th .sort-icon { opacity:.5; font-size:.65rem; margin-left:.25rem; }
+    .pro-table thead th.sort-asc .sort-icon::after  { content:' ▲'; opacity:1; }
+    .pro-table thead th.sort-desc .sort-icon::after { content:' ▼'; opacity:1; }
+    .pro-table tbody tr { border-bottom:1px solid #f0ebe5; transition:background .15s; }
     .pro-table tbody tr:last-child { border-bottom:none; }
-    .pro-table tbody tr:hover { background-color:rgba(231,111,46,.04); }
-    .pro-table td { padding:0.75rem 1rem; color:var(--color-secundario); vertical-align:middle; }
+    .pro-table tbody tr:hover { background:rgba(231,111,46,.04); }
+    .pro-table td { padding:.75rem 1rem; color:var(--color-secundario); vertical-align:middle; }
 
     .prod-img { width:44px; height:44px; border-radius:8px; object-fit:cover; border:1.5px solid #e8ddd4; background:#f5f0eb; }
     .prod-img-ph { width:44px; height:44px; border-radius:8px; background:#f5f0eb; display:flex; align-items:center; justify-content:center; border:1.5px solid #e8ddd4; }
     .prod-img-ph svg { width:22px; height:22px; fill:#c9b8a8; }
 
-    .badge-estado { display:inline-flex; align-items:center; padding:0.25rem 0.65rem; border-radius:20px; font-size:0.75rem; font-weight:600; }
-    .badge-estado.activo   { background:rgba(34,197,94,.12); color:#16a34a; }
-    .badge-estado.inactivo { background:rgba(239,68,68,.10); color:#dc2626; }
+    .badge-estado { display:inline-flex; align-items:center; padding:.25rem .65rem; border-radius:20px; font-size:.75rem; font-weight:600; }
+    .badge-estado.activo   { background:rgba(34,197,94,.12);  color:#16a34a; }
+    .badge-estado.inactivo { background:rgba(239,68,68,.10);  color:#dc2626; }
+    .badge-ret { display:inline-flex; align-items:center; gap:.25rem; padding:.18rem .5rem; border-radius:20px; font-size:.7rem; font-weight:600; background:rgba(99,102,241,.1); color:#6366f1; margin-left:.35rem; }
+    .badge-ret svg { width:11px; height:11px; fill:currentColor; }
 
     .td-precio { font-weight:700; color:var(--color-primario); font-variant-numeric:tabular-nums; }
     .td-stock { font-weight:600; }
     .td-stock.bajo { color:#dc2626; }
     .td-stock.ok   { color:#16a34a; }
 
-    .acc-btns { display:flex; gap:0.4rem; }
-    .btn-acc  { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:6px; border:none; cursor:pointer; text-decoration:none; transition:background-color 0.15s, transform 0.12s; }
-    .btn-acc svg { width:16px; height:16px; fill:currentColor; }
-    .btn-acc.ver     { background:rgba(99,102,241,.1); color:#6366f1; }
-    .btn-acc.ver:hover     { background:rgba(99,102,241,.2); transform:scale(1.1); }
-    .btn-acc.editar  { background:rgba(231,111,46,.1); color:var(--color-primario); }
-    .btn-acc.editar:hover  { background:rgba(231,111,46,.2); transform:scale(1.1); }
-    .btn-acc.eliminar{ background:rgba(239,68,68,.1); color:#dc2626; }
-    .btn-acc.eliminar:hover{ background:rgba(239,68,68,.2); transform:scale(1.1); }
+    .acc-btns { display:flex; gap:.35rem; flex-wrap:nowrap; }
+    .btn-acc  { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; border:none; cursor:pointer; text-decoration:none; transition:background .15s, transform .12s; }
+    .btn-acc svg { width:15px; height:15px; fill:currentColor; }
+    .btn-acc.ver      { background:rgba(99,102,241,.1);  color:#6366f1; }
+    .btn-acc.ver:hover      { background:rgba(99,102,241,.2);  transform:scale(1.1); }
+    .btn-acc.editar   { background:rgba(231,111,46,.1);  color:var(--color-primario); }
+    .btn-acc.editar:hover   { background:rgba(231,111,46,.2);  transform:scale(1.1); }
+    .btn-acc.toggle-on  { background:rgba(239,68,68,.1);   color:#dc2626; }
+    .btn-acc.toggle-on:hover  { background:rgba(239,68,68,.2);   transform:scale(1.1); }
+    .btn-acc.toggle-off { background:rgba(34,197,94,.1);  color:#16a34a; }
+    .btn-acc.toggle-off:hover { background:rgba(34,197,94,.2);  transform:scale(1.1); }
+    .btn-acc.eliminar { background:rgba(239,68,68,.1);   color:#dc2626; }
+    .btn-acc.eliminar:hover { background:rgba(239,68,68,.2);   transform:scale(1.1); }
+
+    /* ── Paginado ── */
+    .pag-wrap { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; padding:.85rem 1rem; border-top:1px solid #f0ebe5; background:#fff; }
+    .pag-info { font-size:.8rem; color:#9a8070; }
+    .pag-btns { display:flex; gap:.3rem; }
+    .pag-btn { display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:32px; padding:0 .5rem; border-radius:6px; border:1.5px solid #e8ddd4; font-size:.82rem; font-weight:600; cursor:pointer; background:#fff; color:var(--color-secundario); transition:background .15s, border-color .15s, color .15s; }
+    .pag-btn:hover:not(:disabled) { background:rgba(231,111,46,.08); border-color:var(--color-primario); color:var(--color-primario); }
+    .pag-btn.active { background:var(--color-primario); border-color:var(--color-primario); color:#fff; }
+    .pag-btn:disabled { opacity:.4; cursor:not-allowed; }
+    .pag-size-select { padding:.35rem .6rem; border:1.5px solid #e8ddd4; border-radius:6px; font-size:.82rem; color:var(--color-secundario); background:#fff; outline:none; cursor:pointer; }
 
     .empty-state { text-align:center; padding:3.5rem 1rem; color:#a89080; }
-    .empty-state svg { width:56px; height:56px; fill:#ddd0c4; margin-bottom:0.75rem; }
+    .empty-state svg { width:56px; height:56px; fill:#ddd0c4; margin-bottom:.75rem; display:block; margin-left:auto; margin-right:auto; }
 
     /* ── Modal overlay ── */
-    .m-overlay {
-        display:none; position:fixed; inset:0;
-        background:rgba(0,0,0,.5); z-index:600;
-        align-items:flex-start; justify-content:center;
-        overflow-y:auto; padding:2rem 1rem;
-    }
+    .m-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:600; align-items:flex-start; justify-content:center; overflow-y:auto; padding:2rem 1rem; }
     .m-overlay.open { display:flex; animation:fadeOverlay .2s ease; }
     @@keyframes fadeOverlay { from{opacity:0} to{opacity:1} }
-
-    .m-box {
-        background:#fff; border-radius:16px; width:100%; max-width:920px;
-        box-shadow:0 20px 60px rgba(0,0,0,.2);
-        animation:slideModal .25s ease; margin:auto;
-        overflow:hidden;
-    }
+    .m-box { background:#fff; border-radius:16px; width:100%; max-width:920px; box-shadow:0 20px 60px rgba(0,0,0,.2); animation:slideModal .25s ease; margin:auto; overflow:hidden; }
     @@keyframes slideModal { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
-
-    /* Spinner */
-    .m-spinner {
-        display:flex; flex-direction:column; align-items:center; justify-content:center;
-        padding:4rem 2rem; gap:1rem; color:#a89080;
-    }
-    .spinner-ring {
-        width:40px; height:40px; border:3px solid #f0ebe5;
-        border-top-color:var(--color-primario);
-        border-radius:50%; animation:spin .7s linear infinite;
-    }
+    .m-spinner { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4rem 2rem; gap:1rem; color:#a89080; }
+    .spinner-ring { width:40px; height:40px; border:3px solid #f0ebe5; border-top-color:var(--color-primario); border-radius:50%; animation:spin .7s linear infinite; }
     @@keyframes spin { to{transform:rotate(360deg)} }
 
     /* ── Toast ── */
-    .toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:0.5rem; pointer-events:none; }
-    .toast-msg {
-        display:flex; align-items:center; gap:0.6rem;
-        padding:0.75rem 1.1rem; border-radius:10px; font-size:0.88rem; font-weight:600;
-        box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease;
-    }
+    .toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
+    .toast-msg { display:flex; align-items:center; gap:.6rem; padding:.75rem 1.1rem; border-radius:10px; font-size:.88rem; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease; }
     .toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
     .toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
     .toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
@@ -111,83 +120,123 @@
 <!-- Toasts -->
 <div class="toast-wrap" id="toastWrap"></div>
 
-<!-- Token CSRF para llamadas sin form (eliminar) -->
+<!-- Token CSRF -->
 @Html.AntiForgeryToken()
 
 <!-- Modal overlay -->
 <div class="m-overlay" id="modalOverlay">
     <div class="m-box" id="modalBox">
         <div id="modalBody">
-            <div class="m-spinner">
-                <div class="spinner-ring"></div>
-                <span>Cargando…</span>
-            </div>
+            <div class="m-spinner"><div class="spinner-ring"></div><span>Cargando…</span></div>
         </div>
     </div>
 </div>
 
-<!-- Encabezado -->
-<div class="pro-header">
-    <div class="pro-title">
-        <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
-        <h1>Gestión de Productos</h1>
+<!-- ── Header card ── -->
+<div class="page-header-card">
+    <div class="page-header-left">
+        <div class="page-header-icon">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        </div>
+        <div>
+            <h1 class="page-header-title">Gestión de Productos</h1>
+            <p class="page-header-sub">Administra el catálogo de productos y define los retornables</p>
+        </div>
     </div>
-    <button class="btn-nuevo" onclick="abrirModal('/Productos/Productos/ModalCrear')">
+    <button class="btn-nuevo" id="btnNuevoProducto" onclick="abrirModal('/Productos/Productos/ModalCrear')">
         <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         Nuevo producto
     </button>
 </div>
 
-<!-- Buscador -->
-<div class="pro-search-bar">
-    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-    <input type="text" id="buscador" placeholder="Buscar por nombre, marca o tipo…" oninput="filtrarTabla()" />
+<!-- ── Tabs ── -->
+<div class="tabs-nav">
+    <button class="tab-btn active" id="tab-productos" onclick="cambiarTab('productos')">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        Productos
+        <span class="tab-badge" id="badge-productos">@Model.Count()</span>
+    </button>
+    <button class="tab-btn" id="tab-retornables" onclick="cambiarTab('retornables')">
+        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+        Retornables
+    </button>
 </div>
 
-<!-- Tabla -->
-<div class="pro-card">
-    <table class="pro-table" id="tablaProductos">
-        <thead>
-            <tr>
-                <th></th>
-                <th>Nombre</th>
-                <th>Tipo</th>
-                <th>Marca</th>
-                <th>Precio</th>
-                <th>Stock</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody id="tbodyProductos">
-            @if (!Model.Any())
-            {
-                <tr id="fila-empty">
-                    <td colspan="8">
-                        <div class="empty-state">
-                            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
-                            <p>No hay productos registrados.</p>
-                        </div>
-                    </td>
+<!-- ── Panel: Productos ── -->
+<div class="tab-panel active" id="panel-productos">
+    <div class="pro-toolbar">
+        <div class="pro-search-bar">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" id="buscador" placeholder="Buscar por nombre, marca o tipo…" oninput="filtrarYPaginar()" />
+        </div>
+        <select class="pro-filter-select" id="filtroEstado" onchange="filtrarYPaginar()">
+            <option value="">Todos los estados</option>
+            <option value="activo">Activos</option>
+            <option value="inactivo">Inactivos</option>
+        </select>
+        <span class="pro-results-info" id="resultadosInfo"></span>
+    </div>
+    <div class="pro-card">
+        <table class="pro-table" id="tablaProductos">
+            <thead>
+                <tr>
+                    <th style="width:56px"></th>
+                    <th class="sortable" data-col="1" onclick="sortTabla(1)">Nombre <span class="sort-icon"></span></th>
+                    <th class="sortable" data-col="2" onclick="sortTabla(2)">Tipo <span class="sort-icon"></span></th>
+                    <th class="sortable" data-col="3" onclick="sortTabla(3)">Marca <span class="sort-icon"></span></th>
+                    <th class="sortable" data-col="4" onclick="sortTabla(4)">Precio <span class="sort-icon"></span></th>
+                    <th class="sortable" data-col="5" onclick="sortTabla(5)">Stock <span class="sort-icon"></span></th>
+                    <th>Estado</th>
+                    <th style="width:150px">Acciones</th>
                 </tr>
-            }
-            else
-            {
-                foreach (var p in Model)
+            </thead>
+            <tbody id="tbodyProductos">
+                @if (!Model.Any())
                 {
-                    @Html.Raw(FilaHtml(p))
+                    <tr id="fila-empty">
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+                                <p>No hay productos registrados.</p>
+                            </div>
+                        </td>
+                    </tr>
                 }
-            }
-        </tbody>
-    </table>
+                else
+                {
+                    foreach (var p in Model)
+                    {
+                        @Html.Raw(FilaHtml(p))
+                    }
+                }
+            </tbody>
+        </table>
+        <div class="pag-wrap" id="pagWrap">
+            <div style="display:flex;align-items:center;gap:.5rem">
+                <span class="pag-info">Filas por página:</span>
+                <select class="pag-size-select" id="pagSize" onchange="cambiarTamano()">
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+            <span class="pag-info" id="pagInfo"></span>
+            <div class="pag-btns" id="pagBtns"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Panel: Retornables ── -->
+<div class="tab-panel" id="panel-retornables">
+    <div id="retornablesContent">
+        <div class="m-spinner" style="padding:3rem"><div class="spinner-ring"></div><span>Cargando…</span></div>
+    </div>
 </div>
 
 @functions {
     string FilaHtml(Infraestructura.Entities.BotiApp.ProProductos p)
     {
-        var imgSrc = p.Imagen is { Length: > 0 }
-            ? $"/Productos/Productos/Imagen/{p.IdProducto}"
-            : null;
+        var imgSrc = p.Imagen is { Length: > 0 } ? $"/Productos/Productos/Imagen/{p.IdProducto}" : null;
         var imgHtml = imgSrc is not null
             ? $@"<img class=""prod-img"" src=""{imgSrc}"" alt=""{p.NombreProducto}"" />"
             : @"<div class=""prod-img-ph""><svg viewBox=""0 0 24 24""><path d=""M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z""/></svg></div>";
@@ -196,10 +245,18 @@
         var badgeText  = p.Estado ? "Activo" : "Inactivo";
         var stockClass = p.Stock <= 5 ? "bajo" : "ok";
         var nombre = System.Web.HttpUtility.JavaScriptStringEncode(p.NombreProducto);
+        var toggleClass = p.Estado ? "toggle-on" : "toggle-off";
+        var toggleTitle = p.Estado ? "Desactivar" : "Activar";
+        var toggleIcon  = p.Estado
+            ? @"<svg viewBox=""0 0 24 24""><path d=""M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z""/></svg>"
+            : @"<svg viewBox=""0 0 24 24""><path d=""M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z""/></svg>";
+        var retBadge = p.ProProductosRetornables is not null
+            ? @"<span class=""badge-ret""><svg viewBox=""0 0 24 24""><path d=""M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z""/></svg>Ret.</span>"
+            : "";
         return $@"
-<tr id=""fila-{p.IdProducto}"" data-id=""{p.IdProducto}"">
+<tr id=""fila-{p.IdProducto}"" data-id=""{p.IdProducto}"" data-estado=""{(p.Estado ? "activo" : "inactivo")}"">
   <td>{imgHtml}</td>
-  <td><span style=""font-weight:600"">{p.NombreProducto}</span>{desc}</td>
+  <td><span style=""font-weight:600"">{p.NombreProducto}</span>{retBadge}{desc}</td>
   <td>{p.IdTipoProductoNavigation?.NombreTipoProducto ?? "—"}</td>
   <td>{p.IdMarcaNavigation?.NombreMarca ?? "—"}</td>
   <td class=""td-precio"">${p.Precio:N0}</td>
@@ -213,6 +270,9 @@
       <button class=""btn-acc editar"" title=""Editar"" onclick=""abrirModal('/Productos/Productos/ModalEditar/{p.IdProducto}')"">
         <svg viewBox=""0 0 24 24""><path d=""M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z""/></svg>
       </button>
+      <button class=""btn-acc {toggleClass}"" id=""btn-toggle-{p.IdProducto}"" title=""{toggleTitle}"" onclick=""toggleEstado({p.IdProducto})"">
+        {toggleIcon}
+      </button>
       <button class=""btn-acc eliminar"" title=""Eliminar"" onclick=""confirmarEliminar({p.IdProducto}, '{nombre}')"">
         <svg viewBox=""0 0 24 24""><path d=""M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z""/></svg>
       </button>
@@ -224,142 +284,241 @@
 
 @section Scripts {
 <script>
-// ── Estado global ──────────────────────────────────────────────────────────
+// ── Estado global ─────────────────────────────────────────────────────────
 const overlay  = document.getElementById('modalOverlay');
-const modalBox = document.getElementById('modalBox');
 const tbody    = document.getElementById('tbodyProductos');
 const csrfToken = () => document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
 
-// ── Modal: abrir / cerrar ──────────────────────────────────────────────────
-async function abrirModal(url) {
-    overlay.classList.add('open');
-    document.getElementById('modalBody').innerHTML = `
-        <div class="m-spinner"><div class="spinner-ring"></div><span>Cargando…</span></div>`;
+// ── Paginado ──────────────────────────────────────────────────────────────
+let allRows = [];
+let filteredRows = [];
+let currentPage = 1;
+let pageSize = 10;
 
+function initPaginado() {
+    allRows = Array.from(tbody.querySelectorAll('tr[data-id]'));
+    filteredRows = [...allRows];
+    renderPagina();
+}
+
+function filtrarYPaginar() {
+    const q   = document.getElementById('buscador').value.toLowerCase().trim();
+    const est = document.getElementById('filtroEstado').value;
+    filteredRows = allRows.filter(tr => {
+        const txt = tr.textContent.toLowerCase();
+        const matchQ   = !q   || txt.includes(q);
+        const matchEst = !est || tr.dataset.estado === est;
+        return matchQ && matchEst;
+    });
+    currentPage = 1;
+    renderPagina();
+}
+
+function cambiarTamano() {
+    pageSize = parseInt(document.getElementById('pagSize').value);
+    currentPage = 1;
+    renderPagina();
+}
+
+function renderPagina() {
+    const total = filteredRows.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage - 1) * pageSize;
+    const end   = Math.min(start + pageSize, total);
+    allRows.forEach(tr => tr.style.display = 'none');
+    filteredRows.forEach((tr, i) => { tr.style.display = (i >= start && i < end) ? '' : 'none'; });
+    document.getElementById('pagInfo').textContent =
+        total === 0 ? 'Sin resultados' : `${start + 1}–${end} de ${total}`;
+    document.getElementById('resultadosInfo').textContent =
+        total === allRows.length ? `${total} productos` : `${total} de ${allRows.length} productos`;
+    const pagBtns = document.getElementById('pagBtns');
+    pagBtns.innerHTML = '';
+    pagBtns.appendChild(btnPag('‹', () => { currentPage--; renderPagina(); }, currentPage === 1));
+    let pStart = Math.max(1, currentPage - 2);
+    let pEnd   = Math.min(totalPages, pStart + 4);
+    pStart = Math.max(1, pEnd - 4);
+    if (pStart > 1) { pagBtns.appendChild(btnPag(1, () => { currentPage = 1; renderPagina(); })); if (pStart > 2) pagBtns.appendChild(btnPagDots()); }
+    for (let i = pStart; i <= pEnd; i++) {
+        const b = btnPag(i, ((pg) => () => { currentPage = pg; renderPagina(); })(i));
+        if (i === currentPage) b.classList.add('active');
+        pagBtns.appendChild(b);
+    }
+    if (pEnd < totalPages) { if (pEnd < totalPages - 1) pagBtns.appendChild(btnPagDots()); pagBtns.appendChild(btnPag(totalPages, () => { currentPage = totalPages; renderPagina(); })); }
+    pagBtns.appendChild(btnPag('›', () => { currentPage++; renderPagina(); }, currentPage === totalPages));
+}
+
+function btnPag(label, onClick, disabled = false) {
+    const b = document.createElement('button'); b.className = 'pag-btn'; b.textContent = label; b.disabled = disabled;
+    if (!disabled) b.onclick = onClick; return b;
+}
+function btnPagDots() {
+    const s = document.createElement('span'); s.className = 'pag-btn'; s.style.border = 'none'; s.style.cursor = 'default'; s.textContent = '…'; return s;
+}
+
+// ── Ordenamiento ──────────────────────────────────────────────────────────
+let sortCol = -1, sortAsc = true;
+function sortTabla(col) {
+    if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; }
+    document.querySelectorAll('.pro-table thead th.sortable').forEach(th => {
+        th.classList.remove('sort-asc','sort-desc');
+        if (parseInt(th.dataset.col) === col) th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
+    });
+    filteredRows.sort((a, b) => {
+        const getVal = tr => tr.querySelectorAll('td')[col]?.textContent.trim() ?? '';
+        let va = getVal(a), vb = getVal(b);
+        const na = parseFloat(va.replace(/[^0-9.-]/g,'')), nb = parseFloat(vb.replace(/[^0-9.-]/g,''));
+        const res = !isNaN(na) && !isNaN(nb) ? na - nb : va.localeCompare(vb, 'es');
+        return sortAsc ? res : -res;
+    });
+    filteredRows.forEach(tr => tbody.appendChild(tr));
+    renderPagina();
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+let retornablesCargados = false;
+function cambiarTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    document.getElementById(`panel-${tab}`).classList.add('active');
+    const btnNuevo = document.getElementById('btnNuevoProducto');
+    btnNuevo.style.display = tab === 'productos' ? '' : 'none';
+    if (tab === 'retornables' && !retornablesCargados) cargarRetornables();
+}
+
+async function cargarRetornables() {
     try {
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error();
-        const html = await resp.text();
-        document.getElementById('modalBody').innerHTML = html;
+        const resp = await fetch('/Productos/Productos/TabRetornables');
+        document.getElementById('retornablesContent').innerHTML = await resp.text();
+        retornablesCargados = true;
     } catch {
-        cerrarModal();
-        mostrarToast('Error al cargar el contenido.', 'error');
+        document.getElementById('retornablesContent').innerHTML =
+            '<p style="color:#dc2626;padding:1.5rem">Error al cargar los datos de retornables.</p>';
     }
 }
 
+// ── Modal: abrir / cerrar ─────────────────────────────────────────────────
+async function abrirModal(url) {
+    overlay.classList.add('open');
+    document.getElementById('modalBody').innerHTML =
+        `<div class="m-spinner"><div class="spinner-ring"></div><span>Cargando…</span></div>`;
+    try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error();
+        document.getElementById('modalBody').innerHTML = await resp.text();
+    } catch { cerrarModal(); mostrarToast('Error al cargar el contenido.', 'error'); }
+}
 function cerrarModal() {
     overlay.classList.remove('open');
     setTimeout(() => { document.getElementById('modalBody').innerHTML = ''; }, 250);
 }
-
-// Cerrar al hacer clic fuera del box
 overlay.addEventListener('click', e => { if (e.target === overlay) cerrarModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
 
-// ── Formulario AJAX (Crear / Editar) ──────────────────────────────────────
+// ── Formulario AJAX ───────────────────────────────────────────────────────
 async function submitFormAjax(formId, esNuevo) {
     const form = document.getElementById(formId);
     if (!form) return;
-
     const btn = form.querySelector('[type=submit]');
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
-
     limpiarErroresModal();
-
     try {
         const resp = await fetch(form.action, { method: 'POST', body: new FormData(form) });
         const data = await resp.json();
-
         if (data.ok) {
-            cerrarModal();
-            mostrarToast(data.mensaje, 'exito');
+            cerrarModal(); mostrarToast(data.mensaje, 'exito');
             esNuevo ? agregarFila(data.producto) : actualizarFila(data.producto);
         } else {
             mostrarErroresModal(data.errores ?? {});
             if (data.mensaje) mostrarToast(data.mensaje, 'error');
         }
-    } catch {
-        mostrarToast('Error de conexión. Inténtalo de nuevo.', 'error');
-    } finally {
-        if (btn) { btn.disabled = false; btn.textContent = esNuevo ? 'Guardar producto' : 'Guardar cambios'; }
-    }
+    } catch { mostrarToast('Error de conexión. Inténtalo de nuevo.', 'error'); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = esNuevo ? 'Guardar producto' : 'Guardar cambios'; } }
 }
 
-// ── Eliminar con confirmación inline ─────────────────────────────────────
+// ── Toggle estado ─────────────────────────────────────────────────────────
+async function toggleEstado(id) {
+    const form = new FormData();
+    form.append('__RequestVerificationToken', csrfToken());
+    try {
+        const resp = await fetch(`/Productos/Productos/ToggleEstadoAjax/${id}`, { method: 'POST', body: form });
+        const data = await resp.json();
+        if (data.ok) { mostrarToast(data.mensaje, 'exito'); actualizarToggleFila(id, data.estado); }
+        else mostrarToast(data.mensaje, 'error');
+    } catch { mostrarToast('Error al cambiar el estado.', 'error'); }
+}
+
+function actualizarToggleFila(id, estado) {
+    const fila = document.getElementById(`fila-${id}`);
+    if (!fila) return;
+    fila.dataset.estado = estado ? 'activo' : 'inactivo';
+    const badge = fila.querySelector('.badge-estado');
+    if (badge) { badge.className = `badge-estado ${estado ? 'activo' : 'inactivo'}`; badge.textContent = estado ? 'Activo' : 'Inactivo'; }
+    const btn = document.getElementById(`btn-toggle-${id}`);
+    if (btn) {
+        btn.className = `btn-acc ${estado ? 'toggle-on' : 'toggle-off'}`;
+        btn.title = estado ? 'Desactivar' : 'Activar';
+        btn.innerHTML = estado
+            ? `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>`
+            : `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>`;
+    }
+    filtrarYPaginar();
+}
+
+// ── Eliminar ──────────────────────────────────────────────────────────────
 function confirmarEliminar(id, nombre) {
-    // Reutilizamos el overlay del modal con un contenido de confirmación pequeño
     overlay.classList.add('open');
     document.getElementById('modalBody').innerHTML = `
-    <div style="padding:2.5rem 2rem; max-width:420px; margin:auto; text-align:center;">
-      <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,.1);
-                  display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
-        <svg width="28" height="28" fill="#dc2626" viewBox="0 0 24 24">
-          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-        </svg>
+    <div style="padding:2.5rem 2rem;max-width:420px;margin:auto;text-align:center;">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+        <svg width="28" height="28" fill="#dc2626" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
       </div>
-      <h3 style="font-size:1.05rem;font-weight:700;color:var(--color-secundario);margin-bottom:.5rem;">
-        ¿Eliminar producto?
-      </h3>
-      <p style="font-size:.88rem;color:#7a6050;margin-bottom:1.75rem;">
-        «${nombre}» será eliminado permanentemente. Esta acción no se puede deshacer.
-      </p>
+      <h3 style="font-size:1.05rem;font-weight:700;color:var(--color-secundario);margin-bottom:.5rem;">¿Eliminar producto?</h3>
+      <p style="font-size:.88rem;color:#7a6050;margin-bottom:1.75rem;">«${nombre}» será eliminado permanentemente. Esta acción no se puede deshacer.</p>
       <div style="display:flex;gap:.75rem;justify-content:center;">
-        <button onclick="cerrarModal()"
-          style="padding:.6rem 1.4rem;background:#f0ebe5;color:var(--color-secundario);
-                 border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.9rem;">
-          Cancelar
-        </button>
-        <button onclick="ejecutarEliminar(${id})"
-          style="padding:.6rem 1.4rem;background:#dc2626;color:#fff;
-                 border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.9rem;">
-          Sí, eliminar
-        </button>
+        <button onclick="cerrarModal()" style="padding:.6rem 1.4rem;background:#f0ebe5;color:var(--color-secundario);border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.9rem;">Cancelar</button>
+        <button onclick="ejecutarEliminar(${id})" style="padding:.6rem 1.4rem;background:#dc2626;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.9rem;">Sí, eliminar</button>
       </div>
     </div>`;
 }
-
 async function ejecutarEliminar(id) {
     cerrarModal();
     try {
-        const resp = await fetch(`/Productos/Productos/EliminarAjax/${id}`, {
-            method: 'POST',
-            headers: { 'RequestVerificationToken': csrfToken() }
-        });
+        const resp = await fetch(`/Productos/Productos/EliminarAjax/${id}`, { method: 'POST', headers: { 'RequestVerificationToken': csrfToken() } });
         const data = await resp.json();
         mostrarToast(data.mensaje, data.ok ? 'exito' : 'error');
         if (data.ok) eliminarFila(id);
-    } catch {
-        mostrarToast('Error al eliminar el producto.', 'error');
-    }
+    } catch { mostrarToast('Error al eliminar el producto.', 'error'); }
 }
 
 // ── Manipulación de filas ─────────────────────────────────────────────────
 function agregarFila(p) {
     document.getElementById('fila-empty')?.remove();
     tbody.insertAdjacentHTML('afterbegin', buildFila(p));
+    allRows.unshift(tbody.querySelector(`#fila-${p.idProducto}`));
+    filtrarYPaginar();
+    document.getElementById('badge-productos').textContent = allRows.length;
 }
-
 function actualizarFila(p) {
     const fila = document.getElementById(`fila-${p.idProducto}`);
-    if (fila) {
-        const tmp = document.createElement('tbody');
-        tmp.innerHTML = buildFila(p);
-        fila.replaceWith(tmp.firstElementChild);
-    }
+    if (!fila) return;
+    const tmp = document.createElement('tbody'); tmp.innerHTML = buildFila(p);
+    const newFila = tmp.firstElementChild; fila.replaceWith(newFila);
+    const idx = allRows.indexOf(fila); if (idx !== -1) allRows[idx] = newFila;
+    const idx2 = filteredRows.indexOf(fila); if (idx2 !== -1) filteredRows[idx2] = newFila;
+    renderPagina();
 }
-
 function eliminarFila(id) {
-    document.getElementById(`fila-${id}`)?.remove();
-    if (!tbody.querySelector('tr')) {
-        tbody.innerHTML = `
-        <tr id="fila-empty"><td colspan="8">
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" style="width:56px;height:56px;fill:#ddd0c4;margin-bottom:.75rem;">
-              <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/>
-            </svg>
-            <p>No hay productos registrados.</p>
-          </div>
-        </td></tr>`;
+    const fila = document.getElementById(`fila-${id}`);
+    allRows = allRows.filter(r => r !== fila);
+    filteredRows = filteredRows.filter(r => r !== fila);
+    fila?.remove(); renderPagina();
+    document.getElementById('badge-productos').textContent = allRows.length;
+    if (!tbody.querySelector('tr[data-id]')) {
+        tbody.innerHTML = `<tr id="fila-empty"><td colspan="8"><div class="empty-state">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+            <p>No hay productos registrados.</p></div></td></tr>`;
     }
 }
 
@@ -371,8 +530,14 @@ function buildFila(p) {
     const badge = p.estado ? '<span class="badge-estado activo">Activo</span>' : '<span class="badge-estado inactivo">Inactivo</span>';
     const stock = `<span class="td-stock ${p.stock <= 5 ? 'bajo' : 'ok'}">${p.stock}</span>`;
     const nom   = esc(p.nombreProducto).replace(/'/g, "\\'");
+    const estadoData = p.estado ? 'activo' : 'inactivo';
+    const toggleClass = p.estado ? 'toggle-on' : 'toggle-off';
+    const toggleTitle = p.estado ? 'Desactivar' : 'Activar';
+    const toggleIcon  = p.estado
+        ? `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>`
+        : `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>`;
     return `
-<tr id="fila-${p.idProducto}" data-id="${p.idProducto}">
+<tr id="fila-${p.idProducto}" data-id="${p.idProducto}" data-estado="${estadoData}">
   <td>${imgHtml}</td>
   <td><span style="font-weight:600">${esc(p.nombreProducto)}</span>${desc}</td>
   <td>${esc(p.nombreTipo)}</td>
@@ -382,11 +547,14 @@ function buildFila(p) {
   <td>${badge}</td>
   <td>
     <div class="acc-btns">
-      <button class="btn-acc ver"      onclick="abrirModal('/Productos/Productos/ModalDetalle/${p.idProducto}')" title="Ver detalle">
+      <button class="btn-acc ver" onclick="abrirModal('/Productos/Productos/ModalDetalle/${p.idProducto}')" title="Ver detalle">
         <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
       </button>
-      <button class="btn-acc editar"   onclick="abrirModal('/Productos/Productos/ModalEditar/${p.idProducto}')" title="Editar">
+      <button class="btn-acc editar" onclick="abrirModal('/Productos/Productos/ModalEditar/${p.idProducto}')" title="Editar">
         <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+      </button>
+      <button class="btn-acc ${toggleClass}" id="btn-toggle-${p.idProducto}" title="${toggleTitle}" onclick="toggleEstado(${p.idProducto})">
+        ${toggleIcon}
       </button>
       <button class="btn-acc eliminar" onclick="confirmarEliminar(${p.idProducto},'${nom}')" title="Eliminar">
         <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
@@ -419,25 +587,242 @@ function mostrarToast(msg, tipo) {
         error: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>'
     };
     const w = document.getElementById('toastWrap');
-    const t = document.createElement('div');
-    t.className = `toast-msg ${tipo}`;
-    t.innerHTML = `${iconos[tipo]}<span>${msg}</span>`;
-    w.appendChild(t);
+    const t = document.createElement('div'); t.className = `toast-msg ${tipo}`;
+    t.innerHTML = `${iconos[tipo]}<span>${msg}</span>`; w.appendChild(t);
     setTimeout(() => t.style.opacity = '0', 3500);
     setTimeout(() => t.remove(), 3800);
-}
-
-// ── Filtrado ─────────────────────────────────────────────────────────────
-function filtrarTabla() {
-    const q = document.getElementById('buscador').value.toLowerCase();
-    tbody.querySelectorAll('tr[data-id]').forEach(tr => {
-        tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
 }
 
 // ── Utilidades ────────────────────────────────────────────────────────────
 function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ── Modal selector de retornables ────────────────────────────────────────────
+let RETM_PRODUCTOS = [];
+let retmSeleccionados = new Map(); // idProducto → { valorEnvase, soloEfectivo }
+
+window.abrirModalRetornables = function () {
+    const dataEl = document.getElementById('retmProductosData');
+    RETM_PRODUCTOS = dataEl ? JSON.parse(dataEl.textContent || '[]') : [];
+    retmSeleccionados = new Map();
+    const buscador = document.getElementById('retmBuscador');
+    if (buscador) buscador.value = '';
+    renderModalRetGrid(RETM_PRODUCTOS);
+    actualizarFooterRet();
+    document.getElementById('retmOverlay')?.classList.add('open');
+};
+
+window.cerrarModalRetornables = function () {
+    document.getElementById('retmOverlay')?.classList.remove('open');
+};
+
+window.filtrarModalRet = function () {
+    const q = (document.getElementById('retmBuscador')?.value ?? '').trim().toLowerCase();
+    const filtrados = RETM_PRODUCTOS.filter(p =>
+        p.nombre.toLowerCase().includes(q) || p.marca.toLowerCase().includes(q)
+    );
+    renderModalRetGrid(filtrados);
+};
+
+function renderModalRetGrid(lista) {
+    const grid = document.getElementById('retmGrid');
+    if (!grid) return;
+    if (!lista.length) {
+        grid.innerHTML = `
+        <div class="retm-empty">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <p>Sin resultados para la búsqueda</p>
+        </div>`;
+        return;
+    }
+    grid.innerHTML = lista.map(p => {
+        const sel    = retmSeleccionados.has(p.id);
+        const cfg    = sel ? retmSeleccionados.get(p.id) : { valorEnvase: '', soloEfectivo: false };
+        const imgHtml = p.tieneImagen
+            ? `<img src="/Productos/Productos/Imagen/${p.id}" alt="${esc(p.nombre)}">`
+            : `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`;
+        return `
+        <div class="prod-sel-card${sel ? ' selected' : ''}" id="psc-${p.id}" onclick="toggleSeleccionRet(${p.id})">
+            <div class="check-corner">
+                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+            </div>
+            <div class="psc-img-wrap">${imgHtml}</div>
+            <div class="psc-body">
+                <div class="psc-nombre">${esc(p.nombre)}</div>
+                <div class="psc-marca">${esc(p.marca)}</div>
+            </div>
+            <div class="psc-config" onclick="event.stopPropagation()">
+                <span class="psc-config-lbl">Valor envase ($)</span>
+                <input type="number" min="1" step="1" placeholder="Ej: 500"
+                    id="retm-envase-${p.id}" value="${cfg.valorEnvase}"
+                    oninput="actualizarConfigRet(${p.id})" />
+                <div class="psc-config-check">
+                    <input type="checkbox" id="retm-ef-${p.id}"
+                        ${cfg.soloEfectivo ? 'checked' : ''}
+                        onchange="actualizarConfigRet(${p.id})" />
+                    <label for="retm-ef-${p.id}">Solo efectivo</label>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.toggleSeleccionRet = function (id) {
+    if (retmSeleccionados.has(id)) {
+        retmSeleccionados.delete(id);
+        document.getElementById(`psc-${id}`)?.classList.remove('selected');
+    } else {
+        retmSeleccionados.set(id, { valorEnvase: '', soloEfectivo: false });
+        document.getElementById(`psc-${id}`)?.classList.add('selected');
+        setTimeout(() => document.getElementById(`retm-envase-${id}`)?.focus(), 50);
+    }
+    actualizarFooterRet();
+};
+
+window.actualizarConfigRet = function (id) {
+    if (!retmSeleccionados.has(id)) return;
+    const valorEnvase  = parseInt(document.getElementById(`retm-envase-${id}`)?.value) || '';
+    const soloEfectivo = document.getElementById(`retm-ef-${id}`)?.checked ?? false;
+    retmSeleccionados.set(id, { valorEnvase, soloEfectivo });
+    actualizarFooterRet();
+};
+
+function actualizarFooterRet() {
+    const n       = retmSeleccionados.size;
+    const countEl = document.getElementById('retmSelCount');
+    if (countEl) countEl.innerHTML = `<span>${n}</span> seleccionado${n !== 1 ? 's' : ''}`;
+    const btn = document.getElementById('btnRetmGuardar');
+    if (btn) btn.disabled = n === 0;
+}
+
+window.guardarSeleccionadosRet = async function () {
+    const btn  = document.getElementById('btnRetmGuardar');
+    const items = [];
+    let errorValidacion = null;
+    retmSeleccionados.forEach((cfg, id) => {
+        if (!cfg.valorEnvase || cfg.valorEnvase <= 0) {
+            const p = RETM_PRODUCTOS.find(x => x.id === id);
+            errorValidacion = `Ingrese un valor de envase válido para «${p?.nombre ?? id}»`;
+        } else {
+            items.push({ id, ...cfg });
+        }
+    });
+    if (errorValidacion) { mostrarToast(errorValidacion, 'error'); return; }
+    if (!items.length) return;
+
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-ring" style="width:16px;height:16px;border-width:2px;margin:0;flex-shrink:0"></span>&nbsp;Guardando…`;
+
+    let guardados = 0;
+    for (const item of items) {
+        const form = new FormData();
+        form.append('idProducto',  item.id);
+        form.append('valorEnvase', item.valorEnvase);
+        form.append('soloEfectivo', item.soloEfectivo);
+        form.append('__RequestVerificationToken', csrfToken());
+        try {
+            const resp = await fetch('/Productos/Productos/AgregarRetornableAjax', { method: 'POST', body: form });
+            const data = await resp.json();
+            if (data.ok) { guardados++; } else { mostrarToast(data.mensaje, 'error'); }
+        } catch { mostrarToast('Error de conexión.', 'error'); }
+    }
+
+    cerrarModalRetornables();
+    if (guardados > 0) {
+        mostrarToast(`${guardados} producto${guardados !== 1 ? 's' : ''} retornable${guardados !== 1 ? 's' : ''} agregado${guardados !== 1 ? 's' : ''}.`, 'exito');
+        retornablesCargados = false;
+        await cargarRetornables();
+    }
+};
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('retmOverlay')?.classList.remove('open');
+});
+
+// ── Retornables (el partial carga via innerHTML; los scripts deben vivir aquí) ──
+async function agregarRetornable() {
+    const idProducto   = parseInt(document.getElementById('retIdProducto').value);
+    const valorEnvase  = parseInt(document.getElementById('retValorEnvase').value);
+    const soloEfectivo = document.getElementById('retSoloEfectivo').checked;
+
+    if (!idProducto || !valorEnvase || valorEnvase <= 0) {
+        mostrarToast('Seleccione un producto e ingrese un valor de envase válido.', 'error');
+        return;
+    }
+
+    const form = new FormData();
+    form.append('idProducto', idProducto);
+    form.append('valorEnvase', valorEnvase);
+    form.append('soloEfectivo', soloEfectivo);
+    form.append('__RequestVerificationToken', csrfToken());
+
+    try {
+        const resp = await fetch('/Productos/Productos/AgregarRetornableAjax', { method: 'POST', body: form });
+        const data = await resp.json();
+        if (data.ok) {
+            mostrarToast(data.mensaje, 'exito');
+            insertarFilaRetornable(data.retornable);
+            document.querySelector(`#retIdProducto option[value="${idProducto}"]`)?.remove();
+            document.getElementById('retIdProducto').value = '';
+            document.getElementById('retValorEnvase').value = '';
+            document.getElementById('retSoloEfectivo').checked = false;
+        } else {
+            mostrarToast(data.mensaje, 'error');
+        }
+    } catch {
+        mostrarToast('Error de conexión al agregar retornable.', 'error');
+    }
+}
+
+function insertarFilaRetornable(r) {
+    document.getElementById('ret-empty-row')?.remove();
+    const tbody = document.getElementById('tbodyRetornables');
+    const efectivoBadge = r.soloEfectivo
+        ? '<span class="badge-efectivo si">Sí</span>'
+        : '<span class="badge-efectivo no">No</span>';
+    const nom = esc(r.nombreProducto).replace(/'/g, "\\'");
+    tbody.insertAdjacentHTML('beforeend', `
+    <tr id="ret-row-${r.idProducto}" data-pid="${r.idProducto}">
+      <td style="font-weight:600">${esc(r.nombreProducto)}</td>
+      <td>${esc(r.nombreMarca)}</td>
+      <td class="td-envase">$${Number(r.valorEnvase).toLocaleString('es-CL')}</td>
+      <td>${efectivoBadge}</td>
+      <td>
+        <button class="btn-ret-del" title="Eliminar" onclick="eliminarRetornable(${r.idProducto},'${nom}')">
+          <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
+      </td>
+    </tr>`);
+}
+
+async function eliminarRetornable(idProducto, nombre) {
+    if (!confirm(`¿Quitar «${nombre}» de los productos retornables?`)) return;
+    const form = new FormData();
+    form.append('idProducto', idProducto);
+    form.append('__RequestVerificationToken', csrfToken());
+    try {
+        const resp = await fetch('/Productos/Productos/EliminarRetornableAjax', { method: 'POST', body: form });
+        const data = await resp.json();
+        mostrarToast(data.mensaje, data.ok ? 'exito' : 'error');
+        if (data.ok) {
+            document.getElementById(`ret-row-${idProducto}`)?.remove();
+            const tbody = document.getElementById('tbodyRetornables');
+            if (!tbody.querySelector('tr')) {
+                tbody.innerHTML = `<tr id="ret-empty-row"><td colspan="5">
+                    <div class="ret-empty">
+                        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                        <p>No hay productos retornables definidos.</p>
+                    </div>
+                </td></tr>`;
+            }
+        }
+    } catch {
+        mostrarToast('Error al eliminar retornable.', 'error');
+    }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', initPaginado);
 </script>
 }

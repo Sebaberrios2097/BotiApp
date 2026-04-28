@@ -132,6 +132,83 @@ public class ProductosController(IProductosRepository productosRepository) : Con
         });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ToggleEstadoAjax(int id)
+    {
+        var ok = await productosRepository.ToggleEstadoAsync(id);
+        if (!ok) return Json(new { ok = false, mensaje = "Producto no encontrado." });
+
+        var p = await productosRepository.ObtenerPorIdAsync(id);
+        return Json(new
+        {
+            ok = true,
+            mensaje = p!.Estado ? "Producto activado." : "Producto desactivado.",
+            estado = p.Estado
+        });
+    }
+
+    // ── Retornables ──────────────────────────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> TabRetornables()
+    {
+        var retornables = await productosRepository.ObtenerRetornablesAsync();
+        var productos = await productosRepository.ObtenerTodosAsync();
+        var idsRetornables = retornables.Select(r => r.IdProducto).ToHashSet();
+        ViewBag.ProductosDisponibles = productos
+            .Where(p => !idsRetornables.Contains(p.IdProducto) && p.Estado)
+            .OrderBy(p => p.NombreProducto)
+            .ToList();
+        return PartialView("_TabRetornables", retornables);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AgregarRetornableAjax(int idProducto, int valorEnvase, bool soloEfectivo)
+    {
+        if (idProducto <= 0 || valorEnvase <= 0)
+            return Json(new { ok = false, mensaje = "Datos inválidos." });
+
+        var retornable = new ProProductosRetornables
+        {
+            IdProducto = idProducto,
+            ValorEnvase = valorEnvase,
+            SoloEfectivo = soloEfectivo
+        };
+
+        var creado = await productosRepository.AgregarRetornableAsync(retornable);
+        var completo = (await productosRepository.ObtenerRetornablesAsync())
+            .FirstOrDefault(r => r.IdProducto == idProducto);
+
+        return Json(new
+        {
+            ok = true,
+            mensaje = "Producto retornable agregado.",
+            retornable = new
+            {
+                completo!.IdProductoRetornable,
+                completo.IdProducto,
+                nombreProducto = completo.IdProductoNavigation.NombreProducto,
+                nombreMarca = completo.IdProductoNavigation.IdMarcaNavigation?.NombreMarca ?? "—",
+                completo.ValorEnvase,
+                completo.SoloEfectivo
+            }
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EliminarRetornableAjax(int idProducto)
+    {
+        var ok = await productosRepository.EliminarRetornableAsync(idProducto);
+        return Json(new
+        {
+            ok,
+            mensaje = ok ? "Producto retornable eliminado." : "No se encontró el retornable."
+        });
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private async Task CargarSelectListsAsync(int idMarca = 0, int idTipo = 0)

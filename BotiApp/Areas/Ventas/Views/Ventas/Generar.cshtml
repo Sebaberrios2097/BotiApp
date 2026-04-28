@@ -26,7 +26,10 @@
         tipo        = p.IdTipoProductoNavigation?.NombreTipoProducto ?? "",
         tieneImagen = p.Imagen is { Length: > 0 },
         ofertaPrecio = ofertasMap.TryGetValue(p.IdProducto, out var op) ? (int?)op : null,
-        ofertaId     = ofertaIdMap.TryGetValue(p.IdProducto, out var oid) ? (int?)oid : null
+        ofertaId     = ofertaIdMap.TryGetValue(p.IdProducto, out var oid) ? (int?)oid : null,
+        retornable   = p.ProProductosRetornables != null
+                       ? new { valorEnvase = p.ProProductosRetornables.ValorEnvase, soloEfectivo = p.ProProductosRetornables.SoloEfectivo }
+                       : (object?)null
     }));
 
     var tipoMarcasJson = JsonSerializer.Serialize(
@@ -68,9 +71,44 @@
 ══════════════════════════════════════════════════════ */
 .gv-wrap { display:grid; grid-template-columns:1fr 330px; gap:1.25rem; align-items:start; }
 @@media (max-width:980px) { .gv-wrap { grid-template-columns:1fr; } }
-.gv-page-header { display:flex; align-items:center; gap:.7rem; margin-bottom:1.4rem; }
-.gv-page-header svg { width:26px; height:26px; fill:var(--color-primario); }
-.gv-page-header h1 { font-size:1.35rem; font-weight:700; color:var(--color-secundario); margin:0; }
+
+/* ── Header card ─────────────────────────────────────── */
+.page-header-card { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); padding:1.1rem 1.5rem; margin-bottom:1.4rem; display:flex; align-items:center; gap:1rem; }
+.phc-icon { width:46px; height:46px; background:rgba(231,111,46,.1); border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.phc-icon svg { width:24px; height:24px; fill:var(--color-primario); }
+.phc-title { font-size:1.15rem; font-weight:700; color:var(--color-secundario); margin:0 0 .15rem; }
+.phc-sub { font-size:.8rem; color:#a89080; margin:0; }
+.phc-badges { margin-left:auto; display:flex; gap:.5rem; flex-shrink:0; flex-wrap:wrap; }
+.phc-badge { display:flex; align-items:center; gap:.35rem; padding:.35rem .75rem; border-radius:20px; font-size:.75rem; font-weight:700; }
+.phc-badge.verde { background:rgba(34,197,94,.1); color:#16a34a; }
+.phc-badge.naranja { background:rgba(231,111,46,.1); color:var(--color-primario); }
+.phc-badge svg { width:13px; height:13px; fill:currentColor; }
+
+/* ── Modal envase retornable ─────────────────────────── */
+.envase-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10001; display:none; align-items:center; justify-content:center; animation:fadeIn .2s ease; }
+.envase-card { background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,.2); padding:2rem 2rem 1.75rem; max-width:380px; width:92%; text-align:center; }
+.envase-icon { width:52px; height:52px; background:rgba(231,111,46,.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto .9rem; }
+.envase-icon svg { width:26px; height:26px; fill:var(--color-primario); }
+.envase-titulo { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#a89080; margin-bottom:.3rem; }
+.envase-nombre { font-size:1rem; font-weight:700; color:var(--color-secundario); margin-bottom:.5rem; }
+.envase-pregunta { font-size:.9rem; color:#7a6050; margin-bottom:1rem; }
+.envase-nota-ef { display:flex; align-items:center; gap:.4rem; justify-content:center; background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.18); border-radius:8px; padding:.45rem .75rem; font-size:.78rem; color:#dc2626; font-weight:600; margin-bottom:1rem; }
+.envase-nota-ef svg { width:15px; height:15px; fill:#dc2626; flex-shrink:0; }
+.envase-btns { display:flex; flex-direction:column; gap:.6rem; }
+.envase-btn { display:flex; align-items:center; justify-content:center; gap:.45rem; padding:.65rem 1rem; border-radius:9px; border:none; font-size:.88rem; font-weight:700; cursor:pointer; transition:opacity .15s,transform .12s; }
+.envase-btn:hover { opacity:.88; transform:translateY(-1px); }
+.envase-btn.si { background:rgba(34,197,94,.12); color:#16a34a; border:1.5px solid rgba(34,197,94,.25); }
+.envase-btn.no { background:rgba(231,111,46,.1); color:var(--color-primario); border:1.5px solid rgba(231,111,46,.25); }
+.envase-btn svg { width:16px; height:16px; fill:currentColor; }
+
+/* ── Envase en carrito ───────────────────────────────── */
+.ci-envase { display:flex; align-items:center; gap:.4rem; background:rgba(231,111,46,.06); border:1px dashed rgba(231,111,46,.3); border-radius:7px; padding:.3rem .65rem; margin-top:.2rem; font-size:.75rem; }
+.ci-envase svg { width:13px; height:13px; fill:var(--color-primario); flex-shrink:0; }
+.ci-envase-lbl { flex:1; color:#7a6050; font-weight:600; }
+.ci-envase-ef { background:#fef2f2; color:#dc2626; border-radius:4px; padding:.05rem .3rem; font-size:.67rem; font-weight:700; font-style:normal; margin-left:.3rem; }
+.ci-envase-precio { font-weight:700; color:var(--color-primario); }
+.ci-envase.solo-ef { background:rgba(239,68,68,.05); border-color:rgba(239,68,68,.25); }
+.tot-line.cargo-envase { font-size:.8rem; color:var(--color-primario); font-weight:600; }
 
 /* ══════════════════════════════════════════════════════
    CATÁLOGO
@@ -266,11 +304,30 @@
 </style>
 
 <div class="toast-wrap" id="toastWrap"></div>
+<div class="envase-overlay" id="envaseOverlay" onclick="cerrarDialogoEnvase()"></div>
 @Html.AntiForgeryToken()
 
-<div class="gv-page-header">
-    <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
-    <h1>Generar Venta</h1>
+<div class="page-header-card">
+    <div class="phc-icon">
+        <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+    </div>
+    <div>
+        <h1 class="phc-title">Generar Venta</h1>
+        <p class="phc-sub">Selecciona productos del catálogo y emite la boleta</p>
+    </div>
+    <div class="phc-badges">
+        <span class="phc-badge naranja">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+            @Model.Productos.Count() productos
+        </span>
+        @if (Model.Promociones.Any())
+        {
+            <span class="phc-badge verde">
+                <svg viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .59 1.42l9 9A2 2 0 0 0 13 22a2 2 0 0 0 1.41-.59l7-7A2 2 0 0 0 22 13a2 2 0 0 0-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
+                @Model.Promociones.Count() promos activas
+            </span>
+        }
+    </div>
 </div>
 
 <div class="gv-wrap">
@@ -383,8 +440,13 @@
     const NOMBRE_MAP = {};                      // idProducto → nombre
     CATALOGO.forEach(p => { NOMBRE_MAP[p.id] = p.nombre; });
 
+    const RETORNABLES_MAP = {};                 // idProducto → {valorEnvase, soloEfectivo}
+    CATALOGO.forEach(p => { if (p.retornable) RETORNABLES_MAP[p.id] = p.retornable; });
+
     /* ── Estado ──────────────────────────────────────────────────────────── */
-    const carrito = new Map();                  // id → {id, nombre, precio, cantidad, stock}
+    const carrito    = new Map();               // id → {id, nombre, precio, cantidad, stock}
+    const envasesMap = new Map();               // idProducto → {valorEnvase, soloEfectivo}
+    let pendingEnvase = null;                   // producto pendiente de confirmación envase
     let tipoActivo  = 0;
     let marcaActiva = 0;
 
@@ -486,20 +548,69 @@
     ══════════════════════════════════════════════════════════════════════ */
     window.toggleProducto = function (id, nombre, precio, stock) {
         if (carrito.has(id)) {
+            // Ya en carrito: solo incrementar cantidad
             const it = carrito.get(id);
             if (it.cantidad < stock) it.cantidad++;
+            renderCarrito();
+            actualizarTarjeta(id);
+        } else if (RETORNABLES_MAP[id]) {
+            // Producto retornable: preguntar si trajo envase
+            pendingEnvase = { id, nombre, precio, stock };
+            mostrarDialogoEnvase(nombre, RETORNABLES_MAP[id].valorEnvase, RETORNABLES_MAP[id].soloEfectivo);
         } else {
             carrito.set(id, { id, nombre, precio, cantidad: 1, stock });
+            renderCarrito();
+            actualizarTarjeta(id);
         }
+    };
+
+    window.confirmarEnvase = function (trajoEnvase) {
+        cerrarDialogoEnvase();
+        if (!pendingEnvase) return;
+        const { id, nombre, precio, stock } = pendingEnvase;
+        pendingEnvase = null;
+        if (!trajoEnvase) envasesMap.set(id, { ...RETORNABLES_MAP[id] });
+        carrito.set(id, { id, nombre, precio, cantidad: 1, stock });
         renderCarrito();
         actualizarTarjeta(id);
     };
+
+    function mostrarDialogoEnvase(nombre, valorEnvase, soloEfectivo) {
+        const nota = soloEfectivo
+            ? `<div class="envase-nota-ef"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>Este cargo debe abonarse en <strong>efectivo</strong></div>`
+            : '';
+        document.getElementById('envaseOverlay').innerHTML = `
+        <div class="envase-card" onclick="event.stopPropagation()">
+            <div class="envase-icon">
+                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <div class="envase-titulo">Producto Retornable</div>
+            <div class="envase-nombre">${x(nombre)}</div>
+            <div class="envase-pregunta">¿El cliente trajo su envase?</div>
+            ${nota}
+            <div class="envase-btns">
+                <button class="envase-btn si" onclick="confirmarEnvase(true)">
+                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                    Sí, trajo envase
+                </button>
+                <button class="envase-btn no" onclick="confirmarEnvase(false)">
+                    <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    No — cobrar envase ($${fmt(valorEnvase)})
+                </button>
+            </div>
+        </div>`;
+        document.getElementById('envaseOverlay').style.display = 'flex';
+    }
+
+    function cerrarDialogoEnvase() {
+        document.getElementById('envaseOverlay').style.display = 'none';
+    }
 
     window.cambiarCantidad = function (id, delta) {
         if (!carrito.has(id)) return;
         const it    = carrito.get(id);
         const nueva = it.cantidad + delta;
-        if (nueva <= 0)            { carrito.delete(id); }
+        if (nueva <= 0)            { carrito.delete(id); envasesMap.delete(id); }
         else if (nueva > it.stock) { return; }
         else                       { it.cantidad = nueva; }
         renderCarrito();
@@ -508,6 +619,7 @@
 
     window.quitarItem = function (id) {
         carrito.delete(id);
+        envasesMap.delete(id);
         renderCarrito();
         actualizarTarjeta(id);
     };
@@ -516,7 +628,7 @@
         if (!carrito.has(id)) return;
         const it    = carrito.get(id);
         const nueva = it.cantidad - cantReq;
-        if (nueva <= 0) carrito.delete(id);
+        if (nueva <= 0) { carrito.delete(id); envasesMap.delete(id); }
         else            it.cantidad = nueva;
         renderCarrito();
         actualizarTarjeta(id);
@@ -732,6 +844,17 @@
                     <span class="ci-sub">$${fmt(precioEfectivo * cantRest)}</span>
                 </div>
             </div>`;
+            // Línea de envase si corresponde
+            const envase = envasesMap.get(it.id);
+            if (envase) {
+                const efHtml = envase.soloEfectivo ? ' <em class="ci-envase-ef">solo efectivo</em>' : '';
+                html += `
+            <div class="ci-envase${envase.soloEfectivo ? ' solo-ef' : ''}">
+                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                <span class="ci-envase-lbl">Envase${efHtml}</span>
+                <span class="ci-envase-precio">$${fmt(envase.valorEnvase * it.cantidad)}</span>
+            </div>`;
+            }
         });
 
         cont.innerHTML  = html;
@@ -750,8 +873,17 @@
 
         const { descuentosPromoLines, descuentosOfertaLines, descTotal } = calcularDescuentos();
 
+        // Cargo de envases
+        let totalEnvases = 0;
+        envasesMap.forEach((env, id) => {
+            const it = carrito.get(id);
+            if (it) totalEnvases += env.valorEnvase * it.cantidad;
+        });
+
+        const totalFinal = Math.max(0, subtotal - descTotal) + totalEnvases;
+
         document.getElementById('totSub').textContent   = `$${fmt(subtotal)}`;
-        document.getElementById('totTotal').textContent = `$${fmt(Math.max(0, subtotal - descTotal))}`;
+        document.getElementById('totTotal').textContent = `$${fmt(totalFinal)}`;
         document.getElementById('infoDistintos').textContent = carrito.size;
         document.getElementById('infoUnidades').textContent  = unidades;
 
@@ -769,6 +901,13 @@
             <div class="tot-line descuento">
                 <span>Oferta: ${x(nombre)}</span>
                 <span>-$${fmt(ahorro)}</span>
+            </div>`;
+        }
+        if (totalEnvases > 0) {
+            linesHtml += `
+            <div class="tot-line cargo-envase">
+                <span>Cargo envases</span>
+                <span>+$${fmt(totalEnvases)}</span>
             </div>`;
         }
         document.getElementById('descuentosContainer').innerHTML = linesHtml;
@@ -806,6 +945,7 @@
         carrito.forEach(it => { subtotalSnapshot += it.precio * it.cantidad; });
 
         // ── Construir items para el servidor ──────────────────────────────
+        const snapshotEnvases = new Map(envasesMap);
         const items = [];
         instancias.forEach(inst => {
             const sumaNormal = inst.itemsActivos.reduce(
@@ -824,6 +964,12 @@
             const precioUnitario = OFERTAS_MAP[id] != null ? OFERTAS_MAP[id] : it.precio;
             items.push({ idProducto: id, cantidad: cantRest, precioNormal: it.precio, precioUnitario, idPromocion: null, idOfertaProducto: OFERTAS_ID_MAP[id] ?? null });
         });
+        // Ítems de envase (cargo extra por envase no traído)
+        snapshotEnvases.forEach((env, id) => {
+            const it = carrito.get(id);
+            if (!it) return;
+            items.push({ idProducto: id, cantidad: it.cantidad, precioNormal: 0, precioUnitario: env.valorEnvase, idPromocion: null, idOfertaProducto: null });
+        });
 
         try {
             const resp = await fetch(URL_CREAR, {
@@ -837,6 +983,7 @@
                 // Limpiar carrito
                 const ids = [...carrito.keys()];
                 carrito.clear();
+                envasesMap.clear();
                 renderCarrito();
                 ids.forEach(id => actualizarTarjeta(id));
 
@@ -851,7 +998,8 @@
                     descPromos:   snapshotDescPromos,
                     descOfertas:  snapshotDescOfertas,
                     descTotal:    snapshotDescTotal,
-                    subtotal:     subtotalSnapshot
+                    subtotal:     subtotalSnapshot,
+                    envases:      snapshotEnvases
                 });
             } else {
                 toast(data.mensaje ?? 'Error al generar la boleta.', 'error');
@@ -867,7 +1015,7 @@
     /* ══════════════════════════════════════════════════════════════════════
        TICKET POS
     ══════════════════════════════════════════════════════════════════════ */
-    function mostrarTicket({ idBoleta, cajero, fechaEmision, instancias, remaining, carritoSnap, descPromos, descOfertas, descTotal, subtotal }) {
+    function mostrarTicket({ idBoleta, cajero, fechaEmision, instancias, remaining, carritoSnap, descPromos, descOfertas, descTotal, subtotal, envases }) {
         const NOMBRE_LOCAL = 'Botillería Cuatro Ases';
         const total = Math.max(0, subtotal - descTotal);
         const pad58  = (l, r) => {
@@ -955,8 +1103,23 @@
         if (descTotal > 0) {
             lineas += `<div class="ticket-row ticket-desc ticket-bold"><span class="tk-l">Total descuentos</span><span class="tk-r">-$${fmt(descTotal)}</span></div>`;
         }
+
+        // Envases en el ticket
+        let totalEnvasesTicket = 0;
+        if (envases && envases.size > 0) {
+            lineas += `<hr class="ticket-hr">`;
+            envases.forEach((env, id) => {
+                const it = carritoSnap.get(id);
+                if (!it) return;
+                const montoEnvase = env.valorEnvase * it.cantidad;
+                totalEnvasesTicket += montoEnvase;
+                const efLabel = env.soloEfectivo ? ' ⚠ SOLO EFECTIVO' : '';
+                lineas += `<div class="ticket-row" style="color:#e76f2e;font-size:10px;"><span class="tk-l">Envase: ${x(it.nombre)}${efLabel}</span><span class="tk-r">+$${fmt(montoEnvase)}</span></div>`;
+            });
+        }
+
         lineas += `<hr class="ticket-hr-sol">`;
-        lineas += `<div class="ticket-row ticket-total"><span class="tk-l">TOTAL</span><span class="tk-r">$${fmt(total)}</span></div>`;
+        lineas += `<div class="ticket-row ticket-total"><span class="tk-l">TOTAL</span><span class="tk-r">$${fmt(total + totalEnvasesTicket)}</span></div>`;
 
         const html = `
         <div class="ticket-overlay" id="ticketOverlay">

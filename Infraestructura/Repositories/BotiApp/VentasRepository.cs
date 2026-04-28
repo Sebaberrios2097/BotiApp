@@ -175,6 +175,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             .Where(p => p.Estado && p.Stock > 0)
             .Include(p => p.IdMarcaNavigation)
             .Include(p => p.IdTipoProductoNavigation)
+            .Include(p => p.ProProductosRetornables)
             .OrderBy(p => p.NombreProducto)
             .ToListAsync();
 

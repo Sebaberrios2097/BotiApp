@@ -1,0 +1,273 @@
+@model IEnumerable<Infraestructura.Entities.BotiApp.ProProductosRetornables>
+@{
+    var disponibles = ViewBag.ProductosDisponibles as List<Infraestructura.Entities.BotiApp.ProProductos> ?? new();
+    var disponiblesJson = System.Text.Json.JsonSerializer.Serialize(disponibles.Select(p => new {
+        id           = p.IdProducto,
+        nombre       = p.NombreProducto,
+        marca        = p.IdMarcaNavigation != null ? p.IdMarcaNavigation.NombreMarca : "—",
+        precio       = p.Precio,
+        tieneImagen  = p.Imagen != null && p.Imagen.Length > 0
+    })).Replace("</", "<\\/");
+}
+
+<style>
+    .ret-form-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(44,29,13,.07);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .ret-form-card h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--color-secundario);
+        margin: 0 0 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .ret-form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        align-items: flex-end;
+    }
+    .ret-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: .3rem;
+        min-width: 180px;
+        flex: 1;
+    }
+    .ret-form-group label {
+        font-size: .78rem;
+        font-weight: 600;
+        color: var(--color-secundario);
+        text-transform: uppercase;
+        letter-spacing: .4px;
+    }
+    .ret-form-group select,
+    .ret-form-group input[type=number] {
+        padding: .48rem .75rem;
+        border: 1.5px solid #e0d5cc;
+        border-radius: 8px;
+        font-size: .9rem;
+        color: var(--color-secundario);
+        outline: none;
+        transition: border-color .15s;
+        background: #faf8f6;
+    }
+    .ret-form-group select:focus,
+    .ret-form-group input[type=number]:focus { border-color: var(--color-primario); }
+    .ret-check-group {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        padding-bottom: .5rem;
+    }
+    .ret-check-group input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--color-primario); cursor: pointer; }
+    .ret-check-group label { font-size: .88rem; font-weight: 500; color: var(--color-secundario); cursor: pointer; }
+    .btn-ret-agregar {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        padding: .52rem 1.1rem;
+        background: var(--color-primario);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: .88rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .2s, transform .15s;
+        white-space: nowrap;
+    }
+    .btn-ret-agregar:hover { background: #cf5f22; transform: translateY(-1px); }
+    .btn-ret-agregar svg { width: 16px; height: 16px; fill: currentColor; }
+
+    /* Tabla retornables */
+    .ret-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(44,29,13,.07); overflow: hidden; }
+    .ret-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .ret-table thead tr { background: var(--color-secundario); color: var(--crema); }
+    .ret-table thead th { padding: .85rem 1rem; font-weight: 600; font-size: .79rem; letter-spacing: .5px; text-transform: uppercase; white-space: nowrap; }
+    .ret-table tbody tr { border-bottom: 1px solid #f0ebe5; transition: background .15s; }
+    .ret-table tbody tr:last-child { border-bottom: none; }
+    .ret-table tbody tr:hover { background: rgba(231,111,46,.04); }
+    .ret-table td { padding: .75rem 1rem; color: var(--color-secundario); vertical-align: middle; }
+    .badge-efectivo { display: inline-flex; align-items: center; padding: .2rem .55rem; border-radius: 20px; font-size: .73rem; font-weight: 600; }
+    .badge-efectivo.si { background: rgba(34,197,94,.12); color: #16a34a; }
+    .badge-efectivo.no { background: rgba(156,163,175,.15); color: #6b7280; }
+    .td-envase { font-weight: 700; color: var(--color-primario); font-variant-numeric: tabular-nums; }
+    .btn-ret-del { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; border: none; cursor: pointer; background: rgba(239,68,68,.1); color: #dc2626; transition: background .15s; }
+    .btn-ret-del:hover { background: rgba(239,68,68,.2); }
+    .btn-ret-del svg { width: 15px; height: 15px; fill: currentColor; }
+    .ret-empty { text-align: center; padding: 3rem 1rem; color: #a89080; }
+    .ret-empty svg { width: 48px; height: 48px; fill: #ddd0c4; margin-bottom: .5rem; }
+    .ret-info-banner {
+        background: rgba(231,111,46,.08);
+        border: 1.5px solid rgba(231,111,46,.2);
+        border-radius: 10px;
+        padding: .85rem 1rem;
+        margin-bottom: 1.25rem;
+        display: flex;
+        gap: .65rem;
+        align-items: flex-start;
+    }
+    .ret-info-banner svg { width: 18px; height: 18px; fill: var(--color-primario); flex-shrink: 0; margin-top: .1rem; }
+    .ret-info-banner p { margin: 0; font-size: .83rem; color: var(--color-secundario); line-height: 1.5; }
+
+    /* ── MODAL SELECTOR DE RETORNABLES ── */
+    .retm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:700; align-items:center; justify-content:center; padding:1.5rem; }
+    .retm-overlay.open { display:flex; animation:fadeRetm .2s ease; }
+    @@keyframes fadeRetm { from{opacity:0} to{opacity:1} }
+    .retm-box { background:#fff; border-radius:16px; width:100%; max-width:860px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.2); animation:slideRetm .25s ease; overflow:hidden; }
+    @@keyframes slideRetm { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+    .retm-header { display:flex; align-items:center; gap:.75rem; padding:1rem 1.25rem; border-bottom:1.5px solid #f0ebe5; flex-shrink:0; }
+    .retm-header-icon { width:38px; height:38px; background:rgba(231,111,46,.1); border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .retm-header-icon svg { width:20px; height:20px; fill:var(--color-primario); }
+    .retm-header-title { font-size:1rem; font-weight:700; color:var(--color-secundario); flex:1; }
+    .retm-header-close { width:32px; height:32px; border-radius:8px; border:none; background:#f0ebe5; color:var(--color-secundario); font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s; line-height:1; }
+    .retm-header-close:hover { background:#e0d5cc; }
+    .retm-search-wrap { padding:.85rem 1.25rem; border-bottom:1.5px solid #f0ebe5; flex-shrink:0; }
+    .retm-search { display:flex; align-items:center; gap:.5rem; background:#faf7f5; border:1.5px solid #e0d5cc; border-radius:8px; padding:.45rem .85rem; transition:border-color .15s; }
+    .retm-search:focus-within { border-color:var(--color-primario); background:#fff; }
+    .retm-search svg { width:16px; height:16px; fill:var(--color-primario); opacity:.7; flex-shrink:0; }
+    .retm-search input { border:none; outline:none; font-size:.88rem; width:100%; background:transparent; color:var(--color-secundario); }
+    .retm-body { flex:1; overflow-y:auto; padding:1rem 1.25rem; }
+    .retm-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(148px,1fr)); gap:.75rem; }
+    /* Card de producto para selección */
+    .prod-sel-card { border:2px solid #e8ddd4; border-radius:12px; background:#faf8f6; cursor:pointer; transition:border-color .15s,box-shadow .15s,background .15s; overflow:hidden; position:relative; user-select:none; }
+    .prod-sel-card:hover { border-color:var(--color-primario); box-shadow:0 2px 10px rgba(231,111,46,.12); }
+    .prod-sel-card.selected { border-color:var(--color-primario); background:rgba(231,111,46,.04); box-shadow:0 3px 12px rgba(231,111,46,.18); }
+    .prod-sel-card .check-corner { position:absolute; top:.4rem; right:.4rem; width:22px; height:22px; border-radius:50%; background:#e8ddd4; border:2px solid #e8ddd4; display:flex; align-items:center; justify-content:center; transition:background .15s,border-color .15s; }
+    .prod-sel-card.selected .check-corner { background:var(--color-primario); border-color:var(--color-primario); }
+    .prod-sel-card .check-corner svg { width:13px; height:13px; fill:#fff; opacity:0; transition:opacity .15s; }
+    .prod-sel-card.selected .check-corner svg { opacity:1; }
+    .psc-img-wrap { width:100%; aspect-ratio:1; background:#f0ebe5; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .psc-img-wrap img { width:100%; height:100%; object-fit:cover; }
+    .psc-img-wrap svg { width:40px; height:40px; fill:#c9b8a8; }
+    .psc-body { padding:.5rem .6rem; }
+    .psc-nombre { font-size:.78rem; font-weight:700; color:var(--color-secundario); line-height:1.3; margin-bottom:.2rem; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+    .psc-marca { font-size:.7rem; color:#a89080; }
+    /* Configuración por card (visible solo cuando seleccionada) */
+    .psc-config { display:none; padding:.5rem .6rem; border-top:1px solid #f0ebe5; background:#fff; }
+    .prod-sel-card.selected .psc-config { display:block; }
+    .psc-config-lbl { font-size:.68rem; font-weight:600; color:var(--color-secundario); display:block; margin-bottom:.2rem; text-transform:uppercase; letter-spacing:.3px; }
+    .psc-config input[type=number] { width:100%; padding:.3rem .5rem; border:1.5px solid #e0d5cc; border-radius:6px; font-size:.82rem; outline:none; transition:border-color .15s; margin-bottom:.4rem; }
+    .psc-config input[type=number]:focus { border-color:var(--color-primario); }
+    .psc-config-check { display:flex; align-items:center; gap:.35rem; font-size:.75rem; font-weight:500; color:var(--color-secundario); }
+    .psc-config-check input { accent-color:var(--color-primario); }
+    .retm-empty { text-align:center; padding:3rem 1rem; color:#a89080; grid-column:1/-1; }
+    .retm-empty svg { width:44px; height:44px; fill:#ddd0c4; margin:0 auto .5rem; display:block; }
+    .retm-footer { display:flex; align-items:center; gap:.75rem; padding:.9rem 1.25rem; border-top:1.5px solid #f0ebe5; background:#faf7f5; flex-shrink:0; }
+    .retm-sel-count { font-size:.85rem; font-weight:600; color:var(--color-secundario); flex:1; }
+    .retm-sel-count span { color:var(--color-primario); font-size:1rem; }
+    .btn-retm-cancelar { padding:.5rem 1rem; border-radius:8px; border:1.5px solid #e0d5cc; background:#fff; color:var(--color-secundario); font-size:.86rem; font-weight:600; cursor:pointer; transition:background .15s; }
+    .btn-retm-cancelar:hover { background:#f0ebe5; }
+    .btn-retm-guardar { padding:.5rem 1.2rem; border-radius:8px; border:none; background:var(--color-primario); color:#fff; font-size:.86rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:.4rem; transition:background .15s,opacity .15s; }
+    .btn-retm-guardar:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-retm-guardar:not(:disabled):hover { background:#cf5f22; }
+    .btn-retm-guardar svg { width:15px; height:15px; fill:currentColor; }
+</style>
+
+<div class="ret-info-banner">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+    <p>Los productos marcados como <strong>retornables</strong> requieren que el vendedor indique si el cliente trajo envase. Si no lo trajo, el valor del envase se suma a la boleta. Si está marcado como <strong>Solo efectivo</strong>, ese monto debe pagarse obligatoriamente en efectivo.</p>
+</div>
+
+<!-- Datos disponibles para el modal (script type=application/json no ejecuta) -->
+<script type="application/json" id="retmProductosData">@Html.Raw(disponiblesJson)</script>
+
+<!-- Toolbar -->
+<div style="display:flex; justify-content:flex-end; margin-bottom:1rem;">
+    <button class="btn-ret-agregar" onclick="abrirModalRetornables()">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        Agregar productos
+    </button>
+</div>
+
+<!-- Tabla de retornables -->
+<div class="ret-card">
+    <table class="ret-table" id="tablaRetornables">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Marca</th>
+                <th>Valor envase</th>
+                <th>Solo efectivo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="tbodyRetornables">
+            @if (!Model.Any())
+            {
+                <tr id="ret-empty-row">
+                    <td colspan="5">
+                        <div class="ret-empty">
+                            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                            <p>No hay productos retornables definidos.</p>
+                        </div>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                foreach (var r in Model)
+                {
+                    <tr id="ret-row-@r.IdProducto" data-pid="@r.IdProducto">
+                        <td style="font-weight:600">@r.IdProductoNavigation.NombreProducto</td>
+                        <td>@(r.IdProductoNavigation.IdMarcaNavigation?.NombreMarca ?? "—")</td>
+                        <td class="td-envase">$@r.ValorEnvase.ToString("N0")</td>
+                        <td>
+                            @if (r.SoloEfectivo)
+                            {
+                                <span class="badge-efectivo si">Sí</span>
+                            }
+                            else
+                            {
+                                <span class="badge-efectivo no">No</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn-ret-del" title="Eliminar" onclick="eliminarRetornable(@r.IdProducto, '@System.Web.HttpUtility.JavaScriptStringEncode(r.IdProductoNavigation.NombreProducto)')">
+                                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal selector de retornables -->
+<div class="retm-overlay" id="retmOverlay" onclick="if(event.target===this)cerrarModalRetornables()">
+    <div class="retm-box">
+        <div class="retm-header">
+            <div class="retm-header-icon">
+                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+            </div>
+            <span class="retm-header-title">Seleccionar productos retornables</span>
+            <button class="retm-header-close" onclick="cerrarModalRetornables()" title="Cerrar">&times;</button>
+        </div>
+        <div class="retm-search-wrap">
+            <div class="retm-search">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" id="retmBuscador" placeholder="Buscar por nombre o marca…" oninput="filtrarModalRet()" autocomplete="off" />
+            </div>
+        </div>
+        <div class="retm-body">
+            <div class="retm-grid" id="retmGrid"></div>
+        </div>
+        <div class="retm-footer">
+            <span class="retm-sel-count" id="retmSelCount"><span>0</span> seleccionados</span>
+            <button class="btn-retm-cancelar" onclick="cerrarModalRetornables()">Cancelar</button>
+            <button class="btn-retm-guardar" id="btnRetmGuardar" disabled onclick="guardarSeleccionadosRet()">
+                <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                Guardar seleccionados
+            </button>
+        </div>
+    </div>
+</div>
+

@@ -11,6 +11,7 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
         => await context.ProProductos
             .Include(p => p.IdMarcaNavigation)
             .Include(p => p.IdTipoProductoNavigation)
+            .Include(p => p.ProProductosRetornables)
             .OrderBy(p => p.NombreProducto)
             .ToListAsync();
 
@@ -45,6 +46,15 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
         return true;
     }
 
+    public async Task<bool> ToggleEstadoAsync(int id)
+    {
+        var producto = await context.ProProductos.FindAsync(id);
+        if (producto is null) return false;
+        producto.Estado = !producto.Estado;
+        await context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<IEnumerable<ProMarcas>> ObtenerMarcasAsync()
         => await context.ProMarcas
             .Where(m => m.Estado)
@@ -69,4 +79,31 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
             .OrderByDescending(p => p.FechaIngreso)
             .Take(top)
             .ToListAsync();
+
+    // ── Retornables ────────────────────────────────────────────────────────
+    public async Task<IEnumerable<ProProductosRetornables>> ObtenerRetornablesAsync()
+        => await context.ProProductosRetornables
+            .Include(r => r.IdProductoNavigation)
+                .ThenInclude(p => p.IdMarcaNavigation)
+            .Include(r => r.IdProductoNavigation)
+                .ThenInclude(p => p.IdTipoProductoNavigation)
+            .OrderBy(r => r.IdProductoNavigation.NombreProducto)
+            .ToListAsync();
+
+    public async Task<ProProductosRetornables> AgregarRetornableAsync(ProProductosRetornables retornable)
+    {
+        context.ProProductosRetornables.Add(retornable);
+        await context.SaveChangesAsync();
+        return retornable;
+    }
+
+    public async Task<bool> EliminarRetornableAsync(int idProducto)
+    {
+        var r = await context.ProProductosRetornables
+            .FirstOrDefaultAsync(x => x.IdProducto == idProducto);
+        if (r is null) return false;
+        context.ProProductosRetornables.Remove(r);
+        await context.SaveChangesAsync();
+        return true;
+    }
 }
