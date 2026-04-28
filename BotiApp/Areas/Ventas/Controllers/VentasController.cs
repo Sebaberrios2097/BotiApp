@@ -221,10 +221,11 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
     // ── POST: anular boleta ───────────────────────────────────────────────────
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "SoloAdmin")]
+    [Authorize(Policy = "AdminOCajero")]
     public async Task<IActionResult> AnularBoletaAjax([FromBody] BuscarBoletaRequest request)
     {
-        var ok = await ventasRepository.AnularBoletaAsync(request.IdBoleta);
+        var idUsuario = ClaimHelper.GetIdUsuario(User);
+        var ok = await ventasRepository.AnularBoletaAsync(request.IdBoleta, idUsuario);
         if (!ok)
             return Json(new { ok = false, mensaje = "La boleta no existe o no está en estado Generada." });
 

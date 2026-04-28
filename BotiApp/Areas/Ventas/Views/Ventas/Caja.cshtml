@@ -480,11 +480,23 @@
         setTimeout(() => div.remove(), 4000);
     }
     async function post(url, data) {
-        const r = await fetch(url, {
-            method : 'POST',
-            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': TOKEN },
-            body   : JSON.stringify(data)
-        });
+        let r;
+        try {
+            r = await fetch(url, {
+                method : 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': TOKEN },
+                body   : JSON.stringify(data)
+            });
+        } catch {
+            return { ok: false, mensaje: 'Error de red. Verifica tu conexión.' };
+        }
+        if (!r.ok) {
+            const texto = await r.text();
+            console.error('Respuesta no-JSON del servidor:', texto);
+            if (r.status === 401 || r.status === 403)
+                return { ok: false, mensaje: 'No tienes permisos para realizar esta acción.' };
+            return { ok: false, mensaje: `Error del servidor (${r.status}).` };
+        }
         return r.json();
     }
     function setBotonCargando(btn, cargando) {

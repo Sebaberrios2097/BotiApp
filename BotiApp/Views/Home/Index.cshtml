@@ -1,8 +1,479 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model BotiApp.Models.DashboardViewModel
+@using BotiApp.Helpers
+@{
+    ViewData["Title"] = "Dashboard";
+    var mesActual     = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(DateTime.Today.Month);
+    mesActual = char.ToUpper(mesActual[0]) + mesActual[1..];
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<style>
+    /* ── Page header ── */
+    .dash-header {
+        margin-bottom: 1.75rem;
+    }
+    .dash-header h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--color-secundario);
+        margin: 0 0 0.2rem;
+    }
+    .dash-header p {
+        color: #6b7280;
+        font-size: 0.88rem;
+        margin: 0;
+    }
+
+    /* ── KPI cards ── */
+    .kpi-grid {
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 1.75rem;
+    }
+    .kpi-grid-admin  { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .kpi-grid-vendor { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    .kpi-grid-cajero { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+
+    .kpi-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1.25rem 1.4rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,.07);
+        border-left: 4px solid var(--color-primario);
+        transition: box-shadow .2s;
+    }
+    .kpi-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.11); }
+    .kpi-card.success { border-left-color: var(--color-success); }
+    .kpi-card.warning { border-left-color: var(--color-warning); }
+    .kpi-card.danger  { border-left-color: var(--color-danger);  }
+    .kpi-card.info    { border-left-color: #6366f1; }
+
+    .kpi-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: rgba(231,111,46,.12);
+    }
+    .kpi-icon.success { background: rgba(92,179,56,.12); }
+    .kpi-icon.warning { background: rgba(252,191,73,.15); }
+    .kpi-icon.danger  { background: rgba(255,55,55,.1);  }
+    .kpi-icon.info    { background: rgba(99,102,241,.12); }
+    .kpi-icon svg { width: 22px; height: 22px; fill: var(--color-primario); }
+    .kpi-icon.success svg { fill: var(--color-success); }
+    .kpi-icon.warning svg { fill: var(--color-warning); }
+    .kpi-icon.danger  svg { fill: var(--color-danger);  }
+    .kpi-icon.info    svg { fill: #6366f1; }
+
+    .kpi-body { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+    .kpi-value {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--color-secundario);
+        line-height: 1.1;
+    }
+    .kpi-label {
+        font-size: 0.78rem;
+        color: #6b7280;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* ── Table card ── */
+    .table-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.07);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    .table-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 1.4rem;
+        border-bottom: 1px solid #f1ede8;
+    }
+    .table-card-header h2 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--color-secundario);
+        margin: 0;
+    }
+    .table-card-header span {
+        font-size: 0.78rem;
+        color: #9ca3af;
+    }
+    .table-responsive { overflow-x: auto; }
+    table.dash-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+    }
+    .dash-table th {
+        padding: .65rem 1rem;
+        text-align: left;
+        font-size: .73rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .6px;
+        color: #9ca3af;
+        background: #faf7f4;
+        border-bottom: 1px solid #f0ebe4;
+    }
+    .dash-table td {
+        padding: .7rem 1rem;
+        border-bottom: 1px solid #f8f5f1;
+        color: var(--color-secundario);
+        vertical-align: middle;
+    }
+    .dash-table tr:last-child td { border-bottom: none; }
+    .dash-table tr:hover td { background: #fdf9f5; }
+
+    /* badges de estado */
+    .badge-estado {
+        display: inline-block;
+        padding: .2rem .65rem;
+        border-radius: 20px;
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: .3px;
+    }
+    .badge-pendiente { background: rgba(252,191,73,.2);  color: #b45309; }
+    .badge-anulada   { background: rgba(255,55,55,.12);  color: #dc2626; }
+    .badge-pagada    { background: rgba(92,179,56,.15);  color: #16a34a; }
+    .badge-otro      { background: rgba(99,102,241,.12); color: #4f46e5; }
+
+    .dash-empty {
+        text-align: center;
+        padding: 2.5rem 1rem;
+        color: #9ca3af;
+        font-size: .88rem;
+    }
+</style>
+
+<div class="dash-header">
+    <h1>
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+             style="fill:var(--color-primario);vertical-align:sub;margin-right:.4rem">
+            <path d="M3 13h8V3H3zm0 8h8v-6H3zm10 0h8v-8h-8zm0-18v6h8V3z"/>
+        </svg>
+        Dashboard
+    </h1>
+    <p>Bienvenido, <strong>@Model.NombreUsuario</strong> — Resumen de <strong>@mesActual @DateTime.Today.Year</strong></p>
 </div>
+
+@* ═══════════════════════════════════════════════════ *@
+@*                    ADMINISTRADOR                    *@
+@* ═══════════════════════════════════════════════════ *@
+@if (ClaimHelper.EsAdmin(User))
+{
+    <div class="kpi-grid kpi-grid-admin">
+        <div class="kpi-card">
+            <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.TotalBoletasMes</span>
+                <span class="kpi-label">Boletas emitidas</span>
+            </div>
+        </div>
+        <div class="kpi-card success">
+            <div class="kpi-icon success">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.TotalBoletasPagadasMes</span>
+                <span class="kpi-label">Boletas pagadas</span>
+            </div>
+        </div>
+        <div class="kpi-card warning">
+            <div class="kpi-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.TotalBoletasPendientesMes</span>
+                <span class="kpi-label">Boletas pendientes</span>
+            </div>
+        </div>
+        <div class="kpi-card danger">
+            <div class="kpi-icon danger">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.TotalBoletasAnuladasMes</span>
+                <span class="kpi-label">Boletas anuladas</span>
+            </div>
+        </div>
+        <div class="kpi-card info">
+            <div class="kpi-icon info">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">$@Model.MontoTotalMes.ToString("N0")</span>
+                <span class="kpi-label">Ingresos del mes</span>
+            </div>
+        </div>
+        <div class="kpi-card danger">
+            <div class="kpi-icon danger">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.TotalProductosBajoStock</span>
+                <span class="kpi-label">Productos bajo stock</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-card-header">
+            <h2>Últimas boletas del sistema</h2>
+            <span>@mesActual @DateTime.Today.Year</span>
+        </div>
+        @if (!Model.UltimasBoletas.Any())
+        {
+            <div class="dash-empty">No hay boletas registradas este mes.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Fecha emisión</th>
+                            <th>Vendedor</th>
+                            <th>Cajero</th>
+                            <th>Estado</th>
+                            <th style="text-align:right">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in Model.UltimasBoletas)
+                        {
+                            var vendedor = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } ve
+                                ? $"{ve.NombresEmpleado} {ve.Apellido1}"
+                                : "—";
+                            var cajero = b.IdCajeroNavigation?.IdEmpleadoNavigation is { } ce
+                                ? $"{ce.NombresEmpleado} {ce.Apellido1}"
+                                : "—";
+                            var (badgeClass, estadoText) = b.IdEstadoBoleta switch
+                            {
+                                1 => ("badge-pendiente", "Pendiente"),
+                                2 => ("badge-anulada",   "Anulada"),
+                                3 => ("badge-pagada",    "Pagada"),
+                                _ => ("badge-otro",      b.IdEstadoBoletaNavigation?.NombreEstadoBoleta ?? "—")
+                            };
+                            <tr>
+                                <td><strong>@b.IdBoleta</strong></td>
+                                <td>@(b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                                <td>@vendedor</td>
+                                <td>@cajero</td>
+                                <td><span class="badge-estado @badgeClass">@estadoText</span></td>
+                                <td style="text-align:right;font-weight:600">$@b.MontoTotal.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════════════ *@
+@*                      VENDEDOR                      *@
+@* ═══════════════════════════════════════════════════ *@
+@if (ClaimHelper.EsVendedor(User))
+{
+    <div class="kpi-grid kpi-grid-vendor">
+        <div class="kpi-card">
+            <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.VendedorBoletasMes</span>
+                <span class="kpi-label">Ventas realizadas</span>
+            </div>
+        </div>
+        <div class="kpi-card success">
+            <div class="kpi-icon success">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">$@Model.VendedorMontoMes.ToString("N0")</span>
+                <span class="kpi-label">Monto cobrado</span>
+            </div>
+        </div>
+        <div class="kpi-card warning">
+            <div class="kpi-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.VendedorBoletasPendientes</span>
+                <span class="kpi-label">Boletas pendientes</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-card-header">
+            <h2>Mis ventas de @mesActual</h2>
+            <span>Últimas @Model.VendedorUltimasBoletas.Count() registradas</span>
+        </div>
+        @if (!Model.VendedorUltimasBoletas.Any())
+        {
+            <div class="dash-empty">No tienes ventas registradas este mes.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Productos</th>
+                            <th style="text-align:right">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in Model.VendedorUltimasBoletas)
+                        {
+                            var (badgeClass, estadoText) = b.IdEstadoBoleta switch
+                            {
+                                1 => ("badge-pendiente", "Pendiente"),
+                                2 => ("badge-anulada",   "Anulada"),
+                                3 => ("badge-pagada",    "Pagada"),
+                                _ => ("badge-otro",      b.IdEstadoBoletaNavigation?.NombreEstadoBoleta ?? "—")
+                            };
+                            <tr>
+                                <td><strong>@b.IdBoleta</strong></td>
+                                <td>@(b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                                <td><span class="badge-estado @badgeClass">@estadoText</span></td>
+                                <td>@b.VenBoletaDetalle.Count</td>
+                                <td style="text-align:right;font-weight:600">$@b.MontoTotal.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════════════ *@
+@*                       CAJERO                       *@
+@* ═══════════════════════════════════════════════════ *@
+@if (ClaimHelper.EsCajero(User))
+{
+    <div class="kpi-grid kpi-grid-cajero">
+        <div class="kpi-card success">
+            <div class="kpi-icon success">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.CajeroBoletasCobradas</span>
+                <span class="kpi-label">Boletas cobradas</span>
+            </div>
+        </div>
+        <div class="kpi-card danger">
+            <div class="kpi-icon danger">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">@Model.CajeroBoletasAnuladas</span>
+                <span class="kpi-label">Boletas anuladas</span>
+            </div>
+        </div>
+        <div class="kpi-card info">
+            <div class="kpi-icon info">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value">$@Model.CajeroMontoGestionado.ToString("N0")</span>
+                <span class="kpi-label">Monto gestionado</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-card-header">
+            <h2>Boletas gestionadas en @mesActual</h2>
+            <span>Últimas @Model.CajeroUltimasBoletas.Count() registradas</span>
+        </div>
+        @if (!Model.CajeroUltimasBoletas.Any())
+        {
+            <div class="dash-empty">No has gestionado boletas este mes.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Fecha pago / anulación</th>
+                            <th>Vendedor</th>
+                            <th>Estado</th>
+                            <th style="text-align:right">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in Model.CajeroUltimasBoletas)
+                        {
+                            var vendedor = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } ve
+                                ? $"{ve.NombresEmpleado} {ve.Apellido1}"
+                                : "—";
+                            var (badgeClass, estadoText) = b.IdEstadoBoleta switch
+                            {
+                                2 => ("badge-anulada", "Anulada"),
+                                3 => ("badge-pagada",  "Pagada"),
+                                _ => ("badge-otro",    b.IdEstadoBoletaNavigation?.NombreEstadoBoleta ?? "—")
+                            };
+                            var fechaGestion = (b.FechaPago ?? b.FechaEmision)?.ToString("dd/MM/yyyy HH:mm") ?? "—";
+                            <tr>
+                                <td><strong>@b.IdBoleta</strong></td>
+                                <td>@fechaGestion</td>
+                                <td>@vendedor</td>
+                                <td><span class="badge-estado @badgeClass">@estadoText</span></td>
+                                <td style="text-align:right;font-weight:600">$@b.MontoTotal.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}

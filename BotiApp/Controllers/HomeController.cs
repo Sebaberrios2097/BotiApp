@@ -1,21 +1,77 @@
+using BotiApp.Helpers;
 using BotiApp.Models;
+using Infraestructura.Repositories.BotiApp.Interfaces;
 using Infraestructura.Repositories.Sp.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
 namespace BotiApp.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
         private readonly IBotiAppStoredProcedures _sp;
+        private readonly IVentasRepository        _ventas;
+        private readonly IProductosRepository     _productos;
 
-        public HomeController(IBotiAppStoredProcedures sp)
+        public HomeController(
+            IBotiAppStoredProcedures sp,
+            IVentasRepository ventas,
+            IProductosRepository productos)
         {
-            _sp = sp;
+            _sp        = sp;
+            _ventas    = ventas;
+            _productos = productos;
         }
+
         public async Task<IActionResult> Index()
         {
-            return View();
+            var hoy  = DateTime.Today;
+            var anio = hoy.Year;
+            var mes  = hoy.Month;
+
+            var vm = new DashboardViewModel
+            {
+                NombreUsuario = ClaimHelper.GetNombreCompleto(User),
+                TipoUsuario   = ClaimHelper.GetTipoUsuario(User)
+            };
+
+            if (ClaimHelper.EsAdmin(User))
+            {
+                var boletas   = (await _ventas.ObtenerBoletasDelMesAsync(anio, mes)).ToList();
+                var productos = (await _productos.ObtenerTodosAsync()).ToList();
+
+                vm.TotalBoletasMes           = boletas.Count;
+                vm.TotalBoletasPagadasMes    = boletas.Count(b => b.IdEstadoBoleta == 3);
+                vm.TotalBoletasAnuladasMes   = boletas.Count(b => b.IdEstadoBoleta == 2);
+                vm.TotalBoletasPendientesMes = boletas.Count(b => b.IdEstadoBoleta == 1);
+                vm.MontoTotalMes             = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
+                vm.TotalProductosBajoStock   = productos.Count(p => p.Stock <= 5 && p.Estado);
+                vm.UltimasBoletas            = boletas.Take(15);
+            }
+            else if (ClaimHelper.EsVendedor(User))
+            {
+                var idUsuario = ClaimHelper.GetIdUsuario(User);
+                var boletas   = (await _ventas.ObtenerBoletasVendedorDelMesAsync(idUsuario, anio, mes)).ToList();
+
+                vm.VendedorBoletasMes        = boletas.Count;
+                vm.VendedorMontoMes          = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
+                vm.VendedorBoletasPendientes = boletas.Count(b => b.IdEstadoBoleta == 1);
+                vm.VendedorUltimasBoletas    = boletas.Take(10);
+            }
+            else if (ClaimHelper.EsCajero(User))
+            {
+                var idUsuario = ClaimHelper.GetIdUsuario(User);
+                var boletas   = (await _ventas.ObtenerBoletasCajeroDelMesAsync(idUsuario, anio, mes)).ToList();
+
+                vm.CajeroBoletasCobradas  = boletas.Count(b => b.IdEstadoBoleta == 3);
+                vm.CajeroBoletasAnuladas  = boletas.Count(b => b.IdEstadoBoleta == 2);
+                vm.CajeroMontoGestionado  = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
+                vm.CajeroUltimasBoletas   = boletas.Take(10);
+            }
+
+            return View(vm);
         }
 
         public IActionResult Privacy()

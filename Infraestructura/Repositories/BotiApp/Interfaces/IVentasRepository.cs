@@ -14,7 +14,7 @@ public interface IVentasRepository
     Task<VenBoletas> CrearBoletaAsync(VenBoletas boleta, IEnumerable<VenBoletaDetalle> detalles);
     Task<VenBoletas?> ModificarBoletaDetalleAsync(int idBoleta, IEnumerable<VenBoletaDetalle> nuevosDetalles);
     Task<VenBoletas?> CobrarBoletaAsync(int idBoleta, int idCajero, IEnumerable<VenMetodosPagoBoleta> metodos);
-    Task<bool> AnularBoletaAsync(int idBoleta);
+    Task<bool> AnularBoletaAsync(int idBoleta, int idUsuario);
 
     // ── Catálogo ──────────────────────────────────────────────────────────────
     Task<IEnumerable<ProProductos>> ObtenerProductosDisponiblesAsync();
@@ -27,4 +27,9 @@ public interface IVentasRepository
 
     // ── Métodos de pago ───────────────────────────────────────────────────────
     Task<IEnumerable<VenMetodosPago>> ObtenerMetodosPagoAsync();
+
+    // ── Dashboard ─────────────────────────────────────────────────────────────
+    Task<IEnumerable<VenBoletas>> ObtenerBoletasDelMesAsync(int anio, int mes);
+    Task<IEnumerable<VenBoletas>> ObtenerBoletasVendedorDelMesAsync(int idVendedor, int anio, int mes);
+    Task<IEnumerable<VenBoletas>> ObtenerBoletasCajeroDelMesAsync(int idCajero, int anio, int mes);
 }

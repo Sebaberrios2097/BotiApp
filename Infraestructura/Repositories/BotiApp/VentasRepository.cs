@@ -142,7 +142,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         return await ObtenerBoletaParaCajaAsync(idBoleta);
     }
 
-    public async Task<bool> AnularBoletaAsync(int idBoleta)
+    public async Task<bool> AnularBoletaAsync(int idBoleta, int idUsuario)
     {
         await using var tx = await context.Database.BeginTransactionAsync();
 
@@ -160,6 +160,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         }
 
         boleta.IdEstadoBoleta = 2; // Anulada
+        boleta.IdCajero       = idUsuario;
         await context.SaveChangesAsync();
         await tx.CommitAsync();
 
@@ -242,4 +243,35 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
 
         return await query.OrderBy(p => p.NombreProducto).Take(30).ToListAsync();
     }
+
+    // ── Dashboard ─────────────────────────────────────────────────────────────
+
+    public async Task<IEnumerable<VenBoletas>> ObtenerBoletasDelMesAsync(int anio, int mes)
+        => await BoletasConIncludes()
+            .AsNoTracking()
+            .Where(b => b.FechaEmision.HasValue
+                     && b.FechaEmision.Value.Year  == anio
+                     && b.FechaEmision.Value.Month == mes)
+            .OrderByDescending(b => b.FechaEmision)
+            .ToListAsync();
+
+    public async Task<IEnumerable<VenBoletas>> ObtenerBoletasVendedorDelMesAsync(int idVendedor, int anio, int mes)
+        => await BoletasConIncludes()
+            .AsNoTracking()
+            .Where(b => b.IdVendedor == idVendedor
+                     && b.FechaEmision.HasValue
+                     && b.FechaEmision.Value.Year  == anio
+                     && b.FechaEmision.Value.Month == mes)
+            .OrderByDescending(b => b.FechaEmision)
+            .ToListAsync();
+
+    public async Task<IEnumerable<VenBoletas>> ObtenerBoletasCajeroDelMesAsync(int idCajero, int anio, int mes)
+        => await BoletasConIncludes()
+            .AsNoTracking()
+            .Where(b => b.IdCajero == idCajero
+                     && b.FechaEmision.HasValue
+                     && b.FechaEmision.Value.Year  == anio
+                     && b.FechaEmision.Value.Month == mes)
+            .OrderByDescending(b => b.FechaEmision)
+            .ToListAsync();
 }
