@@ -1,5 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infraestructura.Entities.BotiApp;
 
@@ -17,7 +20,7 @@ public partial class ProPromocionGrupo
     public string Descripcion { get; set; } = null!;
 
     [Column("Es_Excluyente")]
-    public bool EsExcluyente { get; set; } = true;
+    public bool EsExcluyente { get; set; }
 
     [ForeignKey("IdPromocion")]
     [InverseProperty("ProPromocionGrupo")]

@@ -1,0 +1,676 @@
+@using Infraestructura.Entities.BotiApp
+@model IEnumerable<EmpEmpleado>
+@{
+    ViewData["Title"] = "Empleados";
+
+    var urlCrear        = Url.Action("CrearUsuarioAjax",   "Empleados", new { area = "Empleados" });
+    var urlToggle       = Url.Action("ToggleEstadoAjax",   "Empleados", new { area = "Empleados" });
+    var urlCrearEmp     = Url.Action("CrearEmpleadoAjax", "Empleados", new { area = "Empleados" });
+}
+
+<style>
+/* ══════════════════════════════════════════════════════ HEADER */
+.emp-page-header { display:flex; align-items:center; gap:.7rem; margin-bottom:1.4rem; }
+.emp-page-header svg { width:26px; height:26px; fill:var(--color-primario); }
+.emp-page-header h1  { font-size:1.35rem; font-weight:700; color:var(--color-secundario); margin:0; }
+
+/* ══════════════════════════════════════════════════════ BARRA */
+.emp-toolbar { display:flex; align-items:center; gap:.75rem; margin-bottom:1.1rem; flex-wrap:wrap; }
+.emp-search  { display:flex; align-items:center; gap:.5rem; background:#fff; border:1.5px solid #e0d5cc; border-radius:9px; padding:.45rem .8rem; flex:1; min-width:220px; }
+.emp-search svg { width:15px; height:15px; fill:#a89080; flex-shrink:0; }
+.emp-search input { border:none; outline:none; background:transparent; font-size:.88rem; width:100%; color:var(--color-secundario); }
+.emp-filter { display:flex; align-items:center; gap:.4rem; font-size:.82rem; color:#a89080; }
+.emp-filter select { padding:.42rem .55rem; border:1.5px solid #e0d5cc; border-radius:7px; font-size:.82rem; background:#fff; color:var(--color-secundario); outline:none; cursor:pointer; }
+.emp-count   { font-size:.8rem; color:#a89080; margin-left:auto; }
+
+/* ══════════════════════════════════════════════════════ TABLA */
+.emp-table-wrap { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; }
+.emp-table { width:100%; border-collapse:collapse; font-size:.84rem; }
+.emp-table thead { background:var(--color-secundario); }
+.emp-table th { text-align:left; color:rgba(255,255,255,.75); font-weight:700; font-size:.73rem; text-transform:uppercase; letter-spacing:.04em; padding:.7rem .9rem; white-space:nowrap; }
+.emp-table th:first-child { padding-left:1.1rem; }
+.emp-table td { padding:.65rem .9rem; border-bottom:1px solid #f5f0eb; vertical-align:middle; }
+.emp-table td:first-child { padding-left:1.1rem; }
+.emp-table tbody tr:last-child td { border-bottom:none; }
+.emp-table tbody tr:hover td { background:#fdf8f4; }
+
+/* Celdas */
+.td-nombre { font-weight:700; color:var(--color-secundario); }
+.td-rut    { font-family:monospace; font-size:.82rem; color:#7a6050; }
+.td-fecha  { font-size:.78rem; color:#a89080; }
+.td-contact{ font-size:.78rem; color:#7a6050; }
+
+/* Badge estado usuario */
+.badge-activo  { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .55rem; background:#dcfce7; color:#16a34a; border-radius:12px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+.badge-inactivo{ display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .55rem; background:#fee2e2; color:#dc2626; border-radius:12px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+.badge-sin     { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .55rem; background:#f1f5f9; color:#94a3b8; border-radius:12px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+.badge-dot { width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; }
+
+/* Usuario info */
+.usuario-nombre { font-weight:700; color:var(--color-secundario); font-size:.82rem; }
+.usuario-tipo   { font-size:.73rem; color:#a89080; margin-top:.1rem; }
+
+/* Botones */
+.btn-crear-usuario { display:inline-flex; align-items:center; gap:.35rem; padding:.42rem .85rem; background:var(--color-primario); color:#fff; border:none; border-radius:7px; font-size:.8rem; font-weight:700; cursor:pointer; transition:background .15s,transform .1s; white-space:nowrap; }
+.btn-crear-usuario:hover:not(:disabled) { background:#cf5f22; transform:translateY(-1px); }
+.btn-crear-usuario:disabled { opacity:.5; cursor:not-allowed; }
+.btn-crear-usuario svg { width:14px; height:14px; fill:currentColor; }
+
+.btn-toggle { display:inline-flex; align-items:center; gap:.35rem; padding:.38rem .75rem; border:1.5px solid; border-radius:7px; font-size:.78rem; font-weight:700; cursor:pointer; transition:background .15s; white-space:nowrap; background:transparent; }
+.btn-toggle.activo   { border-color:rgba(239,68,68,.3);  color:#dc2626; }
+.btn-toggle.activo:hover { background:rgba(239,68,68,.08); }
+.btn-toggle.inactivo { border-color:rgba(22,163,74,.3);  color:#16a34a; }
+.btn-toggle.inactivo:hover { background:rgba(22,163,74,.08); }
+.btn-toggle svg { width:13px; height:13px; fill:currentColor; }
+.btn-toggle:disabled { opacity:.4; cursor:not-allowed; }
+
+/* ══════════════════════════════════════════════════════ EMPTY */
+.emp-empty { text-align:center; padding:3rem; color:#a89080; }
+.emp-empty svg { width:52px; height:52px; fill:#ddd0c4; display:block; margin:0 auto .75rem; }
+.emp-empty p { font-size:.9rem; font-weight:600; }
+
+/* ══════════════════════════════════════════════════════ MODAL NUEVO EMPLEADO */
+.emp-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:2000; display:flex; align-items:center; justify-content:center; animation:fadeInO .18s ease; }
+@@keyframes fadeInO { from{opacity:0} to{opacity:1} }
+.emp-modal-box { background:#fff; border-radius:14px; width:480px; max-width:96vw; box-shadow:0 8px 32px rgba(0,0,0,.22); overflow:hidden; display:flex; flex-direction:column; }
+.emp-modal-header { display:flex; align-items:center; gap:.6rem; padding:.9rem 1.15rem; background:var(--color-secundario); color:#fff; }
+.emp-modal-header svg  { width:17px; height:17px; fill:var(--color-primario); }
+.emp-modal-header span { font-size:.88rem; font-weight:700; flex:1; }
+.emp-modal-header .btn-mclose { background:none; border:none; cursor:pointer; color:#fff; opacity:.7; display:flex; padding:0; transition:opacity .1s; }
+.emp-modal-header .btn-mclose:hover { opacity:1; }
+.emp-modal-header .btn-mclose svg { width:18px; height:18px; fill:currentColor; }
+.emp-modal-body { padding:1.1rem 1.15rem; display:flex; flex-direction:column; gap:.75rem; }
+.emp-form-row { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; }
+.emp-form-row.full { grid-template-columns:1fr; }
+.emp-field { display:flex; flex-direction:column; gap:.3rem; }
+.emp-field label { font-size:.76rem; font-weight:700; color:#a89080; text-transform:uppercase; letter-spacing:.04em; }
+.emp-field input { padding:.5rem .75rem; border:1.5px solid #e0d5cc; border-radius:8px; font-size:.88rem; color:var(--color-secundario); outline:none; transition:border-color .15s; }
+.emp-field input:focus { border-color:var(--color-primario); }
+.emp-field input.input-error { border-color:#dc2626; }
+.emp-field .field-hint { font-size:.72rem; color:#a89080; }
+.emp-modal-footer { display:flex; gap:.65rem; justify-content:flex-end; padding:.9rem 1.15rem; border-top:1px solid #f0ebe5; }
+.btn-emp-cancelar { padding:.55rem 1rem; background:transparent; color:#a89080; border:1.5px solid #e0d5cc; border-radius:8px; font-size:.86rem; font-weight:700; cursor:pointer; transition:background .15s; }
+.btn-emp-cancelar:hover { background:#f5f0eb; }
+.btn-emp-guardar  { display:flex; align-items:center; gap:.4rem; padding:.55rem 1.15rem; background:var(--color-primario); color:#fff; border:none; border-radius:8px; font-size:.86rem; font-weight:700; cursor:pointer; transition:background .15s; }
+.btn-emp-guardar:hover:not(:disabled) { background:#cf5f22; }
+.btn-emp-guardar:disabled { opacity:.5; cursor:not-allowed; }
+.btn-emp-guardar svg { width:15px; height:15px; fill:currentColor; }
+
+/* ══════════════════════════════════════════════════════ MODAL TIPO USUARIO */
+.tipo-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:2100; display:flex; align-items:center; justify-content:center; animation:fadeInO .18s ease; }
+.tipo-modal-box { background:#fff; border-radius:14px; width:400px; max-width:96vw; box-shadow:0 8px 32px rgba(0,0,0,.22); overflow:hidden; display:flex; flex-direction:column; }
+.tipo-modal-header { display:flex; align-items:center; gap:.6rem; padding:.9rem 1.15rem; background:var(--color-secundario); color:#fff; }
+.tipo-modal-header svg { width:17px; height:17px; fill:var(--color-primario); }
+.tipo-modal-header span { font-size:.88rem; font-weight:700; flex:1; }
+.tipo-modal-header .btn-mclose { background:none; border:none; cursor:pointer; color:#fff; opacity:.7; display:flex; padding:0; transition:opacity .1s; }
+.tipo-modal-header .btn-mclose:hover { opacity:1; }
+.tipo-modal-header .btn-mclose svg { width:18px; height:18px; fill:currentColor; }
+.tipo-modal-body { padding:1.1rem 1.15rem; display:flex; flex-direction:column; gap:.65rem; }
+.tipo-modal-subtitle { font-size:.8rem; color:#a89080; margin-bottom:.1rem; }
+.tipo-modal-nombre { font-size:.95rem; font-weight:700; color:var(--color-secundario); margin-bottom:.5rem; }
+.tipos-grid { display:flex; flex-direction:column; gap:.5rem; }
+.btn-tipo { display:flex; align-items:center; gap:.75rem; padding:.7rem 1rem; background:#faf7f4; border:1.5px solid #e8ddd5; border-radius:10px; cursor:pointer; text-align:left; transition:border-color .15s, background .15s; width:100%; }
+.btn-tipo:hover:not(:disabled) { border-color:var(--color-primario); background:#fff4ec; }
+.btn-tipo:disabled { opacity:.5; cursor:not-allowed; }
+.btn-tipo-ico { width:36px; height:36px; border-radius:50%; background:var(--color-primario); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.btn-tipo-ico svg { width:18px; height:18px; fill:#fff; }
+.btn-tipo-label { font-size:.9rem; font-weight:700; color:var(--color-secundario); }
+.tipo-modal-footer { padding:.75rem 1.15rem; border-top:1px solid #f0ebe5; display:flex; justify-content:flex-end; }
+.btn-tipo-cancelar { padding:.5rem 1rem; background:transparent; color:#a89080; border:1.5px solid #e0d5cc; border-radius:8px; font-size:.86rem; font-weight:700; cursor:pointer; transition:background .15s; }
+.btn-tipo-cancelar:hover { background:#f5f0eb; }
+
+/* ══════════════════════════════════════════════════════ TOAST */
+.toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
+.toast-msg  { display:flex; align-items:center; gap:.6rem; padding:.75rem 1.1rem; border-radius:10px; font-size:.88rem; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease; }
+.toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
+.toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
+.toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
+@@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+.spin-sm { width:14px; height:14px; border:2px solid rgba(0,0,0,.15); border-top-color:currentColor; border-radius:50%; animation:spinR .6s linear infinite; display:inline-block; }
+@@keyframes spinR { to { transform:rotate(360deg); } }
+</style>
+
+<div class="toast-wrap" id="toastWrap"></div>
+@Html.AntiForgeryToken()
+
+<!-- ══ MODAL TIPO USUARIO ══ -->
+<div class="tipo-modal-overlay" id="modalTipoUsuario" style="display:none;" onclick="if(event.target===this)cerrarModalTipo()">
+    <div class="tipo-modal-box">
+        <div class="tipo-modal-header">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <span>Seleccionar tipo de usuario</span>
+            <button class="btn-mclose" onclick="cerrarModalTipo()" title="Cerrar">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+        </div>
+        <div class="tipo-modal-body">
+            <p class="tipo-modal-subtitle">Empleado</p>
+            <p class="tipo-modal-nombre" id="tipoModalNombreEmp"></p>
+            <div class="tipos-grid" id="tiposGrid">
+                @foreach (var tipo in (IEnumerable<Infraestructura.Entities.BotiApp.EmpTiposUsuario>)ViewBag.Tipos)
+                {
+                    <button class="btn-tipo" onclick="confirmarTipo(@tipo.IdTipoUsuario, '@Html.Raw(tipo.NombreTipoUsuario)')" data-tipo-id="@tipo.IdTipoUsuario">
+                        <div class="btn-tipo-ico">
+                            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        </div>
+                        <span class="btn-tipo-label">@tipo.NombreTipoUsuario</span>
+                    </button>
+                }
+            </div>
+        </div>
+        <div class="tipo-modal-footer">
+            <button class="btn-tipo-cancelar" onclick="cerrarModalTipo()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ MODAL NUEVO EMPLEADO ══ -->
+<div class="emp-modal-overlay" id="modalNuevoEmp" style="display:none;" onclick="if(event.target===this)cerrarModalEmp()">
+    <div class="emp-modal-box">
+        <div class="emp-modal-header">
+            <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <span>Nuevo empleado</span>
+            <button class="btn-mclose" onclick="cerrarModalEmp()" title="Cerrar">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+        </div>
+        <div class="emp-modal-body">
+            <div class="emp-form-row">
+                <div class="emp-field">
+                    <label>Nombres <span style="color:#dc2626">*</span></label>
+                    <input type="text" id="empNombres" placeholder="Ej: Juan Carlos" maxlength="80" />
+                </div>
+                <div class="emp-field">
+                    <label>Primer apellido <span style="color:#dc2626">*</span></label>
+                    <input type="text" id="empApellido1" placeholder="Ej: González" maxlength="50" />
+                </div>
+            </div>
+            <div class="emp-form-row">
+                <div class="emp-field">
+                    <label>Segundo apellido</label>
+                    <input type="text" id="empApellido2" placeholder="Opcional" maxlength="50" />
+                </div>
+                <div class="emp-field">
+                    <label>RUT (sin dígito verificador) <span style="color:#dc2626">*</span></label>
+                    <input type="number" id="empRut" placeholder="Ej: 20847154" min="1000000" max="99999999" />
+                    <span class="field-hint">Solo números, sin puntos ni guión</span>
+                </div>
+            </div>
+            <div class="emp-form-row">
+                <div class="emp-field">
+                    <label>Teléfono</label>
+                    <input type="text" id="empFono" placeholder="Ej: +56 9 1234 5678" maxlength="50" />
+                </div>
+                <div class="emp-field">
+                    <label>Correo</label>
+                    <input type="email" id="empCorreo" placeholder="correo@ejemplo.com" maxlength="150" />
+                </div>
+            </div>
+        </div>
+        <div class="emp-modal-footer">
+            <button class="btn-emp-cancelar" onclick="cerrarModalEmp()">Cancelar</button>
+            <button class="btn-emp-guardar" id="btnGuardarEmp" onclick="guardarEmpleado()">
+                <svg viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="emp-page-header">
+    <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+    <h1>Empleados</h1>
+    <button onclick="abrirModalEmp()" style="margin-left:auto; display:flex; align-items:center; gap:.4rem; padding:.6rem 1.1rem; background:var(--color-primario); color:#fff; border:none; border-radius:9px; font-size:.88rem; font-weight:700; cursor:pointer; transition:background .15s;" onmouseover="this.style.background='#cf5f22'" onmouseout="this.style.background='var(--color-primario)'">
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+        Nuevo empleado
+    </button>
+</div>
+
+<!-- Barra de filtros -->
+<div class="emp-toolbar">
+    <div class="emp-search">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" id="filtroTexto" placeholder="Buscar por nombre o RUT…" oninput="filtrar()" />
+    </div>
+    <div class="emp-filter">
+        Usuario:
+        <select id="filtroUsuario" onchange="filtrar()">
+            <option value="">Todos</option>
+            <option value="con">Con usuario</option>
+            <option value="sin">Sin usuario</option>
+        </select>
+    </div>
+    <div class="emp-filter">
+        Estado:
+        <select id="filtroEstado" onchange="filtrar()">
+            <option value="">Todos</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+        </select>
+    </div>
+    <span class="emp-count" id="empCount"></span>
+</div>
+
+<!-- Tabla -->
+<div class="emp-table-wrap">
+    <table class="emp-table" id="tablaEmpleados">
+        <thead>
+            <tr>
+                <th>Empleado</th>
+                <th>RUT</th>
+                <th>Contacto</th>
+                <th>Ingreso</th>
+                <th>Usuario</th>
+                <th>Estado</th>
+                <th style="width:160px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var emp in Model)
+            {
+                var u         = emp.EmpUsuario;
+                var tieneUser = u != null;
+                var activo    = tieneUser && u!.Estado;
+                var rut       = emp.Rut.ToString();
+                var rutFormat = rut.Length >= 2 ? rut[..^1] + "-" + rut[^1..] : rut;
+                var nombre    = $"{emp.NombresEmpleado} {emp.Apellido1}{(emp.Apellido2 != null ? " " + emp.Apellido2 : "")}";
+
+                <tr data-nombre="@nombre.ToLower()"
+                    data-rut="@emp.Rut"
+                    data-tieneuser="@(tieneUser ? "con" : "sin")"
+                    data-estado="@(tieneUser ? (activo ? "activo" : "inactivo") : "")">
+                    <td class="td-nombre">@nombre</td>
+                    <td class="td-rut">@rutFormat</td>
+                    <td class="td-contact">
+                        @if (!string.IsNullOrEmpty(emp.Fono))
+                        {
+                            <div>📞 @emp.Fono</div>
+                        }
+                        @if (!string.IsNullOrEmpty(emp.Correo))
+                        {
+                            <div>✉ @emp.Correo</div>
+                        }
+                        @if (string.IsNullOrEmpty(emp.Fono) && string.IsNullOrEmpty(emp.Correo))
+                        {
+                            <span style="color:#c8bdb5">—</span>
+                        }
+                    </td>
+                    <td class="td-fecha">@emp.FechaIngreso.ToString("dd/MM/yyyy")</td>
+
+                    <!-- Columna usuario -->
+                    <td id="td-user-@emp.IdEmpleado">
+                        @if (tieneUser)
+                        {
+                            <div class="usuario-nombre">@u!.NombreUsuario</div>
+                            <div class="usuario-tipo">@(u.IdTipoUsuarioNavigation?.NombreTipoUsuario ?? "—")</div>
+                        }
+                        else
+                        {
+                            <span class="badge-sin"><span class="badge-dot"></span>Sin usuario</span>
+                        }
+                    </td>
+
+                    <!-- Columna estado -->
+                    <td id="td-estado-@emp.IdEmpleado">
+                        @if (tieneUser)
+                        {
+                            if (activo)
+                            {
+                                <span class="badge-activo"><span class="badge-dot"></span>Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge-inactivo"><span class="badge-dot"></span>Inactivo</span>
+                            }
+                        }
+                        else
+                        {
+                            <span style="color:#c8bdb5">—</span>
+                        }
+                    </td>
+
+                    <!-- Columna acciones -->
+                    <td id="td-acc-@emp.IdEmpleado" style="text-align:right;">
+                        @if (!tieneUser)
+                        {
+                            <button class="btn-crear-usuario"
+                                    onclick="abrirModalTipo(@emp.IdEmpleado, '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode($"{emp.NombresEmpleado} {emp.Apellido1}"))')"
+                                    title="Generar usuario para este empleado">
+                                <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                                Generar usuario
+                            </button>
+                        }
+                        else
+                        {
+                            var tituloBtn  = activo ? "Desactivar usuario" : "Activar usuario";
+                            var labelBtn   = activo ? "Desactivar" : "Activar";
+                            var claseBtn   = activo ? "activo" : "inactivo";
+                            <button class="btn-toggle @claseBtn"
+                                    id="btn-toggle-@u!.IdUsuario"
+                                    onclick="toggleEstado(@u.IdUsuario, @emp.IdEmpleado, this)"
+                                    title="@tituloBtn">
+                                @if (activo)
+                                {
+                                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+                                }
+                                else
+                                {
+                                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                                }
+                                @labelBtn
+                            </button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (!Model.Any())
+    {
+        <div class="emp-empty">
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            <p>No hay empleados registrados.</p>
+        </div>
+    }
+</div>
+
+<div id="filaVaciaMsg" style="display:none; text-align:center; padding:2rem; color:#a89080; font-size:.86rem; background:#fff; border-radius:0 0 14px 14px;">
+    No se encontraron empleados con ese criterio.
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    const TOKEN         = document.querySelector('input[name="__RequestVerificationToken"]').value;
+    const URL_CREAR     = '@Html.Raw(urlCrear)';
+    const URL_TOGGLE    = '@Html.Raw(urlToggle)';
+    const URL_CREAR_EMP = '@Html.Raw(urlCrearEmp)';
+
+    /* ── Utilitarios ──────────────────────────────────────────────────────── */
+    function toast(msg, tipo) {
+        const wrap = document.getElementById('toastWrap');
+        const div  = document.createElement('div');
+        div.className = 'toast-msg ' + tipo;
+        div.innerHTML = tipo === 'exito'
+            ? `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`
+            : `<svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`;
+        div.innerHTML += `<span>${msg}</span>`;
+        wrap.appendChild(div);
+        setTimeout(() => div.remove(), 4500);
+    }
+
+    async function post(url, data) {
+        const r = await fetch(url, {
+            method : 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': TOKEN },
+            body   : JSON.stringify(data)
+        });
+        return r.json();
+    }
+
+    /* ── Filtrar tabla ────────────────────────────────────────────────────── */
+    window.filtrar = function () {
+        const texto   = document.getElementById('filtroTexto').value.toLowerCase().trim();
+        const fUser   = document.getElementById('filtroUsuario').value;
+        const fEst    = document.getElementById('filtroEstado').value;
+        const filas   = document.querySelectorAll('#tablaEmpleados tbody tr');
+        let visibles  = 0;
+
+        filas.forEach(tr => {
+            const nombre   = tr.dataset.nombre  || '';
+            const rut      = tr.dataset.rut     || '';
+            const tieneU   = tr.dataset.tieneuser || '';
+            const estado   = tr.dataset.estado  || '';
+
+            const matchTxt  = !texto || nombre.includes(texto) || rut.includes(texto);
+            const matchUser = !fUser || tieneU === fUser;
+            const matchEst  = !fEst  || estado === fEst;
+
+            const visible = matchTxt && matchUser && matchEst;
+            tr.style.display = visible ? '' : 'none';
+            if (visible) visibles++;
+        });
+
+        document.getElementById('empCount').textContent = `${visibles} empleado${visibles !== 1 ? 's' : ''}`;
+        document.getElementById('filaVaciaMsg').style.display = visibles === 0 ? 'block' : 'none';
+    };
+
+    /* Inicializar contador */
+    filtrar();
+
+    /* ── Modal selección tipo de usuario ────────────────────────────────── */
+    let _tipoEmpId = null;
+
+    window.abrirModalTipo = function (idEmpleado, nombreEmp) {
+        _tipoEmpId = idEmpleado;
+        document.getElementById('tipoModalNombreEmp').textContent = nombreEmp;
+        // Rehabilitar todos los botones de tipo
+        document.querySelectorAll('#tiposGrid .btn-tipo').forEach(b => b.disabled = false);
+        document.getElementById('modalTipoUsuario').style.display = 'flex';
+    };
+
+    window.cerrarModalTipo = function () {
+        document.getElementById('modalTipoUsuario').style.display = 'none';
+        _tipoEmpId = null;
+    };
+
+    window.confirmarTipo = async function (idTipoUsuario, nombreTipo) {
+        if (_tipoEmpId === null) return;
+        const idEmpleado = _tipoEmpId;
+
+        // Deshabilitar todos los botones mientras se crea
+        document.querySelectorAll('#tiposGrid .btn-tipo').forEach(b => b.disabled = true);
+        const btnActivo = document.querySelector(`#tiposGrid .btn-tipo[data-tipo-id="${idTipoUsuario}"]`);
+        if (btnActivo) btnActivo.innerHTML =
+            `<div class="btn-tipo-ico"><span class="spin-sm" style="border-color:rgba(255,255,255,.3);border-top-color:#fff"></span></div>` +
+            `<span class="btn-tipo-label">Creando usuario…</span>`;
+
+        const res = await post(URL_CREAR, { idEmpleado, idTipoUsuario });
+
+        cerrarModalTipo();
+
+        if (!res || !res.ok) { toast(res?.mensaje ?? 'Error al crear el usuario.', 'error'); return; }
+        toast(res.mensaje, 'exito');
+
+        const u = res.usuario;
+        if (!u) return;
+
+        /* Actualizar columna usuario */
+        document.getElementById(`td-user-${idEmpleado}`).innerHTML =
+            `<div class="usuario-nombre">${esc(u.nombreUsuario)}</div>` +
+            `<div class="usuario-tipo">${esc(u.tipoUsuario)}</div>`;
+
+        /* Actualizar columna estado */
+        document.getElementById(`td-estado-${idEmpleado}`).innerHTML =
+            u.estado
+            ? `<span class="badge-activo"><span class="badge-dot"></span>Activo</span>`
+            : `<span class="badge-inactivo"><span class="badge-dot"></span>Inactivo</span>`;
+
+        /* Actualizar columna acciones */
+        const clase = u.estado ? 'activo' : 'inactivo';
+        const label = u.estado ? 'Desactivar' : 'Activar';
+        const ico   = u.estado
+            ? `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>`
+            : `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`;
+        document.getElementById(`td-acc-${idEmpleado}`).innerHTML =
+            `<button class="btn-toggle ${clase}" id="btn-toggle-${u.idUsuario}" ` +
+            `onclick="toggleEstado(${u.idUsuario}, ${idEmpleado}, this)" title="${u.estado ? 'Desactivar' : 'Activar'} usuario">` +
+            `${ico} ${label}</button>`;
+
+        /* Actualizar data-attrs de la fila para filtros */
+        const fila = document.querySelector(`tr[data-nombre]`+
+            `[data-rut]`);
+        const filaEmp = document.getElementById(`td-acc-${idEmpleado}`)?.closest('tr');
+        if (filaEmp) {
+            filaEmp.dataset.tieneuser = 'con';
+            filaEmp.dataset.estado    = u.estado ? 'activo' : 'inactivo';
+        }
+        filtrar();
+    };
+
+    /* ── Toggle estado usuario ───────────────────────────────────────────── */
+    window.toggleEstado = async function (idUsuario, idEmpleado, btn) {
+        btn.disabled = true;
+        const orig = btn.innerHTML;
+        btn.innerHTML = `<span class="spin-sm"></span>`;
+
+        const res = await post(URL_TOGGLE, { idUsuario });
+        btn.innerHTML = orig;
+        btn.disabled  = false;
+
+        if (!res.ok) { toast(res.mensaje, 'error'); return; }
+
+        const activo = res.estado;
+
+        /* Badge estado */
+        document.getElementById(`td-estado-${idEmpleado}`).innerHTML = activo
+            ? `<span class="badge-activo"><span class="badge-dot"></span>Activo</span>`
+            : `<span class="badge-inactivo"><span class="badge-dot"></span>Inactivo</span>`;
+
+        /* Botón toggle */
+        const clase = activo ? 'activo' : 'inactivo';
+        const label = activo ? 'Desactivar' : 'Activar';
+        const ico   = activo
+            ? `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>`
+            : `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`;
+        btn.className     = `btn-toggle ${clase}`;
+        btn.title         = `${activo ? 'Desactivar' : 'Activar'} usuario`;
+        btn.innerHTML     = `${ico} ${label}`;
+        btn.onclick       = function() { toggleEstado(idUsuario, idEmpleado, this); };
+
+        /* data-attrs */
+        const fila = btn.closest('tr');
+        fila.dataset.estado = activo ? 'activo' : 'inactivo';
+        filtrar();
+
+        toast(`Usuario ${activo ? 'activado' : 'desactivado'} correctamente.`, 'exito');
+    };
+
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s ?? '';
+        return d.innerHTML;
+    }
+
+    /* ── Modal nuevo empleado ──────────────────────────────────────────────── */
+    window.abrirModalEmp = function abrirModalEmp() {
+        // Limpiar campos
+        ['empNombres','empApellido1','empApellido2','empRut','empFono','empCorreo']
+            .forEach(id => {
+                const el = document.getElementById(id);
+                el.value = '';
+                el.classList.remove('input-error');
+            });
+        document.getElementById('modalNuevoEmp').style.display = 'flex';
+        document.getElementById('empNombres').focus();
+    }
+
+    window.cerrarModalEmp = function cerrarModalEmp() {
+        document.getElementById('modalNuevoEmp').style.display = 'none';
+    }
+
+    window.guardarEmpleado = async function guardarEmpleado() {
+        const nombres    = document.getElementById('empNombres').value.trim();
+        const apellido1  = document.getElementById('empApellido1').value.trim();
+        const apellido2  = document.getElementById('empApellido2').value.trim();
+        const rutVal     = document.getElementById('empRut').value.trim();
+        const fono       = document.getElementById('empFono').value.trim();
+        const correo     = document.getElementById('empCorreo').value.trim();
+
+        // Validación básica
+        let valido = true;
+        const req = [['empNombres', nombres], ['empApellido1', apellido1], ['empRut', rutVal]];
+        req.forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if (!val) { el.classList.add('input-error'); valido = false; }
+            else        el.classList.remove('input-error');
+        });
+        if (!valido) return;
+
+        const rut = parseInt(rutVal);
+        if (isNaN(rut) || rut < 1000000) {
+            document.getElementById('empRut').classList.add('input-error');
+            toast('Ingresa un RUT válido (sin dígito verificador)', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('btnGuardarEmp');
+        btn.disabled = true;
+        btn.textContent = 'Guardando…';
+
+        const datos = await post(URL_CREAR_EMP, {
+            nombres, apellido1,
+            apellido2: apellido2 || null,
+            rut,
+            fono: fono || null,
+            correo: correo || null
+        });
+
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg> Guardar';
+
+        if (!datos || !datos.ok) {
+            toast(datos?.mensaje ?? 'Error al crear el empleado.', 'error');
+            return;
+        }
+
+        cerrarModalEmp();
+        toast(datos.mensaje, 'exito');
+        agregarFilaEmpleado(datos);
+        actualizarContador();
+    }
+
+    function agregarFilaEmpleado(d) {
+        const tbody = document.getElementById('tablaEmpleados').querySelector('tbody');
+
+        // Quitar fila "sin resultados" si existe
+        const empty = tbody.querySelector('td[colspan]');
+        if (empty) empty.closest('tr').remove();
+
+        const nombreCompleto = esc(d.nombre);
+        const fono   = d.fono   ? esc(d.fono)   : '<span style="color:#d1c5bc">—</span>';
+        const correo = d.correo ? esc(d.correo)  : '<span style="color:#d1c5bc">—</span>';
+
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-nombre', d.nombre.toLowerCase());
+        tr.setAttribute('data-rut', d.rut ?? '');
+        tr.setAttribute('data-tieneuser', 'no');
+        tr.setAttribute('data-estado', '');
+
+        tr.innerHTML = `
+            <td>
+                <div class="emp-cell-nombre">${nombreCompleto}</div>
+            </td>
+            <td><span class="badge-rut">${esc(d.rut)}</span></td>
+            <td>
+                <div class="emp-contacto">${fono}</div>
+                <div class="emp-contacto">${correo}</div>
+            </td>
+            <td>${esc(d.fechaIngreso)}</td>
+            <td><span class="badge-sin-usuario">Sin usuario</span></td>
+            <td><span style="color:#d1c5bc;font-size:.8rem">—</span></td>
+            <td>
+                <button class="btn-accion btn-generar"
+                    onclick="abrirModalTipo(${d.idEmpleado}, ${JSON.stringify(d.nombre)})"
+                    title="Generar usuario para este empleado">
+                    <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    Generar usuario
+                </button>
+            </td>`;
+
+        // Insertar en orden (al final de la tbody)
+        tbody.appendChild(tr);
+    }
+
+    function actualizarContador() {
+        const total  = document.getElementById('tablaEmpleados').querySelectorAll('tbody tr[data-nombre]').length;
+        const vis    = Array.from(document.getElementById('tablaEmpleados').querySelectorAll('tbody tr[data-nombre]'))
+                            .filter(r => r.style.display !== 'none').length;
+        document.getElementById('empCount').textContent = vis === total
+            ? `${total} empleado${total !== 1 ? 's' : ''}`
+            : `${vis} de ${total} empleado${total !== 1 ? 's' : ''}`;
+    }
+})();
+</script>
+}

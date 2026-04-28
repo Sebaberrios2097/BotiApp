@@ -22,6 +22,15 @@ namespace Infraestructura.Repositories.BotiApp
                         .AsNoTracking()
                         .ToListAsync();
 
+        public async Task<IEnumerable<EmpEmpleado>> GetAllWithUsuario()
+            => await _db.EmpEmpleado
+                        .Include(e => e.EmpUsuario)
+                            .ThenInclude(u => u!.IdTipoUsuarioNavigation)
+                        .AsNoTracking()
+                        .OrderBy(e => e.Apellido1)
+                            .ThenBy(e => e.NombresEmpleado)
+                        .ToListAsync();
+
         /// <summary>
         /// Obtiene un empleado por su Id. Retorna null si no existe.
         /// </summary>

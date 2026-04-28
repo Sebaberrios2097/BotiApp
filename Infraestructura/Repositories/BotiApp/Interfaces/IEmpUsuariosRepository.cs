@@ -10,5 +10,6 @@ namespace Infraestructura.Repositories.BotiApp.Interfaces
         Task<EmpUsuario> Create(EmpUsuario usuario);
         Task<EmpUsuario?> Update(EmpUsuario usuario);
         Task<bool> Delete(int id);
+        Task<bool?> ToggleEstado(int idUsuario);
     }
 }

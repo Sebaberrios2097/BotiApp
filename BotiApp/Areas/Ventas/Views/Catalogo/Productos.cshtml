@@ -1,0 +1,152 @@
+@using Infraestructura.Entities.BotiApp
+@model IEnumerable<ProProductos>
+@{
+    ViewData["Title"] = "Catálogo de Productos";
+    var urlImagen = Url.Action("Imagen", "Catalogo", new { area = "Ventas" });
+}
+
+<style>
+/* ═══════════════════════════════════════════════════ HEADER */
+.cat-header { display:flex; align-items:center; gap:.75rem; margin-bottom:1.4rem; }
+.cat-header svg { width:22px; height:22px; fill:var(--color-primario); flex-shrink:0; }
+.cat-header h1 { font-size:1.2rem; font-weight:800; color:var(--color-secundario); margin:0; }
+.cat-badge-readonly { margin-left:auto; display:inline-flex; align-items:center; gap:.3rem; padding:.28rem .7rem; background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; border-radius:20px; font-size:.74rem; font-weight:700; }
+.cat-badge-readonly svg { width:13px; height:13px; fill:currentColor; }
+
+/* ═══════════════════════════════════════════════════ TOOLBAR */
+.cat-toolbar { display:flex; align-items:center; gap:.65rem; margin-bottom:1.1rem; flex-wrap:wrap; }
+.cat-search { flex:1; min-width:200px; max-width:320px; position:relative; }
+.cat-search input { width:100%; padding:.5rem .75rem .5rem 2.1rem; border:1.5px solid #e0d5cc; border-radius:9px; font-size:.87rem; color:var(--color-secundario); outline:none; transition:border-color .15s; }
+.cat-search input:focus { border-color:var(--color-primario); }
+.cat-search svg { position:absolute; left:.6rem; top:50%; transform:translateY(-50%); width:15px; height:15px; fill:#b0a097; pointer-events:none; }
+.cat-select { padding:.48rem .7rem; border:1.5px solid #e0d5cc; border-radius:9px; font-size:.85rem; color:var(--color-secundario); background:#fff; outline:none; cursor:pointer; }
+.cat-count { font-size:.8rem; color:#a89080; font-weight:600; margin-left:auto; }
+
+/* ═══════════════════════════════════════════════════ GRID */
+.cat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:1rem; }
+
+/* ═══════════════════════════════════════════════════ CARD */
+.cat-card { background:#fff; border-radius:12px; border:1.5px solid #ece4dc; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow .2s, border-color .2s; }
+.cat-card:hover { box-shadow:0 4px 18px rgba(0,0,0,.1); border-color:#d4bfb0; }
+.cat-card-img { width:100%; height:130px; object-fit:cover; background:#f5f0eb; display:flex; align-items:center; justify-content:center; }
+.cat-card-img img { width:100%; height:130px; object-fit:cover; }
+.cat-card-img svg { width:40px; height:40px; fill:#ddd0c4; }
+.cat-card-body { padding:.75rem .85rem; flex:1; display:flex; flex-direction:column; gap:.25rem; }
+.cat-card-nombre { font-size:.88rem; font-weight:700; color:var(--color-secundario); line-height:1.3; }
+.cat-card-marca { font-size:.75rem; color:#a89080; }
+.cat-card-tipo { font-size:.72rem; color:#b8a89a; }
+.cat-card-footer { padding:.55rem .85rem; border-top:1px solid #f0ebe5; display:flex; align-items:center; justify-content:space-between; }
+.cat-precio { font-size:.95rem; font-weight:800; color:var(--color-primario); }
+.cat-stock { font-size:.75rem; font-weight:600; }
+.cat-stock.ok { color:#16a34a; }
+.cat-stock.bajo { color:#d97706; }
+.cat-stock.agotado { color:#dc2626; }
+.cat-estado-inactivo { opacity:.45; }
+.cat-badge-inac { position:absolute; top:.4rem; right:.4rem; background:#f1f5f9; color:#94a3b8; font-size:.68rem; font-weight:700; padding:.15rem .45rem; border-radius:20px; }
+.cat-card-wrap { position:relative; }
+.cat-empty { text-align:center; padding:3rem; color:#a89080; grid-column:1/-1; }
+.cat-empty svg { width:52px; height:52px; fill:#ddd0c4; display:block; margin:0 auto .75rem; }
+</style>
+
+<div class="cat-header">
+    <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+    <h1>Catálogo de Productos</h1>
+    <span class="cat-badge-readonly">
+        <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+        Solo lectura
+    </span>
+</div>
+
+<div class="cat-toolbar">
+    <div class="cat-search">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" id="catSearch" placeholder="Buscar producto…" oninput="filtrarCat()" />
+    </div>
+    <select class="cat-select" id="catFiltroEstado" onchange="filtrarCat()">
+        <option value="">Todos</option>
+        <option value="activo">Activos</option>
+        <option value="inactivo">Inactivos</option>
+    </select>
+    <select class="cat-select" id="catFiltroTipo" onchange="filtrarCat()">
+        <option value="">Todos los tipos</option>
+        @foreach (var tipo in Model.Select(p => p.IdTipoProductoNavigation?.NombreTipoProducto).Where(t => t != null).Distinct().OrderBy(t => t))
+        {
+            <option value="@tipo">@tipo</option>
+        }
+    </select>
+    <span class="cat-count" id="catCount"></span>
+</div>
+
+<div class="cat-grid" id="catGrid">
+    @foreach (var p in Model)
+    {
+        var estadoStr = p.Estado ? "activo" : "inactivo";
+        var tipo = p.IdTipoProductoNavigation?.NombreTipoProducto ?? "";
+        var marca = p.IdMarcaNavigation?.NombreMarca ?? "";
+        var stockClass = p.Stock == 0 ? "agotado" : p.Stock < 5 ? "bajo" : "ok";
+        var stockLabel = p.Stock == 0 ? "Sin stock" : $"Stock: {p.Stock}";
+
+        <div class="cat-card-wrap" data-nombre="@p.NombreProducto.ToLower()" data-estado="@estadoStr" data-tipo="@tipo.ToLower()">
+            <div class="cat-card @(p.Estado ? "" : "cat-estado-inactivo")">
+                <div class="cat-card-img">
+                    @if (p.Imagen != null && p.Imagen.Length > 0)
+                    {
+                        <img src="@(urlImagen)?id=@p.IdProducto" alt="@p.NombreProducto" loading="lazy" />
+                    }
+                    else
+                    {
+                        <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                    }
+                </div>
+                @if (!p.Estado)
+                {
+                    <span class="cat-badge-inac" style="position:absolute;top:.4rem;right:.4rem">Inactivo</span>
+                }
+                <div class="cat-card-body">
+                    <div class="cat-card-nombre">@p.NombreProducto</div>
+                    @if (!string.IsNullOrEmpty(marca))
+                    {
+                        <div class="cat-card-marca">@marca</div>
+                    }
+                    @if (!string.IsNullOrEmpty(tipo))
+                    {
+                        <div class="cat-card-tipo">@tipo</div>
+                    }
+                </div>
+                <div class="cat-card-footer">
+                    <span class="cat-precio">$@p.Precio.ToString("N0")</span>
+                    <span class="cat-stock @stockClass">@stockLabel</span>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    function filtrarCat() {
+        const texto = document.getElementById('catSearch').value.toLowerCase().trim();
+        const estado = document.getElementById('catFiltroEstado').value;
+        const tipo   = document.getElementById('catFiltroTipo').value.toLowerCase();
+        const cards  = document.querySelectorAll('#catGrid .cat-card-wrap');
+        let vis = 0;
+
+        cards.forEach(c => {
+            const matchTxt    = !texto  || c.dataset.nombre.includes(texto);
+            const matchEstado = !estado || c.dataset.estado === estado;
+            const matchTipo   = !tipo   || c.dataset.tipo === tipo;
+            const show = matchTxt && matchEstado && matchTipo;
+            c.style.display = show ? '' : 'none';
+            if (show) vis++;
+        });
+
+        document.getElementById('catCount').textContent =
+            `${vis} producto${vis !== 1 ? 's' : ''}`;
+    }
+
+    window.filtrarCat = filtrarCat;
+    filtrarCat();
+})();
+</script>
+}

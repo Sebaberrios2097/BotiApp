@@ -1,5 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infraestructura.Entities.BotiApp;
 
@@ -16,10 +19,14 @@ public partial class ProPromocionDetalle
     [Column("Id_Producto")]
     public int IdProducto { get; set; }
 
-    [Column("Id_Grupo")]
-    public int? IdGrupo { get; set; } 
-
     public int Cantidad { get; set; }
+
+    [Column("Id_Grupo")]
+    public int? IdGrupo { get; set; }
+
+    [ForeignKey("IdGrupo")]
+    [InverseProperty("ProPromocionDetalle")]
+    public virtual ProPromocionGrupo? IdGrupoNavigation { get; set; }
 
     [ForeignKey("IdProducto")]
     [InverseProperty("ProPromocionDetalle")]
@@ -28,8 +35,4 @@ public partial class ProPromocionDetalle
     [ForeignKey("IdPromocion")]
     [InverseProperty("ProPromocionDetalle")]
     public virtual ProPromocion IdPromocionNavigation { get; set; } = null!;
-
-    [ForeignKey("IdGrupo")]
-    [InverseProperty("ProPromocionDetalle")]
-    public virtual ProPromocionGrupo? IdGrupoNavigation { get; set; }
 }

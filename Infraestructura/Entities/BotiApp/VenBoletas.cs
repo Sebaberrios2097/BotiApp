@@ -1,5 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infraestructura.Entities.BotiApp;
 
@@ -10,8 +13,11 @@ public partial class VenBoletas
     [Column("Id_Boleta")]
     public int IdBoleta { get; set; }
 
-    [Column("Id_Usuario")]
-    public int IdUsuario { get; set; }
+    [Column("Id_Vendedor")]
+    public int IdVendedor { get; set; }
+
+    [Column("Id_Cajero")]
+    public int? IdCajero { get; set; }
 
     [Column("Id_Estado_Boleta")]
     public int IdEstadoBoleta { get; set; }
@@ -29,9 +35,13 @@ public partial class VenBoletas
     [InverseProperty("VenBoletas")]
     public virtual VenEstadosBoletas IdEstadoBoletaNavigation { get; set; } = null!;
 
-    [ForeignKey("IdUsuario")]
-    [InverseProperty("VenBoletas")]
-    public virtual EmpUsuario IdUsuarioNavigation { get; set; } = null!;
+    [ForeignKey("IdVendedor")]
+    [InverseProperty("VenBoletasVendedor")]
+    public virtual EmpUsuario IdVendedorNavigation { get; set; } = null!;
+
+    [ForeignKey("IdCajero")]
+    [InverseProperty("VenBoletasCajero")]
+    public virtual EmpUsuario? IdCajeroNavigation { get; set; }
 
     [InverseProperty("IdBoletaNavigation")]
     public virtual ICollection<VenBoletaDetalle> VenBoletaDetalle { get; set; } = new List<VenBoletaDetalle>();

@@ -1,12 +1,15 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — BotiApp</title>
     <link rel="stylesheet" href="~/css/colores.css" />
     <style>
-            *, *::before, *::after {
+            *,
+            *::before,
+            *::after {
                 box-sizing: border-box;
                 margin: 0;
                 padding: 0;
@@ -39,34 +42,34 @@
                 align-items: center;
                 gap: 0.75rem;
                 padding: 1.25rem 1.25rem 1rem;
-                border-bottom: 1px solid rgba(255,255,255,0.07);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.07);
                 flex-shrink: 0;
             }
 
-                .sidebar-brand .brand-icon {
-                    width: 38px;
-                    height: 38px;
-                    background-color: var(--color-primario);
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-shrink: 0;
-                }
+            .sidebar-brand .brand-icon {
+                width: 38px;
+                height: 38px;
+                background-color: var(--color-primario);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
 
-                    .sidebar-brand .brand-icon svg {
-                        width: 21px;
-                        height: 21px;
-                        fill: var(--blanco);
-                    }
+            .sidebar-brand .brand-icon svg {
+                width: 21px;
+                height: 21px;
+                fill: var(--blanco);
+            }
 
-                .sidebar-brand span {
-                    color: var(--blanco);
-                    font-size: 0.9rem;
-                    font-weight: 700;
-                    line-height: 1.2;
-                    letter-spacing: 0.3px;
-                }
+            .sidebar-brand span {
+                color: var(--blanco);
+                font-size: 0.9rem;
+                font-weight: 700;
+                line-height: 1.2;
+                letter-spacing: 0.3px;
+            }
 
             /* ── ZONA 2: Usuario (fijo bajo la marca) ── */
             .sidebar-user {
@@ -74,27 +77,27 @@
                 align-items: center;
                 gap: 0.65rem;
                 padding: 0.9rem 1.25rem;
-                border-bottom: 1px solid rgba(255,255,255,0.07);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.07);
                 flex-shrink: 0;
-                background-color: rgba(255,255,255,0.03);
+                background-color: rgba(255, 255, 255, 0.03);
             }
 
-                .sidebar-user .user-avatar {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 50%;
-                    background-color: var(--color-primario);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-shrink: 0;
-                }
+            .sidebar-user .user-avatar {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background-color: var(--color-primario);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
 
-                    .sidebar-user .user-avatar svg {
-                        width: 20px;
-                        height: 20px;
-                        fill: var(--blanco);
-                    }
+            .sidebar-user .user-avatar svg {
+                width: 20px;
+                height: 20px;
+                fill: var(--blanco);
+            }
 
             .sidebar-user-info {
                 display: flex;
@@ -103,45 +106,45 @@
                 overflow: hidden;
             }
 
-                .sidebar-user-info .user-name {
-                    color: var(--blanco);
-                    font-size: 0.82rem;
-                    font-weight: 700;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
+            .sidebar-user-info .user-name {
+                color: var(--blanco);
+                font-size: 0.82rem;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
 
-                .sidebar-user-info .user-role {
-                    color: var(--color-primario);
-                    font-size: 0.72rem;
-                    font-weight: 500;
-                    opacity: 0.85;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
+            .sidebar-user-info .user-role {
+                color: var(--color-primario);
+                font-size: 0.72rem;
+                font-weight: 500;
+                opacity: 0.85;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
 
             /* ── ZONA 3: Nav (scrolleable) ── */
             .sidebar-nav {
                 flex: 1;
                 overflow-y: auto;
                 scrollbar-width: thin;
-                scrollbar-color: rgba(255,255,255,0.1) transparent;
+                scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
             }
 
-                .sidebar-nav::-webkit-scrollbar {
-                    width: 4px;
-                }
+            .sidebar-nav::-webkit-scrollbar {
+                width: 4px;
+            }
 
-                .sidebar-nav::-webkit-scrollbar-track {
-                    background: transparent;
-                }
+            .sidebar-nav::-webkit-scrollbar-track {
+                background: transparent;
+            }
 
-                .sidebar-nav::-webkit-scrollbar-thumb {
-                    background-color: rgba(255,255,255,0.12);
-                    border-radius: 4px;
-                }
+            .sidebar-nav::-webkit-scrollbar-thumb {
+                background-color: rgba(255, 255, 255, 0.12);
+                border-radius: 4px;
+            }
 
             /* Categorías */
             .nav-category {
@@ -163,7 +166,7 @@
                 align-items: center;
                 gap: 0.75rem;
                 padding: 0.65rem 1.25rem;
-                color: rgba(255,255,255,0.65);
+                color: rgba(255, 255, 255, 0.65);
                 text-decoration: none;
                 font-size: 0.9rem;
                 font-weight: 500;
@@ -173,34 +176,34 @@
                 margin: 0.1rem 0.5rem 0.1rem 0;
             }
 
-                .nav-link svg {
-                    width: 18px;
-                    height: 18px;
-                    fill: currentColor;
-                    flex-shrink: 0;
-                    opacity: 0.8;
-                }
+            .nav-link svg {
+                width: 18px;
+                height: 18px;
+                fill: currentColor;
+                flex-shrink: 0;
+                opacity: 0.8;
+            }
 
-                .nav-link:hover {
-                    background-color: rgba(231,111,46,0.12);
-                    color: var(--blanco);
-                    border-left-color: var(--color-primario);
-                }
+            .nav-link:hover {
+                background-color: rgba(231, 111, 46, 0.12);
+                color: var(--blanco);
+                border-left-color: var(--color-primario);
+            }
 
-                .nav-link.active {
-                    background-color: rgba(231,111,46,0.18);
-                    color: var(--color-primario);
-                    border-left-color: var(--color-primario);
-                    font-weight: 700;
-                }
+            .nav-link.active {
+                background-color: rgba(231, 111, 46, 0.18);
+                color: var(--color-primario);
+                border-left-color: var(--color-primario);
+                font-weight: 700;
+            }
 
-                    .nav-link.active svg {
-                        opacity: 1;
-                    }
+            .nav-link.active svg {
+                opacity: 1;
+            }
 
             .nav-divider {
                 height: 1px;
-                background-color: rgba(255,255,255,0.07);
+                background-color: rgba(255, 255, 255, 0.07);
                 margin: 0.5rem 1.25rem;
             }
 
@@ -210,7 +213,7 @@
                 align-items: center;
                 gap: 0.75rem;
                 padding: 0.65rem 1.25rem;
-                color: rgba(255,255,255,0.65);
+                color: rgba(255, 255, 255, 0.65);
                 font-size: 0.9rem;
                 font-weight: 500;
                 border-left: 3px solid transparent;
@@ -222,25 +225,25 @@
                 list-style: none;
             }
 
-                .nav-parent svg.icon-main {
-                    width: 18px;
-                    height: 18px;
-                    fill: currentColor;
-                    flex-shrink: 0;
-                    opacity: 0.8;
-                }
+            .nav-parent svg.icon-main {
+                width: 18px;
+                height: 18px;
+                fill: currentColor;
+                flex-shrink: 0;
+                opacity: 0.8;
+            }
 
-                .nav-parent:hover {
-                    background-color: rgba(231,111,46,0.12);
-                    color: var(--blanco);
-                    border-left-color: var(--color-primario);
-                }
+            .nav-parent:hover {
+                background-color: rgba(231, 111, 46, 0.12);
+                color: var(--blanco);
+                border-left-color: var(--color-primario);
+            }
 
-                .nav-parent.open,
-                .nav-parent.has-active {
-                    color: var(--color-primario);
-                    border-left-color: var(--color-primario);
-                }
+            .nav-parent.open,
+            .nav-parent.has-active {
+                color: var(--color-primario);
+                border-left-color: var(--color-primario);
+            }
 
             .nav-parent-label {
                 flex: 1;
@@ -270,16 +273,16 @@
                 transition: max-height 0.3s ease;
             }
 
-                .nav-submenu.open {
-                    max-height: 300px;
-                }
+            .nav-submenu.open {
+                max-height: 300px;
+            }
 
             .nav-sublink {
                 display: flex;
                 align-items: center;
                 gap: 0.65rem;
                 padding: 0.55rem 1.25rem 0.55rem 2.9rem;
-                color: rgba(255,255,255,0.5);
+                color: rgba(255, 255, 255, 0.5);
                 text-decoration: none;
                 font-size: 0.85rem;
                 font-weight: 400;
@@ -289,36 +292,36 @@
                 transition: background-color 0.2s, color 0.2s, border-color 0.2s;
             }
 
-                .nav-sublink svg {
-                    width: 15px;
-                    height: 15px;
-                    fill: currentColor;
-                    flex-shrink: 0;
-                    opacity: 0.7;
-                }
+            .nav-sublink svg {
+                width: 15px;
+                height: 15px;
+                fill: currentColor;
+                flex-shrink: 0;
+                opacity: 0.7;
+            }
 
-                .nav-sublink:hover {
-                    background-color: rgba(231,111,46,0.1);
-                    color: var(--blanco);
-                    border-left-color: rgba(231,111,46,0.5);
-                }
+            .nav-sublink:hover {
+                background-color: rgba(231, 111, 46, 0.1);
+                color: var(--blanco);
+                border-left-color: rgba(231, 111, 46, 0.5);
+            }
 
-                .nav-sublink.active {
-                    background-color: rgba(231,111,46,0.15);
-                    color: var(--color-primario);
-                    border-left-color: var(--color-primario);
-                    font-weight: 600;
-                }
+            .nav-sublink.active {
+                background-color: rgba(231, 111, 46, 0.15);
+                color: var(--color-primario);
+                border-left-color: var(--color-primario);
+                font-weight: 600;
+            }
 
-                    .nav-sublink.active svg {
-                        opacity: 1;
-                    }
+            .nav-sublink.active svg {
+                opacity: 1;
+            }
 
             /* ── ZONA 4: Footer (fijo abajo) ── */
             .sidebar-footer {
                 flex-shrink: 0;
                 padding: 0.9rem 1.25rem;
-                border-top: 1px solid rgba(255,255,255,0.07);
+                border-top: 1px solid rgba(255, 255, 255, 0.07);
                 display: flex;
                 flex-direction: column;
                 gap: 0.7rem;
@@ -329,22 +332,22 @@
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
-                color: rgba(255,255,255,0.4);
+                color: rgba(255, 255, 255, 0.4);
                 font-size: 0.78rem;
             }
 
-                .sidebar-clock svg {
-                    width: 14px;
-                    height: 14px;
-                    fill: var(--color-primario);
-                    flex-shrink: 0;
-                    opacity: 0.8;
-                }
+            .sidebar-clock svg {
+                width: 14px;
+                height: 14px;
+                fill: var(--color-primario);
+                flex-shrink: 0;
+                opacity: 0.8;
+            }
 
-                .sidebar-clock #sidebar-time {
-                    font-variant-numeric: tabular-nums;
-                    letter-spacing: 0.5px;
-                }
+            .sidebar-clock #sidebar-time {
+                font-variant-numeric: tabular-nums;
+                letter-spacing: 0.5px;
+            }
 
             .btn-logout {
                 display: flex;
@@ -354,9 +357,9 @@
                 width: 100%;
                 padding: 0.6rem 1rem;
                 background-color: transparent;
-                border: 1.5px solid rgba(255,255,255,0.15);
+                border: 1.5px solid rgba(255, 255, 255, 0.15);
                 border-radius: 8px;
-                color: rgba(255,255,255,0.55);
+                color: rgba(255, 255, 255, 0.55);
                 font-size: 0.85rem;
                 font-weight: 600;
                 cursor: pointer;
@@ -365,18 +368,18 @@
                 letter-spacing: 0.3px;
             }
 
-                .btn-logout svg {
-                    width: 16px;
-                    height: 16px;
-                    fill: currentColor;
-                    flex-shrink: 0;
-                }
+            .btn-logout svg {
+                width: 16px;
+                height: 16px;
+                fill: currentColor;
+                flex-shrink: 0;
+            }
 
-                .btn-logout:hover {
-                    background-color: rgba(255, 55, 55, 0.15);
-                    border-color: var(--rojo);
-                    color: #ff6b6b;
-                }
+            .btn-logout:hover {
+                background-color: rgba(255, 55, 55, 0.15);
+                border-color: var(--rojo);
+                color: #ff6b6b;
+            }
 
             /* ── CONTENIDO PRINCIPAL ── */
             .main-wrapper {
@@ -418,20 +421,20 @@
                 cursor: pointer;
                 align-items: center;
                 justify-content: center;
-                box-shadow: 0 4px 14px rgba(231,111,46,0.5);
+                box-shadow: 0 4px 14px rgba(231, 111, 46, 0.5);
                 transition: background-color 0.2s, transform 0.15s;
             }
 
-                .sidebar-toggle svg {
-                    width: 22px;
-                    height: 22px;
-                    fill: var(--blanco);
-                }
+            .sidebar-toggle svg {
+                width: 22px;
+                height: 22px;
+                fill: var(--blanco);
+            }
 
-                .sidebar-toggle:hover {
-                    background-color: #cf5f22;
-                    transform: scale(1.07);
-                }
+            .sidebar-toggle:hover {
+                background-color: #cf5f22;
+                transform: scale(1.07);
+            }
 
             @@media (max-width: 768px) {
                 .sidebar {
@@ -441,9 +444,9 @@
                     transition: left 0.25s ease;
                 }
 
-                    .sidebar.open {
-                        left: 0;
-                    }
+                .sidebar.open {
+                    left: 0;
+                }
 
                 .sidebar-toggle {
                     display: flex;
@@ -453,16 +456,17 @@
                     display: none;
                     position: fixed;
                     inset: 0;
-                    background: rgba(0,0,0,0.45);
+                    background: rgba(0, 0, 0, 0.45);
                     z-index: 199;
                 }
 
-                    .sidebar-overlay.open {
-                        display: block;
-                    }
+                .sidebar-overlay.open {
+                    display: block;
+                }
             }
     </style>
 </head>
+
 <body>
 
     @{
@@ -476,10 +480,15 @@
         bool IsController(string ctrl)
             => string.Equals(controller, ctrl, StringComparison.OrdinalIgnoreCase);
 
-        bool configSubmenuOpen = IsController("Configuracion") || IsController("Usuarios");
+        bool configSubmenuOpen = IsController("Configuracion") || IsController("Usuarios")
+                              || IsController("Productos") || IsController("Promociones")
+                              || IsController("Empleados");
 
         var nombreCompleto = User.FindFirst("NombreCompleto")?.Value ?? User.Identity?.Name ?? "Usuario";
-        var tipoUsuario = User.FindFirst("TipoUsuario")?.Value ?? "";
+        var tipoUsuario    = User.FindFirst("TipoUsuario")?.Value ?? "";
+        bool esAdmin       = tipoUsuario == "Administrador";
+        bool esVendedor    = tipoUsuario == "Vendedor";
+        bool esCajero      = tipoUsuario == "Cajero";
     }
 
     <!-- Overlay móvil -->
@@ -495,12 +504,15 @@
                     <!-- Corcho / tapa -->
                     <rect x="10.5" y="1" width="3" height="1.8" rx="0.4" />
                     <!-- Cuello y cuerpo de la botella -->
-                    <path d="M10 2.8h4v2c0 .4.22.76.55.95C16.5 6.9 18 9.2 18 11.5V20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-8.5c0-2.3 1.5-4.6 3.45-5.75.33-.19.55-.55.55-.95V2.8z" />
+                    <path
+                    d="M10 2.8h4v2c0 .4.22.76.55.95C16.5 6.9 18 9.2 18 11.5V20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-8.5c0-2.3 1.5-4.6 3.45-5.75.33-.19.55-.55.55-.95V2.8z" />
                     <!-- Etiqueta en la botella -->
                     <rect x="8.5" y="13.5" width="7" height="4.5" rx="0.8" opacity="0.3" />
                     <!-- Cruz/detalle en la etiqueta (el "4" de Cuatro Ases simplificado) -->
-                    <line x1="12" y1="14.3" x2="12" y2="17.2" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" opacity="0.7" />
-                    <line x1="10.3" y1="15.75" x2="13.7" y2="15.75" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" opacity="0.7" />
+                    <line x1="12" y1="14.3" x2="12" y2="17.2" stroke="currentColor" stroke-width="0.9"
+                          stroke-linecap="round" opacity="0.7" />
+                    <line x1="10.3" y1="15.75" x2="13.7" y2="15.75" stroke="currentColor" stroke-width="0.9"
+                          stroke-linecap="round" opacity="0.7" />
                 </svg>
             </div>
             <span>Botillería<br />Cuatro Ases</span>
@@ -510,7 +522,8 @@
         <div class="sidebar-user">
             <div class="user-avatar">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                    <path
+                    d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
                 </svg>
             </div>
             <div class="sidebar-user-info">
@@ -526,8 +539,8 @@
                 <!-- INICIO -->
                 <li class="nav-category">Inicio</li>
                 <li class="nav-item">
-                    <a class="nav-link @(IsActive("Home", "Index") ? "active" : "")"
-                           asp-controller="Home" asp-action="Index">
+                    <a class="nav-link @(IsActive("Home", "Index") ? "active" : "")" asp-area="" asp-controller="Home"
+                           asp-action="Index">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
                         </svg>
@@ -539,98 +552,134 @@
 
                 <!-- VENTAS -->
                 <li class="nav-category">Ventas</li>
-                <li class="nav-item">
-                    <a class="nav-link @(IsActive("Ventas", "Generar") ? "active" : "")"
-                           asp-area="Ventas" asp-controller="Ventas" asp-action="Generar">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" />
-                        </svg>
-                        Generar Venta
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(IsActive("Ventas", "Consultar") ? "active" : "")"
-                           asp-controller="Ventas" asp-action="Consultar">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
-                        </svg>
-                        Consultar Ventas
-                    </a>
-                </li>
+
+                @if (esAdmin || esVendedor)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @(IsActive("Ventas", "Generar") ? "active" : "")" asp-area="Ventas"
+                               asp-controller="Ventas" asp-action="Generar">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" />
+                            </svg>
+                            Generar Venta
+                        </a>
+                    </li>
+                }
+
+                @if (esAdmin || esCajero)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @(IsActive("Ventas", "Caja") ? "active" : "")" asp-area="Ventas"
+                               asp-controller="Ventas" asp-action="Caja">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+                            </svg>
+                            Caja
+                        </a>
+                    </li>
+                }
+
+                @if (esAdmin || esVendedor)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link @(IsActive("Ventas", "Historial") ? "active" : "")" asp-area="Ventas"
+                               asp-controller="Ventas" asp-action="Historial">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                            </svg>
+                            Historial Ventas
+                        </a>
+                    </li>
+                }
 
                 <li class="nav-divider"></li>
 
-                <!-- PRODUCTOS -->
-                <li class="nav-category">Productos</li>
+                <!-- CATÁLOGO (todos los roles) -->
+                <li class="nav-category">Catálogo</li>
                 <li class="nav-item">
-                    <a class="nav-link @(IsActive("Productos", "Index") ? "active" : "")"
-                           asp-area="Productos" asp-controller="Productos" asp-action="Index">
+                    <a class="nav-link @(IsActive("Catalogo", "Productos") ? "active" : "")" asp-area="Ventas"
+                           asp-controller="Catalogo" asp-action="Productos">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z" />
+                            <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/>
                         </svg>
-                        Ver Productos
+                        Productos
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(IsActive("Promociones", "Index") ? "active" : "")"
-                           asp-area="Productos" asp-controller="Promociones" asp-action="Index">
+                    <a class="nav-link @(IsActive("Catalogo", "Promociones") ? "active" : "")" asp-area="Ventas"
+                           asp-controller="Catalogo" asp-action="Promociones">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" />
                         </svg>
-                        Promos
+                        Promociones
                     </a>
                 </li>
 
-                <li class="nav-divider"></li>
+                @if (esAdmin)
+                {
+                    <li class="nav-divider"></li>
 
-                <!-- COMPRAS -->
-                <li class="nav-category">Compras</li>
-                <li class="nav-item">
-                    <a class="nav-link @(IsController("Compras") ? "active" : "")"
-                           asp-controller="Compras" asp-action="Index">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z" />
-                        </svg>
-                        Órdenes de Compra
-                    </a>
-                </li>
-
-                <li class="nav-divider"></li>
-
-                <!-- CONFIGURACIÓN (con submenu) -->
-                <li class="nav-category">Configuración</li>
-                <li class="nav-item">
-                    <div class="nav-parent @(configSubmenuOpen ? "open has-active" : "")"
-                         onclick="toggleSubmenu(this)">
-                        <svg class="icon-main" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.01 7.01 0 0 0-1.62-.94l-.36-2.54A.484.484 0 0 0 14 2h-4c-.25 0-.46.18-.49.42l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.37 1.04.7 1.62.94l.36 2.54c.05.24.26.42.49.42h4c.25 0 .46-.18.49-.42l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-                        </svg>
-                        <span class="nav-parent-label">Configuración</span>
-                        <svg class="nav-chevron" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M7 10l5 5 5-5z" />
-                        </svg>
-                    </div>
-                    <ul class="nav-submenu @(configSubmenuOpen ? "open" : "")">
-                        <li>
-                            <a class="nav-sublink @(IsController("Usuarios") ? "active" : "")"
-                                   asp-controller="Usuarios" asp-action="Index">
-                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-                                </svg>
-                                Gestionar Usuarios
-                            </a>
-                        </li>
-                        <li>
-                            <a class="nav-sublink @(IsController("Configuracion") ? "active" : "")"
-                                   asp-controller="Configuracion" asp-action="Index">
-                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
-                                </svg>
-                                Configuración del sistema
-                            </a>
-                        </li>
-                    </ul>
-                </li>
+                    <!-- CONFIGURACIÓN (solo administrador) -->
+                    <li class="nav-category">Administración</li>
+                    <li class="nav-item">
+                        <div class="nav-parent @(configSubmenuOpen ? "open has-active" : "")" onclick="toggleSubmenu(this)">
+                            <svg class="icon-main" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.01 7.01 0 0 0-1.62-.94l-.36-2.54A.484.484 0 0 0 14 2h-4c-.25 0-.46.18-.49.42l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.37 1.04.7 1.62.94l.36 2.54c.05.24.26.42.49.42h4c.25 0 .46-.18.49-.42l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                            </svg>
+                            <span class="nav-parent-label">Configuración</span>
+                            <svg class="nav-chevron" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M7 10l5 5 5-5z" />
+                            </svg>
+                        </div>
+                        <ul class="nav-submenu @(configSubmenuOpen ? "open" : "")">
+                            <li>
+                                <a class="nav-sublink @(IsActive("Empleados", "Index") ? "active" : "")" asp-area="Empleados"
+                                       asp-controller="Empleados" asp-action="Index">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                                    </svg>
+                                    Empleados
+                                </a>
+                            </li>
+                            <li>
+                                <a class="nav-sublink @(IsActive("Productos", "Index") ? "active" : "")" asp-area="Productos"
+                                       asp-controller="Productos" asp-action="Index">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z" />
+                                    </svg>
+                                    Mantenedor Productos
+                                </a>
+                            </li>
+                            <li>
+                                <a class="nav-sublink @(IsActive("Promociones", "Index") ? "active" : "")" asp-area="Productos"
+                                       asp-controller="Promociones" asp-action="Index">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" />
+                                    </svg>
+                                    Mantenedor Promociones
+                                </a>
+                            </li>
+                            <li>
+                                <a class="nav-sublink @(IsController("Compras") ? "active" : "")" asp-area="" asp-controller="Compras"
+                                       asp-action="Index">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z" />
+                                    </svg>
+                                    Órdenes de Compra
+                                </a>
+                            </li>
+                            <li>
+                                <a class="nav-sublink @(IsController("Configuracion") ? "active" : "")"
+                                       asp-area="" asp-controller="Configuracion" asp-action="Index">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
+                                    </svg>
+                                    Configuración del sistema
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                }
 
             </ul>
         </nav>
@@ -639,13 +688,15 @@
         <div class="sidebar-footer">
             <div class="sidebar-clock">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
+                    <path
+                    d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
                 </svg>
                 <span id="sidebar-time">--:--:--</span>
             </div>
-            <a class="btn-logout" asp-controller="Login" asp-action="Logout">
+            <a class="btn-logout" asp-area="" asp-controller="Login" asp-action="Logout">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                    <path
+                    d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
                 </svg>
                 Cerrar sesión
             </a>
@@ -694,11 +745,12 @@
 
             function toggleSubmenu(parentEl) {
                 const submenu = parentEl.nextElementSibling;
-                const isOpen  = parentEl.classList.contains('open');
+                const isOpen = parentEl.classList.contains('open');
                 parentEl.classList.toggle('open', !isOpen);
                 submenu.classList.toggle('open', !isOpen);
             }
     </script>
 
 </body>
+
 </html>

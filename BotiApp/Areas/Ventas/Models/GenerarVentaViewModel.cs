@@ -4,7 +4,7 @@ namespace BotiApp.Areas.Ventas.Models;
 
 public class GenerarVentaViewModel
 {
-    public string NombreCajero { get; set; } = string.Empty;
+    public string NombreVendedor { get; set; } = string.Empty;
     public IEnumerable<ProProductos> Productos { get; set; } = [];
     public IEnumerable<ProTiposProductos> Tipos { get; set; } = [];
     public IEnumerable<ProMarcas> Marcas { get; set; } = [];

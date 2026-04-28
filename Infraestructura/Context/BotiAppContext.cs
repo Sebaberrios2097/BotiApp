@@ -1,4 +1,6 @@
-﻿using Infraestructura.Entities.BotiApp;
+﻿using System;
+using System.Collections.Generic;
+using Infraestructura.Entities.BotiApp;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infraestructura.Context;
@@ -32,11 +34,13 @@ public partial class BotiAppContext : DbContext
 
     public virtual DbSet<ProProductos> ProProductos { get; set; }
 
+    public virtual DbSet<ProProductosRetornables> ProProductosRetornables { get; set; }
+
     public virtual DbSet<ProPromocion> ProPromocion { get; set; }
 
-    public virtual DbSet<ProPromocionGrupo> ProPromocionGrupo { get; set; }
-
     public virtual DbSet<ProPromocionDetalle> ProPromocionDetalle { get; set; }
+
+    public virtual DbSet<ProPromocionGrupo> ProPromocionGrupo { get; set; }
 
     public virtual DbSet<ProProveedores> ProProveedores { get; set; }
 
@@ -146,59 +150,42 @@ public partial class BotiAppContext : DbContext
                 .HasConstraintName("FK_Pro_Productos_Pro_Tipos_Productos");
         });
 
+        modelBuilder.Entity<ProProductosRetornables>(entity =>
+        {
+            entity.HasOne(d => d.IdProductoNavigation).WithOne(p => p.ProProductosRetornables)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Pro_Productos_Retornables_Pro_Productos");
+        });
+
         modelBuilder.Entity<ProPromocion>(entity =>
         {
             entity.HasKey(e => e.IdPromocion).HasName("PK_Bta_Promocion");
         });
 
+        modelBuilder.Entity<ProPromocionDetalle>(entity =>
+        {
+            entity.HasKey(e => e.IdPromocionDetalle).HasName("PK_Bta_Promocion_Detalle");
+
+            entity.HasOne(d => d.IdGrupoNavigation).WithMany(p => p.ProPromocionDetalle).HasConstraintName("FK_PromoDetalle_Grupo");
+
+            entity.HasOne(d => d.IdProductoNavigation).WithMany(p => p.ProPromocionDetalle)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Pro_Promocion_Detalle_Pro_Productos");
+
+            entity.HasOne(d => d.IdPromocionNavigation).WithMany(p => p.ProPromocionDetalle)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Pro_Promocion_Detalle_Pro_Promocion");
+        });
+
         modelBuilder.Entity<ProPromocionGrupo>(entity =>
         {
-            entity.HasKey(e => e.IdGrupo).HasName("PK_Pro_Promocion_Grupo");
+            entity.HasKey(e => e.IdGrupo).HasName("PK__Pro_Prom__ACDDD97846347211");
 
-            entity.HasOne(d => d.IdPromocionNavigation)
-                  .WithMany(p => p.ProPromocionGrupo)
-                  .OnDelete(DeleteBehavior.Cascade)
-                  .HasConstraintName("FK_PromoGrupo_Promo");
-        });
+            entity.Property(e => e.EsExcluyente).HasDefaultValue(true);
 
-        modelBuilder.Entity<ProPromocionDetalle>(entity =>
-        {
-            entity.HasKey(e => e.IdPromocionDetalle).HasName("PK_Bta_Promocion_Detalle");
-
-            entity.Property(e => e.IdPromocionDetalle).ValueGeneratedOnAdd();
-
-            entity.HasOne(d => d.IdProductoNavigation).WithMany(p => p.ProPromocionDetalle)
+            entity.HasOne(d => d.IdPromocionNavigation).WithMany(p => p.ProPromocionGrupo)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Pro_Promocion_Detalle_Pro_Productos");
-
-            entity.HasOne(d => d.IdPromocionNavigation).WithMany(p => p.ProPromocionDetalle)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Pro_Promocion_Detalle_Pro_Promocion");
-
-            entity.HasOne(d => d.IdGrupoNavigation).WithMany(p => p.ProPromocionDetalle)
-                .HasForeignKey(d => d.IdGrupo)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("FK_PromoDetalle_Grupo");
-        });
-
-        modelBuilder.Entity<ProPromocionDetalle>(entity =>
-        {
-            entity.HasKey(e => e.IdPromocionDetalle).HasName("PK_Bta_Promocion_Detalle");
-
-            entity.Property(e => e.IdPromocionDetalle).ValueGeneratedOnAdd();
-
-            entity.HasOne(d => d.IdProductoNavigation).WithMany(p => p.ProPromocionDetalle)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Pro_Promocion_Detalle_Pro_Productos");
-
-            entity.HasOne(d => d.IdPromocionNavigation).WithMany(p => p.ProPromocionDetalle)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Pro_Promocion_Detalle_Pro_Promocion");
-
-            entity.HasOne(d => d.IdGrupoNavigation).WithMany(p => p.ProPromocionDetalle)
-                .HasForeignKey(d => d.IdGrupo)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("FK_PromoDetalle_Grupo");
+                .HasConstraintName("FK_PromoGrupo_Promo");
         });
 
         modelBuilder.Entity<ProProveedores>(entity =>
@@ -256,9 +243,14 @@ public partial class BotiAppContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Bta_Boletas_Bta_Estados_Boletas");
 
-            entity.HasOne(d => d.IdUsuarioNavigation).WithMany(p => p.VenBoletas)
+            entity.HasOne(d => d.IdVendedorNavigation).WithMany(p => p.VenBoletasVendedor)
+                .HasForeignKey(d => d.IdVendedor)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Bta_Boletas_Emp_Usuario");
+                .HasConstraintName("FK_Bta_Boletas_Emp_Vendedor");
+
+            entity.HasOne(d => d.IdCajeroNavigation).WithMany(p => p.VenBoletasCajero)
+                .HasForeignKey(d => d.IdCajero)
+                .OnDelete(DeleteBehavior.ClientSetNull);
         });
 
         modelBuilder.Entity<VenEstadosBoletas>(entity =>

@@ -8,6 +8,11 @@
         .GroupBy(o => o.IdProducto)
         .ToDictionary(g => g.Key, g => g.Min(o => o.PrecioOferta));
 
+    // Mapa idProducto → id de la oferta activa con menor precio
+    var ofertaIdMap = Model.Ofertas
+        .GroupBy(o => o.IdProducto)
+        .ToDictionary(g => g.Key, g => g.OrderBy(o => o.PrecioOferta).First().IdOfertaProducto);
+
     var catalogoJson = JsonSerializer.Serialize(Model.Productos.Select(p => new
     {
         id          = p.IdProducto,
@@ -20,7 +25,8 @@
         marca       = p.IdMarcaNavigation?.NombreMarca ?? "",
         tipo        = p.IdTipoProductoNavigation?.NombreTipoProducto ?? "",
         tieneImagen = p.Imagen is { Length: > 0 },
-        ofertaPrecio = ofertasMap.TryGetValue(p.IdProducto, out var op) ? (int?)op : null
+        ofertaPrecio = ofertasMap.TryGetValue(p.IdProducto, out var op) ? (int?)op : null,
+        ofertaId     = ofertaIdMap.TryGetValue(p.IdProducto, out var oid) ? (int?)oid : null
     }));
 
     var tipoMarcasJson = JsonSerializer.Serialize(
@@ -209,18 +215,18 @@
 .btn-cerrar { background:#f0ebe5; color:var(--color-secundario); }
 
 /* El ticket propiamente (fuente monoespaciada, estilo impresora POS) */
-.ticket { 
+.ticket {
     font-family:'Courier New', Courier, monospace;
-    font-size:11px; 
+    font-size:11px;
     line-height:1.25;       /* antes: 1.4 */
-    padding:.5rem .6rem; 
+    padding:.5rem .6rem;
     color:#000;
 }
 .ticket-hr     { border:none; border-top:1px dashed #555; margin:.25rem 0; }
 .ticket-hr-sol { border:none; border-top:1px solid #555;  margin:.25rem 0; }
-.ticket-row { 
-    display:flex; 
-    justify-content:space-between; 
+.ticket-row {
+    display:flex;
+    justify-content:space-between;
     margin-bottom:1px;      /* antes no tenía, el line-height lo inflaba */
 }
 .ticket-row .tk-l { flex:1; min-width:0; overflow:hidden; text-overflow:clip; }
@@ -228,6 +234,7 @@
 .ticket-total  { font-size:14px; font-weight:700; }
 .ticket-desc   { color:#000; }
 .ticket-promo-tag { font-size:10px; font-weight:700; }
+.ticket-center { text-align:center; }
 
 /* Impresión POS (80 mm — cambiar a 58mm si tu impresora es de ese ancho) */
 @@page {
@@ -317,7 +324,7 @@
         </div>
 
         <div class="boleta-info-sec">
-            <div class="bi-row"><span class="lbl">Cajero</span><span class="val">@Model.NombreCajero</span></div>
+            @* <div class="bi-row"><span class="lbl">Cajero</span><span class="val">@Model.NombreCajero</span></div> *@
             <div class="bi-row"><span class="lbl">Fecha emisión</span><span class="val" id="infoFecha">—</span></div>
             <div class="bi-row"><span class="lbl">Productos distintos</span><span class="val" id="infoDistintos">0</span></div>
             <div class="bi-row"><span class="lbl">Unidades totales</span><span class="val" id="infoUnidades">0</span></div>
@@ -364,8 +371,14 @@
     const URL_IMG     = '@urlImagen';
     const CSRF        = () => document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
 
-    const OFERTAS_MAP = {};                     // idProducto → precioOferta
-    CATALOGO.forEach(p => { if (p.ofertaPrecio != null) OFERTAS_MAP[p.id] = p.ofertaPrecio; });
+    const OFERTAS_MAP    = {};                  // idProducto → precioOferta
+    const OFERTAS_ID_MAP = {};                  // idProducto → idOfertaProducto
+    CATALOGO.forEach(p => {
+        if (p.ofertaPrecio != null) {
+            OFERTAS_MAP[p.id]    = p.ofertaPrecio;
+            OFERTAS_ID_MAP[p.id] = p.ofertaId;
+        }
+    });
 
     const NOMBRE_MAP = {};                      // idProducto → nombre
     CATALOGO.forEach(p => { NOMBRE_MAP[p.id] = p.nombre; });
@@ -615,10 +628,19 @@
             )
         );
 
-        // ── Líneas de descuento para el panel de totales ──────────────────
-        const descuentosPromoLines = instancias.map(inst => ({
-            nombre: inst.promoNombre,
-            ahorro: inst.ahorro
+        // ── Líneas de descuento para el panel de totales (agrupadas por promo) ──
+        const promoAhorroMap = new Map();
+        instancias.forEach(inst => {
+            if (!promoAhorroMap.has(inst.promoId)) {
+                promoAhorroMap.set(inst.promoId, { nombre: inst.promoNombre, ahorro: 0, veces: 0 });
+            }
+            const entry = promoAhorroMap.get(inst.promoId);
+            entry.ahorro += inst.ahorro;
+            entry.veces++;
+        });
+        const descuentosPromoLines = [...promoAhorroMap.values()].map(({ nombre, ahorro, veces }) => ({
+            nombre: veces > 1 ? `${nombre} (x${veces})` : nombre,
+            ahorro
         }));
 
         const descuentosOfertaLines = [];
@@ -793,14 +815,14 @@
                 const precioUnitario = sumaNormal > 0
                     ? Math.round((precio * cantReq / sumaNormal) * inst.promoPrecio / cantReq)
                     : precio;
-                items.push({ idProducto: id, cantidad: cantReq, precioUnitario });
+                items.push({ idProducto: id, cantidad: cantReq, precioNormal: precio, precioUnitario, idPromocion: inst.promoId, idOfertaProducto: null });
             });
         });
         carrito.forEach((it, id) => {
             const cantRest = remaining.get(id) ?? 0;
             if (cantRest <= 0) return;
             const precioUnitario = OFERTAS_MAP[id] != null ? OFERTAS_MAP[id] : it.precio;
-            items.push({ idProducto: id, cantidad: cantRest, precioUnitario });
+            items.push({ idProducto: id, cantidad: cantRest, precioNormal: it.precio, precioUnitario, idPromocion: null, idOfertaProducto: OFERTAS_ID_MAP[id] ?? null });
         });
 
         try {
@@ -821,7 +843,7 @@
                 // Mostrar ticket con el snapshot
                 mostrarTicket({
                     idBoleta:     data.boleta.idBoleta,
-                    cajero:       data.boleta.cajero,
+                    @* cajero:       data.boleta.cajero, *@
                     fechaEmision: data.boleta.fechaEmision,
                     instancias:   snapshotInstancias,
                     remaining:    snapshotRemaining,
@@ -857,26 +879,47 @@
 
         let lineas = '';
 
-        // ── Ítems de promo ────────────────────────────────────────────────
+        // ── Ítems de promo (agrupados por idPromo) ────────────────────────
+        const promoTicketMap = new Map();
         instancias.forEach(inst => {
+            if (!promoTicketMap.has(inst.promoId)) {
+                promoTicketMap.set(inst.promoId, {
+                    nombre: inst.promoNombre,
+                    precioUnitario: inst.promoPrecio,
+                    veces: 0,
+                    ahorroTotal: 0,
+                    productosQty: new Map() // idProducto → { nombre, precio, cantTotal }
+                });
+            }
+            const g = promoTicketMap.get(inst.promoId);
+            g.veces++;
+            g.ahorroTotal += inst.ahorro;
+            inst.itemsActivos.forEach(({ id, nombre, cantReq, precio }) => {
+                if (!g.productosQty.has(id)) g.productosQty.set(id, { nombre, precio, cantTotal: 0 });
+                g.productosQty.get(id).cantTotal += cantReq;
+            });
+        });
+
+        promoTicketMap.forEach(g => {
+            const label = g.veces > 1 ? `${g.nombre} (x${g.veces})` : g.nombre;
             lineas += `
             <hr class="ticket-hr">
             <div class="ticket-row ticket-promo-tag">
-                <span class="tk-l">${x(inst.promoNombre)}</span>
-                <span class="tk-r ticket-bold">$${fmt(inst.promoPrecio)}</span>
+                <span class="tk-l">${x(label)}</span>
+                <span class="tk-r ticket-bold">$${fmt(g.precioUnitario * g.veces)}</span>
             </div>`;
-            inst.itemsActivos.forEach(({ nombre, cantReq, precio }) => {
+            g.productosQty.forEach(({ nombre, precio, cantTotal }) => {
                 lineas += `
             <div class="ticket-row" style="padding-left:.8rem;">
                 <span class="tk-l">${x(nombre)}</span>
-                <span class="tk-r">${cantReq} x $${fmt(precio)}</span>
+                <span class="tk-r">${cantTotal} x $${fmt(precio)}</span>
             </div>`;
             });
-            if (inst.ahorro > 0) {
+            if (g.ahorroTotal > 0) {
                 lineas += `
             <div class="ticket-row ticket-desc" style="padding-left:.8rem;font-size:10px;">
                 <span class="tk-l">Ahorro promo</span>
-                <span class="tk-r">-$${fmt(inst.ahorro)}</span>
+                <span class="tk-r">-$${fmt(g.ahorroTotal)}</span>
             </div>`;
             }
         });
@@ -927,7 +970,7 @@
                     <div class="ticket-center" style="font-size:10px;">TICKET INTERNO</div>
                     <hr class="ticket-hr-sol">
                     <div class="ticket-row"><span class="tk-l">N° Boleta</span><span class="tk-r ticket-bold">${idBoleta}</span></div>
-                    <div class="ticket-row"><span class="tk-l">Cajero</span><span class="tk-r">${x(cajero)}</span></div>
+                    @* <div class="ticket-row"><span class="tk-l">Cajero</span><span class="tk-r">${x(cajero)}</span></div> *@
                     <div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">${fechaEmision}</span></div>
                     <hr class="ticket-hr-sol">
                     <div class="ticket-row ticket-bold"><span class="tk-l">ARTÍCULO</span><span class="tk-r">VALOR</span></div>

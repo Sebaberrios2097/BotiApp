@@ -9,42 +9,52 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
 {
     // ── Boletas ───────────────────────────────────────────────────────────────
 
-    public async Task<IEnumerable<VenBoletas>> ObtenerBoletasAsync()
-        => await context.VenBoletas
-            .AsNoTracking()
+    private IQueryable<VenBoletas> BoletasConIncludes()
+        => context.VenBoletas
             .Include(b => b.IdEstadoBoletaNavigation)
-            .Include(b => b.IdUsuarioNavigation).ThenInclude(u => u.IdEmpleadoNavigation)
+            .Include(b => b.IdVendedorNavigation).ThenInclude(u => u.IdEmpleadoNavigation)
+            .Include(b => b.IdCajeroNavigation).ThenInclude(u => u!.IdEmpleadoNavigation)
             .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdProductoNavigation)
+            .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdPromocionNavigation)
+            .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdOfertaProductoNavigation);
+
+    public async Task<IEnumerable<VenBoletas>> ObtenerBoletasAsync()
+        => await BoletasConIncludes()
+            .AsNoTracking()
             .OrderByDescending(b => b.FechaEmision)
             .ToListAsync();
 
-    public async Task<IEnumerable<VenBoletas>> ObtenerBoletasPorUsuarioAsync(int idUsuario, int top = 15)
-        => await context.VenBoletas
+    public async Task<IEnumerable<VenBoletas>> ObtenerBoletasPorVendedorAsync(int idVendedor, int top = 100)
+        => await BoletasConIncludes()
             .AsNoTracking()
-            .Where(b => b.IdUsuario == idUsuario)
-            .Include(b => b.IdEstadoBoletaNavigation)
-            .Include(b => b.IdUsuarioNavigation).ThenInclude(u => u.IdEmpleadoNavigation)
-            .Include(b => b.VenBoletaDetalle)
+            .Where(b => b.IdVendedor == idVendedor)
+            .OrderByDescending(b => b.FechaEmision)
+            .Take(top)
+            .ToListAsync();
+
+    public async Task<IEnumerable<VenBoletas>> ObtenerBoletasPorCajeroAsync(int idCajero, int top = 100)
+        => await BoletasConIncludes()
+            .AsNoTracking()
+            .Where(b => b.IdCajero == idCajero)
             .OrderByDescending(b => b.FechaEmision)
             .Take(top)
             .ToListAsync();
 
     public async Task<IEnumerable<VenBoletas>> ObtenerUltimasBoletasSistemaAsync(int top = 15)
-        => await context.VenBoletas
+        => await BoletasConIncludes()
             .AsNoTracking()
-            .Include(b => b.IdEstadoBoletaNavigation)
-            .Include(b => b.IdUsuarioNavigation).ThenInclude(u => u.IdEmpleadoNavigation)
-            .Include(b => b.VenBoletaDetalle)
             .OrderByDescending(b => b.FechaEmision)
             .Take(top)
             .ToListAsync();
 
     public async Task<VenBoletas?> ObtenerPorIdAsync(int id)
-        => await context.VenBoletas
+        => await BoletasConIncludes()
             .AsNoTracking()
-            .Include(b => b.IdEstadoBoletaNavigation)
-            .Include(b => b.IdUsuarioNavigation).ThenInclude(u => u.IdEmpleadoNavigation)
-            .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdProductoNavigation)
+            .FirstOrDefaultAsync(b => b.IdBoleta == id);
+
+    public async Task<VenBoletas?> ObtenerBoletaParaCajaAsync(int id)
+        => await BoletasConIncludes()
+            .AsNoTracking()
             .FirstOrDefaultAsync(b => b.IdBoleta == id);
 
     public async Task<VenBoletas> CrearBoletaAsync(VenBoletas boleta, IEnumerable<VenBoletaDetalle> detalles)
@@ -68,6 +78,92 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         await tx.CommitAsync();
 
         return boleta;
+    }
+
+    public async Task<VenBoletas?> ModificarBoletaDetalleAsync(int idBoleta, IEnumerable<VenBoletaDetalle> nuevosDetalles)
+    {
+        await using var tx = await context.Database.BeginTransactionAsync();
+
+        var boleta = await context.VenBoletas
+            .Include(b => b.VenBoletaDetalle)
+            .FirstOrDefaultAsync(b => b.IdBoleta == idBoleta && b.IdEstadoBoleta == 1);
+
+        if (boleta == null) return null;
+
+        // Restaurar stock de ítems anteriores
+        foreach (var old in boleta.VenBoletaDetalle)
+        {
+            var prod = await context.ProProductos.FindAsync(old.IdProducto);
+            if (prod != null) prod.Stock += old.Cantidad;
+        }
+
+        context.VenBoletaDetalle.RemoveRange(boleta.VenBoletaDetalle);
+        await context.SaveChangesAsync();
+
+        // Insertar nuevos ítems y descontar stock
+        var lista = nuevosDetalles.ToList();
+        foreach (var item in lista)
+        {
+            item.IdBoleta = idBoleta;
+            context.VenBoletaDetalle.Add(item);
+            var prod = await context.ProProductos.FindAsync(item.IdProducto);
+            if (prod != null) prod.Stock -= item.Cantidad;
+        }
+
+        boleta.MontoTotal = lista.Sum(d => d.Subtotal);
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        return await ObtenerBoletaParaCajaAsync(idBoleta);
+    }
+
+    public async Task<VenBoletas?> CobrarBoletaAsync(int idBoleta, int idCajero, IEnumerable<VenMetodosPagoBoleta> metodos)
+    {
+        await using var tx = await context.Database.BeginTransactionAsync();
+
+        var boleta = await context.VenBoletas
+            .FirstOrDefaultAsync(b => b.IdBoleta == idBoleta && b.IdEstadoBoleta == 1);
+
+        if (boleta == null) return null;
+
+        boleta.IdEstadoBoleta = 3; // Pagada
+        boleta.IdCajero       = idCajero;
+        boleta.FechaPago      = DateTime.Now;
+
+        foreach (var m in metodos)
+        {
+            m.IdBoleta = idBoleta;
+            context.VenMetodosPagoBoleta.Add(m);
+        }
+
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        return await ObtenerBoletaParaCajaAsync(idBoleta);
+    }
+
+    public async Task<bool> AnularBoletaAsync(int idBoleta)
+    {
+        await using var tx = await context.Database.BeginTransactionAsync();
+
+        var boleta = await context.VenBoletas
+            .Include(b => b.VenBoletaDetalle)
+            .FirstOrDefaultAsync(b => b.IdBoleta == idBoleta && b.IdEstadoBoleta == 1);
+
+        if (boleta == null) return false;
+
+        // Restaurar stock
+        foreach (var d in boleta.VenBoletaDetalle)
+        {
+            var prod = await context.ProProductos.FindAsync(d.IdProducto);
+            if (prod != null) prod.Stock += d.Cantidad;
+        }
+
+        boleta.IdEstadoBoleta = 2; // Anulada
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        return true;
     }
 
     // ── Catálogo ──────────────────────────────────────────────────────────────

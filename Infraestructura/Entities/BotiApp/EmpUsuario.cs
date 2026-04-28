@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infraestructura.Entities.BotiApp;
 
@@ -42,6 +44,9 @@ public partial class EmpUsuario
     [InverseProperty("EmpUsuario")]
     public virtual EmpTiposUsuario IdTipoUsuarioNavigation { get; set; } = null!;
 
-    [InverseProperty("IdUsuarioNavigation")]
-    public virtual ICollection<VenBoletas> VenBoletas { get; set; } = new List<VenBoletas>();
+    [InverseProperty("IdVendedorNavigation")]
+    public virtual ICollection<VenBoletas> VenBoletasVendedor { get; set; } = new List<VenBoletas>();
+
+    [InverseProperty("IdCajeroNavigation")]
+    public virtual ICollection<VenBoletas> VenBoletasCajero { get; set; } = new List<VenBoletas>();
 }

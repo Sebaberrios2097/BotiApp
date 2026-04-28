@@ -1,0 +1,304 @@
+@using System.Text.Json
+@model BotiApp.Areas.Ventas.Models.HistorialVentasViewModel
+@{
+    ViewData["Title"] = "Historial de Ventas";
+
+    var boletasJson = JsonSerializer.Serialize(Model.Boletas.Select(b => new
+    {
+        id         = b.IdBoleta,
+        fecha      = b.FechaEmision,
+        estado     = b.Estado,
+        idEstado   = b.IdEstado,
+        idVendedor = b.IdVendedor,
+        vendedor   = b.Vendedor,
+        idCajero   = b.IdCajero,
+        cajero     = b.Cajero,
+        total      = b.MontoTotal,
+        detalle    = b.Detalle.Select(d => new
+        {
+            nombre         = d.Nombre,
+            cantidad       = d.Cantidad,
+            precioUnitario = d.PrecioUnitario,
+            precioNormal   = d.PrecioNormal,
+            subtotal       = d.Subtotal,
+            nombrePromocion = d.NombrePromocion,
+            nombreOferta    = d.NombreOferta
+        })
+    }));
+
+    var vendedoresJson = JsonSerializer.Serialize(Model.Vendedores.Select(v => new
+    {
+        id     = v.IdUsuario,
+        nombre = v.Nombre
+    }));
+}
+
+<style>
+/* ══════════════════════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════════════════════ */
+.gv-page-header { display:flex; align-items:center; gap:.7rem; margin-bottom:1.4rem; }
+.gv-page-header svg { width:26px; height:26px; fill:var(--color-primario); }
+.gv-page-header h1 { font-size:1.35rem; font-weight:700; color:var(--color-secundario); margin:0; }
+
+/* ══════════════════════════════════════════════════════
+   PANEL PRINCIPAL
+══════════════════════════════════════════════════════ */
+.hist-panel { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; display:flex; flex-direction:column; }
+.hist-panel-header { display:flex; align-items:center; gap:.55rem; padding:.85rem 1.15rem; background:var(--color-secundario); color:#fff; flex-shrink:0; }
+.hist-panel-header svg { width:17px; height:17px; fill:var(--color-primario); }
+.hist-panel-header span { font-size:.85rem; font-weight:700; }
+.hist-panel-header .cnt-badge { margin-left:auto; background:var(--color-primario); color:#fff; border-radius:20px; padding:.1rem .55rem; font-size:.7rem; font-weight:700; }
+
+/* ══════════════════════════════════════════════════════
+   FILTROS
+══════════════════════════════════════════════════════ */
+.filtros-wrap { padding:.85rem 1rem; border-bottom:1px solid #f0ebe5; background:#faf7f5; display:flex; flex-direction:column; gap:.65rem; flex-shrink:0; }
+.search-bar { display:flex; align-items:center; gap:.5rem; background:#fff; border:1.5px solid #e0d5cc; border-radius:8px; padding:.45rem .8rem; }
+.search-bar svg { width:16px; height:16px; fill:var(--color-primario); opacity:.7; flex-shrink:0; }
+.search-bar input { border:none; outline:none; font-size:.88rem; width:100%; background:transparent; color:var(--color-secundario); }
+.search-bar .clr { background:none; border:none; cursor:pointer; color:#c9b8a8; font-size:1rem; display:none; flex-shrink:0; line-height:1; }
+.search-bar .clr.on { display:block; }
+.pills-row { display:flex; flex-wrap:wrap; gap:.35rem; }
+.pill { padding:.3rem .75rem; border-radius:20px; font-size:.75rem; font-weight:600; border:1.5px solid #e0d5cc; background:#fff; color:#7a6050; cursor:pointer; transition:border-color .15s,background .15s,color .15s; white-space:nowrap; }
+.pill:hover { border-color:var(--color-primario); color:var(--color-primario); }
+.pill.active { background:var(--color-primario); border-color:var(--color-primario); color:#fff; }
+
+/* ══════════════════════════════════════════════════════
+   LISTA DE BOLETAS
+══════════════════════════════════════════════════════ */
+.boletas-list { padding:.75rem 1rem; display:flex; flex-direction:column; gap:.55rem; }
+
+/* Card de boleta */
+.bl-card { border:1.5px solid #ede5df; border-radius:11px; overflow:hidden; transition:border-color .15s,box-shadow .15s; }
+.bl-card:hover { border-color:var(--color-primario); box-shadow:0 2px 10px rgba(231,111,46,.10); }
+.bl-card.open { border-color:var(--color-primario); }
+
+.bl-card-top { display:flex; align-items:center; gap:.75rem; padding:.6rem .9rem; cursor:pointer; background:#faf7f5; flex-wrap:wrap; user-select:none; }
+.bl-card-top:hover { background:#f5efe9; }
+
+.bl-num { font-size:.85rem; font-weight:700; color:var(--color-secundario); flex-shrink:0; min-width:70px; }
+.bl-fecha { font-size:.78rem; color:#7a6050; flex-shrink:0; }
+.bl-cajero { font-size:.78rem; color:#7a6050; flex:1; min-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bl-cajero strong { color:var(--color-secundario); font-weight:700; }
+.bl-estado { font-size:.68rem; font-weight:700; padding:.2rem .55rem; border-radius:20px; flex-shrink:0; }
+.bl-estado.est-1 { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+.bl-estado.est-2 { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+.bl-estado.est-other { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+.bl-total { font-size:.88rem; font-weight:700; color:var(--color-primario); flex-shrink:0; margin-left:auto; }
+.bl-chevron { width:18px; height:18px; fill:#c9b8a8; flex-shrink:0; transition:transform .2s; }
+.bl-card.open .bl-chevron { transform:rotate(180deg); fill:var(--color-primario); }
+
+/* Detalle expandido */
+.bl-detalle { display:none; padding:.5rem .9rem .75rem; border-top:1px solid #f0ebe5; background:#fff; }
+.bl-card.open .bl-detalle { display:block; }
+
+.bl-det-table { width:100%; border-collapse:collapse; font-size:.78rem; }
+.bl-det-table th { text-align:left; padding:.3rem .5rem; color:#a89080; font-weight:600; border-bottom:1.5px solid #f0ebe5; }
+.bl-det-table th:last-child, .bl-det-table td:last-child { text-align:right; }
+.bl-det-table td { padding:.3rem .5rem; color:var(--color-secundario); border-bottom:1px solid #f8f4f1; }
+.bl-det-table tr:last-child td { border-bottom:none; }
+.bl-det-total { display:flex; justify-content:flex-end; gap:.5rem; align-items:center; margin-top:.55rem; padding-top:.45rem; border-top:1.5px solid #f0ebe5; }
+.bl-det-total .lbl { font-size:.78rem; color:#a89080; font-weight:600; }
+.bl-det-total .val { font-size:.95rem; font-weight:700; color:var(--color-primario); }
+.etq-promo  { font-size:.62rem; font-weight:700; background:#fef3c7; color:#d97706; border-radius:4px; padding:.1rem .35rem; vertical-align:middle; white-space:nowrap; }
+.etq-oferta { font-size:.62rem; font-weight:700; background:#ede9fe; color:#7c3aed; border-radius:4px; padding:.1rem .35rem; vertical-align:middle; white-space:nowrap; }
+.precio-normal-tachado { text-decoration:line-through; color:#b8a898; font-size:.72rem; display:block; line-height:1.2; }
+.precio-descuento { color:#16a34a; font-weight:700; }
+
+/* Estado vacío */
+.boletas-empty { text-align:center; padding:3.5rem 1rem; color:#b8a898; font-size:.88rem; }
+.boletas-empty svg { width:52px; height:52px; fill:#ddd0c4; display:block; margin:0 auto .75rem; }
+
+/* Toast */
+.toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
+.toast-msg { display:flex; align-items:center; gap:.6rem; padding:.75rem 1.1rem; border-radius:10px; font-size:.88rem; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease; }
+.toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
+.toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
+.toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
+@@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+</style>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<div class="gv-page-header">
+    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+    <h1>Historial de Ventas</h1>
+</div>
+
+<div class="hist-panel">
+    <div class="hist-panel-header">
+        <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.95-2.05L6.64 18.36A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+        <span>Ventas registradas</span>
+        <span class="cnt-badge" id="cntBoletas">@Model.Boletas.Count()</span>
+    </div>
+
+    @if (Model.EsAdmin || Model.Boletas.Any())
+    {
+        <div class="filtros-wrap">
+            <div class="search-bar">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" id="txtBuscar" placeholder="Buscar por N° boleta o cajero…"
+                       oninput="aplicarFiltros()" autocomplete="off" />
+                <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">✕</button>
+            </div>
+
+            @if (Model.EsAdmin)
+            {
+                <div class="pills-row" id="pillsVendedores">
+                    <button class="pill active" data-vendedor="0" onclick="selVendedor(0)">Todas las ventas</button>
+                    <button class="pill" data-vendedor="@Model.IdUsuarioActual" onclick="selVendedor(@Model.IdUsuarioActual)">Mis ventas</button>
+                    @foreach (var v in Model.Vendedores.Where(v => v.IdUsuario != Model.IdUsuarioActual))
+                    {
+                        <button class="pill" data-vendedor="@v.IdUsuario" onclick="selVendedor(@v.IdUsuario)">@v.Nombre</button>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    <div class="boletas-list" id="boletasList"></div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+
+    /* ── Datos ──────────────────────────────────────────────────────────────── */
+    const BOLETAS      = @Html.Raw(boletasJson);
+    const ES_ADMIN     = @Html.Raw(Model.EsAdmin.ToString().ToLower());
+    const ES_CAJERO    = @Html.Raw(Model.EsCajero.ToString().ToLower());
+    const ID_USUARIO   = @Model.IdUsuarioActual;
+
+    /* ── Estado ─────────────────────────────────────────────────────────────── */
+    let vendedorActivo = 0;   // 0 = todos
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       FILTROS
+    ══════════════════════════════════════════════════════════════════════════ */
+    window.selVendedor = function (id) {
+        vendedorActivo = id;
+        document.querySelectorAll('#pillsVendedores .pill')
+            .forEach(p => p.classList.toggle('active', +p.dataset.vendedor === id));
+        aplicarFiltros();
+    };
+
+    window.aplicarFiltros = function () {
+        const q = (document.getElementById('txtBuscar')?.value ?? '').trim().toLowerCase();
+        document.getElementById('btnClr')?.classList.toggle('on', q.length > 0);
+
+        const filtradas = BOLETAS.filter(b => {
+            const okVendedor = vendedorActivo === 0 || b.idVendedor === vendedorActivo;
+            const okQ = q === ''
+                || String(b.id).includes(q)
+                || b.vendedor.toLowerCase().includes(q)
+                || b.fecha.toLowerCase().includes(q);
+            return okVendedor && okQ;
+        });
+
+        renderLista(filtradas);
+    };
+
+    window.limpiarQ = function () {
+        document.getElementById('txtBuscar').value = '';
+        aplicarFiltros();
+    };
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       RENDER LISTA
+    ══════════════════════════════════════════════════════════════════════════ */
+    function renderLista(lista) {
+        const cont = document.getElementById('boletasList');
+        document.getElementById('cntBoletas').textContent = lista.length;
+
+        if (!lista.length) {
+            cont.innerHTML = `
+            <div class="boletas-empty">
+                <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.33C18 2.99 16.01 1 13.67 1c-1.32 0-2.4.75-3.17 1.69L10 3.5l-.5-.82C8.73 1.75 7.65 1 6.33 1 4 1 2 2.99 2 5.33c0 .45.1.89.18 1.33H0v2h20V6zm-8.5-.17c.38-.61.96-2.33 2.17-2.33 1 0 1.83.83 1.83 1.83 0 .67-.36 1.15-.88 1.5L12 8.5l-1.62-1.67.12-1zm-3 0L7.88 7.83C7.36 7.48 7 7 7 6.33 7 5.33 7.83 4.5 8.83 4.5c1.21 0 1.79 1.72 2.17 2.33zM4 20c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10H4v10z"/></svg>
+                No hay ventas para mostrar
+            </div>`;
+            return;
+        }
+
+        cont.innerHTML = lista.map(b => {
+            const estadoClass = b.idEstado === 1 ? 'est-1' : b.idEstado === 2 ? 'est-2' : 'est-other';
+            const infoHtml    = ES_ADMIN
+                ? `<span class="bl-cajero"><strong>Vendedor:</strong> ${x(b.vendedor)}</span>${b.cajero ? ` <span class="bl-cajero"><strong>Cajero:</strong> ${x(b.cajero)}</span>` : ''}`
+                : ES_CAJERO
+                    ? `<span class="bl-cajero"><strong>Vendedor:</strong> ${x(b.vendedor)}</span>`
+                    : '';
+            const detalleRows = b.detalle.map(d => {
+                const tieneDescuento = d.precioNormal > d.precioUnitario;
+                const badge = d.nombrePromocion
+                    ? ` <span class="etq-promo">🏷️ ${x(d.nombrePromocion)}</span>`
+                    : d.nombreOferta
+                        ? ' <span class="etq-oferta">✦ Oferta</span>'
+                        : '';
+                const precioHtml = tieneDescuento
+                    ? `<span class="precio-normal-tachado">$${fmt(d.precioNormal)}</span><span class="precio-descuento">$${fmt(d.precioUnitario)}</span>`
+                    : `$${fmt(d.precioUnitario)}`;
+                return `
+                <tr>
+                    <td>${x(d.nombre)}${badge}</td>
+                    <td style="text-align:center;">${d.cantidad}</td>
+                    <td style="text-align:right;">${precioHtml}</td>
+                    <td>$${fmt(d.subtotal)}</td>
+                </tr>`;
+            }).join('');
+
+            return `
+            <div class="bl-card" id="blc-${b.id}">
+                <div class="bl-card-top" onclick="toggleDetalle(${b.id})">
+                    <span class="bl-num">N° ${b.id}</span>
+                    <span class="bl-fecha">${x(b.fecha)}</span>
+                    ${infoHtml}
+                    <span class="bl-estado ${estadoClass}">${x(b.estado)}</span>
+                    <span class="bl-total">$${fmt(b.total)}</span>
+                    <svg class="bl-chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+                </div>
+                <div class="bl-detalle">
+                    <table class="bl-det-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th style="text-align:center;">Cant.</th>
+                                <th style="text-align:right;">P. Unit.</th>
+                                <th style="text-align:right;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>${detalleRows}</tbody>
+                    </table>
+                    <div class="bl-det-total">
+                        <span class="lbl">Total pagado</span>
+                        <span class="val">$${fmt(b.total)}</span>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       TOGGLE DETALLE
+    ══════════════════════════════════════════════════════════════════════════ */
+    window.toggleDetalle = function (id) {
+        const card = document.getElementById(`blc-${id}`);
+        if (!card) return;
+        card.classList.toggle('open');
+    };
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       UTILIDADES
+    ══════════════════════════════════════════════════════════════════════════ */
+    function fmt(n) { return Number(n).toLocaleString('es-CL'); }
+    function x(s) {
+        return String(s ?? '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /* ── Inicializar ────────────────────────────────────────────────────────── */
+    aplicarFiltros();
+
+})();
+</script>
+}

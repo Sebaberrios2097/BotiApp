@@ -1,0 +1,890 @@
+﻿@using System.Text.Json
+@model BotiApp.Areas.Ventas.Models.CajaViewModel
+@{
+    ViewData["Title"] = "Caja";
+
+    var metodosPagoJson = JsonSerializer.Serialize(Model.MetodosPago.Select(m => new
+    {
+        id        = m.IdMetodoPago,
+        nombre    = m.NombreMetodoPago,
+        esEfectivo = m.NombreMetodoPago.ToLower().Contains("efectivo")
+    }));
+
+    var catalogoJson = JsonSerializer.Serialize(Model.Productos.Select(p => new
+    {
+        id       = p.IdProducto,
+        nombre   = p.NombreProducto,
+        precio   = p.Precio,
+        stock    = p.Stock,
+        ofertaId     = Model.Ofertas.FirstOrDefault(o => o.IdProducto == p.IdProducto)?.IdOfertaProducto,
+        ofertaPrecio = Model.Ofertas.FirstOrDefault(o => o.IdProducto == p.IdProducto)?.PrecioOferta
+    }));
+
+    var urlBuscar   = Url.Action("BuscarBoletaAjax",   "Ventas", new { area = "Ventas" });
+    var urlModifica = Url.Action("ModificarBoletaAjax", "Ventas", new { area = "Ventas" });
+    var urlCobrar   = Url.Action("CobrarBoletaAjax",   "Ventas", new { area = "Ventas" });
+    var urlAnular   = Url.Action("AnularBoletaAjax",   "Ventas", new { area = "Ventas" });
+}
+
+<style>
+/* ══════════════════════════════════════════════════════ LAYOUT */
+.cj-wrap { display:grid; grid-template-columns:1fr 380px; gap:1.25rem; align-items:start; }
+@@media (max-width:1050px) { .cj-wrap { grid-template-columns:1fr; } }
+.cj-page-header { display:flex; align-items:center; gap:.7rem; margin-bottom:1.4rem; }
+.cj-page-header svg { width:26px; height:26px; fill:var(--color-primario); }
+.cj-page-header h1  { font-size:1.35rem; font-weight:700; color:var(--color-secundario); margin:0; }
+
+/* ══════════════════════════════════════════════════════ PANEL */
+.cj-panel { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; display:flex; flex-direction:column; }
+.cj-panel-header { display:flex; align-items:center; gap:.55rem; padding:.85rem 1.15rem; background:var(--color-secundario); color:#fff; flex-shrink:0; }
+.cj-panel-header svg { width:17px; height:17px; fill:var(--color-primario); }
+.cj-panel-header span { font-size:.85rem; font-weight:700; }
+.cj-panel-body { padding:1rem 1.15rem; display:flex; flex-direction:column; gap:1rem; }
+
+/* ══════════════════════════════════════════════════════ BUSCADOR */
+.cj-search-row { display:flex; gap:.55rem; align-items:center; }
+.cj-search-row input { flex:1; padding:.6rem .9rem; border:1.5px solid #e0d5cc; border-radius:8px; font-size:.92rem; color:var(--color-secundario); outline:none; transition:border-color .15s; }
+.cj-search-row input:focus { border-color:var(--color-primario); }
+.btn-buscar { padding:.6rem 1.2rem; background:var(--color-secundario); color:#fff; border:none; border-radius:8px; font-size:.88rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:.4rem; transition:background .15s; }
+.btn-buscar svg { width:16px; height:16px; fill:currentColor; }
+.btn-buscar:hover { background:var(--color-primario); }
+
+/* ══════════════════════════════════════════════════════ INFO BOLETA */
+.bol-info { display:none; }
+.bol-info.visible { display:block; }
+.bol-info-header { display:flex; flex-wrap:wrap; gap:.5rem 1.5rem; padding:.6rem .9rem; background:#faf7f5; border:1.5px solid #ede5df; border-radius:9px; margin-bottom:.8rem; }
+.bol-info-item { font-size:.8rem; }
+.bol-info-item .lbl { color:#a89080; font-weight:600; margin-right:.25rem; }
+.bol-info-item .val { color:var(--color-secundario); font-weight:700; }
+.estado-badge { display:inline-block; padding:.15rem .55rem; border-radius:12px; font-size:.73rem; font-weight:700; }
+.est-1 { background:#fef3c7; color:#d97706; }
+.est-2 { background:#fee2e2; color:#dc2626; }
+.est-3 { background:#dcfce7; color:#16a34a; }
+
+/* ══════════════════════════════════════════════════════ TABLA DETALLE */
+.detalle-wrap { overflow-x:auto; }
+.detalle-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+.detalle-table th { text-align:left; color:#a89080; font-weight:700; font-size:.73rem; text-transform:uppercase; border-bottom:2px solid #f0ebe5; padding:.4rem .55rem; white-space:nowrap; }
+.detalle-table td { padding:.45rem .55rem; border-bottom:1px solid #f7f2ef; vertical-align:middle; }
+.detalle-table tr:last-child td { border-bottom:none; }
+.td-nombre { font-weight:600; color:var(--color-secundario); }
+.td-badge  { font-size:.65rem; font-weight:700; padding:.1rem .35rem; border-radius:4px; display:inline-block; margin-left:.3rem; vertical-align:middle; }
+.td-badge-promo  { background:#fef3c7; color:#d97706; }
+.td-badge-oferta { background:#ede9fe; color:#7c3aed; }
+.td-precio-normal    { text-decoration:line-through; color:#a89080; font-size:.75rem; }
+.td-precio-descuento { color:#7c3aed; font-weight:700; }
+.qty-input { width:55px; padding:.25rem .35rem; border:1.5px solid #e0d5cc; border-radius:6px; text-align:center; font-size:.85rem; font-weight:700; color:var(--color-secundario); }
+.qty-input:focus { border-color:var(--color-primario); outline:none; }
+.btn-row-del { width:26px; height:26px; border:none; border-radius:5px; background:rgba(239,68,68,.1); color:#dc2626; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .12s; }
+.btn-row-del:hover { background:rgba(239,68,68,.22); }
+.btn-row-del svg { width:13px; height:13px; fill:currentColor; }
+.detalle-total-row td { font-weight:700; color:var(--color-secundario); border-top:2px solid #f0ebe5; }
+
+/* ══════════════════════════════════════════════════════ BOTONES ACCIÓN */
+.bol-actions { display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; }
+.btn-guardar { display:flex; align-items:center; gap:.4rem; padding:.6rem 1.05rem; background:var(--color-secundario); color:#fff; border:none; border-radius:8px; font-size:.87rem; font-weight:700; cursor:pointer; transition:background .15s,transform .12s; }
+.btn-guardar svg { width:15px; height:15px; fill:currentColor; }
+.btn-guardar:hover:not(:disabled) { background:var(--color-primario); transform:translateY(-1px); }
+.btn-guardar:disabled { opacity:.5; cursor:not-allowed; }
+.btn-agregar-modal { display:flex; align-items:center; gap:.4rem; padding:.6rem 1.05rem; background:var(--color-primario); color:#fff; border:none; border-radius:8px; font-size:.87rem; font-weight:700; cursor:pointer; transition:background .15s,transform .12s; }
+.btn-agregar-modal svg { width:15px; height:15px; fill:currentColor; }
+.btn-agregar-modal:hover:not(:disabled) { background:#cf5f22; transform:translateY(-1px); }
+.btn-agregar-modal:disabled { opacity:.5; cursor:not-allowed; }
+.btn-anular { display:flex; align-items:center; gap:.4rem; padding:.6rem 1.05rem; background:rgba(239,68,68,.09); color:#dc2626; border:1.5px solid rgba(239,68,68,.22); border-radius:8px; font-size:.87rem; font-weight:700; cursor:pointer; transition:background .15s; margin-left:auto; }
+.btn-anular svg { width:15px; height:15px; fill:currentColor; }
+.btn-anular:hover:not(:disabled) { background:rgba(239,68,68,.2); }
+.btn-anular:disabled { opacity:.5; cursor:not-allowed; }
+
+/* ══════════════════════════════════════════════════════ MODAL AGREGAR PRODUCTO */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:2000; display:flex; align-items:center; justify-content:center; animation:fadeIn .18s ease; }
+@@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.modal-box { background:#fff; border-radius:14px; width:520px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,.22); overflow:hidden; }
+.modal-header { display:flex; align-items:center; gap:.6rem; padding:.9rem 1.15rem; background:var(--color-secundario); color:#fff; flex-shrink:0; }
+.modal-header svg  { width:17px; height:17px; fill:var(--color-primario); }
+.modal-header span { font-size:.88rem; font-weight:700; flex:1; }
+.modal-header .btn-modal-cerrar { background:none; border:none; cursor:pointer; color:#fff; opacity:.7; display:flex; align-items:center; padding:0; transition:opacity .1s; }
+.modal-header .btn-modal-cerrar:hover { opacity:1; }
+.modal-header .btn-modal-cerrar svg { width:18px; height:18px; fill:currentColor; }
+.modal-body { padding:1rem 1.15rem; display:flex; flex-direction:column; gap:.75rem; overflow-y:auto; flex:1; }
+.modal-search { display:flex; align-items:center; gap:.5rem; background:#f5f0eb; border:1.5px solid #e0d5cc; border-radius:8px; padding:.45rem .8rem; }
+.modal-search svg { width:15px; height:15px; fill:#a89080; flex-shrink:0; }
+.modal-search input { border:none; outline:none; background:transparent; font-size:.88rem; width:100%; color:var(--color-secundario); }
+.modal-prod-list { display:flex; flex-direction:column; gap:.3rem; }
+.modal-prod-item { display:flex; align-items:center; gap:.65rem; padding:.5rem .75rem; border:1.5px solid #ede5df; border-radius:9px; cursor:pointer; transition:border-color .12s, background .12s; }
+.modal-prod-item:hover { border-color:var(--color-primario); background:#fdf7f3; }
+.modal-prod-item.seleccionado { border-color:var(--color-primario); background:#fdf7f3; }
+.modal-prod-nombre { flex:1; font-size:.84rem; font-weight:600; color:var(--color-secundario); }
+.modal-prod-meta { font-size:.72rem; color:#a89080; }
+.modal-prod-precio { font-size:.86rem; font-weight:700; color:var(--color-primario); flex-shrink:0; }
+.modal-prod-precio-normal { font-size:.72rem; text-decoration:line-through; color:#a89080; }
+.modal-footer { display:flex; align-items:center; gap:.65rem; padding:.85rem 1.15rem; border-top:1px solid #f0ebe5; flex-shrink:0; background:#fff; }
+.modal-footer .qty-label { font-size:.82rem; font-weight:600; color:#a89080; flex-shrink:0; }
+.modal-footer .qty-ctrl { display:flex; align-items:center; gap:.3rem; }
+.modal-footer .qty-ctrl button { width:28px; height:28px; border:1.5px solid #e0d5cc; border-radius:6px; background:#f5f0eb; cursor:pointer; font-size:1rem; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.modal-footer .qty-ctrl button:hover { background:#e8ddd4; }
+.modal-footer .qty-ctrl span { font-size:.9rem; font-weight:700; min-width:28px; text-align:center; }
+.modal-footer .btn-modal-agregar { flex:1; padding:.6rem; background:var(--color-primario); color:#fff; border:none; border-radius:8px; font-size:.9rem; font-weight:700; cursor:pointer; transition:background .15s; }
+.modal-footer .btn-modal-agregar:hover:not(:disabled) { background:#cf5f22; }
+.modal-footer .btn-modal-agregar:disabled { opacity:.45; cursor:not-allowed; }
+
+/* ══════════════════════════════════════════════════════ PANEL COBRO */
+.cobro-panel { position:sticky; top:1rem; background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; display:flex; flex-direction:column; }
+.cobro-panel-header { display:flex; align-items:center; gap:.55rem; padding:.85rem 1.15rem; background:var(--color-secundario); color:#fff; flex-shrink:0; }
+.cobro-panel-header svg  { width:17px; height:17px; fill:var(--color-primario); }
+.cobro-panel-header span { font-size:.85rem; font-weight:700; }
+.cobro-body { padding:.85rem 1rem; display:flex; flex-direction:column; gap:.85rem; }
+.cobro-no-perm { padding:1.5rem; text-align:center; color:#a89080; font-size:.86rem; }
+.cobro-no-perm svg { width:44px; height:44px; fill:#ddd0c4; display:block; margin:0 auto .6rem; }
+
+/* Método principal */
+.cobro-metodo-principal { display:flex; gap:.45rem; align-items:center; }
+.cobro-metodo-principal select { flex:1; padding:.55rem .7rem; border:1.5px solid #e0d5cc; border-radius:8px; font-size:.88rem; color:var(--color-secundario); background:#fff; outline:none; }
+.btn-pagar-rapido { padding:.55rem 1rem; background:var(--color-primario); color:#fff; border:none; border-radius:8px; font-size:.86rem; font-weight:700; cursor:pointer; white-space:nowrap; transition:background .15s; }
+.btn-pagar-rapido:hover { background:#cf5f22; }
+
+/* Método adicional (pago dividido) */
+.cobro-adicional { background:#faf7f5; border:1.5px dashed #e0d5cc; border-radius:9px; padding:.6rem .8rem; display:flex; flex-direction:column; gap:.5rem; }
+.cobro-adicional-title { font-size:.73rem; font-weight:700; color:#a89080; text-transform:uppercase; letter-spacing:.04em; }
+.cobro-adicional-row { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+.cobro-adicional-row select { flex:1; min-width:120px; padding:.45rem .55rem; border:1.5px solid #e0d5cc; border-radius:7px; font-size:.83rem; color:var(--color-secundario); background:#fff; outline:none; }
+.cobro-monto-input { width:95px; padding:.45rem .45rem; border:1.5px solid #e0d5cc; border-radius:7px; font-size:.83rem; text-align:right; color:var(--color-secundario); }
+.cobro-monto-input:focus { border-color:var(--color-primario); outline:none; }
+.btn-add-metodo { padding:.45rem .75rem; background:var(--color-secundario); color:#fff; border:none; border-radius:7px; font-size:.82rem; font-weight:700; cursor:pointer; white-space:nowrap; transition:background .15s; }
+.btn-add-metodo:hover { background:var(--color-primario); }
+
+/* Lista métodos */
+.cobro-list { display:flex; flex-direction:column; gap:.3rem; }
+.cobro-item { display:flex; align-items:center; gap:.4rem; background:#faf7f5; border:1px solid #ede5df; border-radius:7px; padding:.4rem .65rem; }
+.cobro-item-nombre { flex:1; font-size:.82rem; font-weight:600; color:var(--color-secundario); }
+.cobro-item-monto  { font-size:.85rem; font-weight:700; color:var(--color-primario); flex-shrink:0; }
+.btn-quitar-metodo { width:22px; height:22px; border:none; border-radius:4px; background:rgba(239,68,68,.08); color:#dc2626; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .12s; }
+.btn-quitar-metodo:hover { background:rgba(239,68,68,.2); }
+.btn-quitar-metodo svg { width:12px; height:12px; fill:currentColor; }
+
+/* Resumen */
+.cobro-resumen { border-top:1px solid #f0ebe5; padding-top:.7rem; display:flex; flex-direction:column; gap:.25rem; }
+.cobro-res-row { display:flex; justify-content:space-between; font-size:.83rem; }
+.cobro-res-row .lbl { color:#a89080; font-weight:600; }
+.cobro-res-row .val { font-weight:700; color:var(--color-secundario); }
+.cobro-res-row.gran .val { font-size:1.05rem; color:var(--color-primario); }
+.diferencia-ok  { color:#16a34a !important; }
+.diferencia-err { color:#dc2626 !important; }
+
+/* Vuelto (dentro del resumen) */
+.cobro-vuelto-row { display:flex; justify-content:space-between; align-items:center; background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:8px; padding:.45rem .75rem; font-size:.86rem; font-weight:700; color:#15803d; }
+.cobro-vuelto-label { font-weight:600; color:#15803d; }
+.cobro-recibido-row { display:flex; align-items:center; gap:.55rem; font-size:.83rem; }
+.cobro-recibido-row label { font-weight:600; color:#a89080; flex-shrink:0; }
+.cobro-recibido-row input { flex:1; padding:.4rem .5rem; border:1.5px solid #e0d5cc; border-radius:6px; font-size:.87rem; text-align:right; background:#fff; color:var(--color-secundario); outline:none; }
+.cobro-recibido-row input:focus { border-color:#22c55e; }
+
+/* Botón finalizar */
+.btn-finalizar { display:flex; align-items:center; justify-content:center; gap:.45rem; padding:.72rem; background:var(--color-primario); color:#fff; border:none; border-radius:9px; font-size:.95rem; font-weight:700; cursor:pointer; transition:background .2s,transform .15s; }
+.btn-finalizar svg { width:17px; height:17px; fill:currentColor; }
+.btn-finalizar:hover:not(:disabled) { background:#cf5f22; transform:translateY(-1px); }
+.btn-finalizar:disabled { opacity:.45; cursor:not-allowed; }
+
+/* ══════════════════════════════════════════════════════ ESTADO FINAL */
+.estado-final { display:none; padding:1.25rem; text-align:center; border-radius:10px; margin-top:.5rem; }
+.estado-final.pagada  { background:#f0fdf4; border:1.5px solid #bbf7d0; }
+.estado-final.anulada { background:#fef2f2; border:1.5px solid #fecaca; }
+.estado-final svg { width:44px; height:44px; display:block; margin:0 auto .5rem; }
+.estado-final p   { font-size:.9rem; font-weight:700; margin:0; }
+.estado-final.pagada  svg { fill:#16a34a; }
+.estado-final.pagada  p   { color:#15803d; }
+.estado-final.anulada svg { fill:#dc2626; }
+.estado-final.anulada p   { color:#b91c1c; }
+
+/* ══════════════════════════════════════════════════════ TOAST */
+.toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
+.toast-msg { display:flex; align-items:center; gap:.6rem; padding:.75rem 1.1rem; border-radius:10px; font-size:.88rem; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease; }
+.toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
+.toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
+.toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
+@@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+.spin-sm { width:15px; height:15px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spinR .65s linear infinite; display:inline-block; }
+@@keyframes spinR { to { transform:rotate(360deg); } }
+</style>
+
+<!-- ══ MODAL AGREGAR PRODUCTO ══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalAgregar" style="display:none;" onclick="if(event.target===this) cerrarModal()">
+    <div class="modal-box">
+        <div class="modal-header">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+            <span>Agregar producto</span>
+            <button class="btn-modal-cerrar" onclick="cerrarModal()" title="Cerrar">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-search">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" id="modalBuscarProd" placeholder="Buscar producto…" oninput="filtrarModalProductos()" autocomplete="off" />
+            </div>
+            <div class="modal-prod-list" id="modalProdList"></div>
+        </div>
+        <div class="modal-footer">
+            <span class="qty-label">Cantidad:</span>
+            <div class="qty-ctrl">
+                <button onclick="modalQtyChange(-1)">−</button>
+                <span id="modalQty">1</span>
+                <button onclick="modalQtyChange(+1)">+</button>
+            </div>
+            <button class="btn-modal-agregar" id="btnModalAgregar" onclick="confirmarAgregarModal()" disabled>
+                Agregar a boleta
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+@Html.AntiForgeryToken()
+
+<div class="cj-page-header">
+    <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+    <h1>Caja</h1>
+</div>
+
+<div class="cj-wrap">
+
+    <!-- ══ COLUMNA IZQUIERDA: boleta ══ -->
+    <div style="display:flex; flex-direction:column; gap:1.2rem;">
+
+        <!-- Buscador -->
+        <div class="cj-panel">
+            <div class="cj-panel-header">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <span>Buscar boleta</span>
+            </div>
+            <div class="cj-panel-body" style="padding:.85rem 1.15rem;">
+                <div class="cj-search-row">
+                    <input type="number" id="inputNBoleta" placeholder="N° de boleta" min="1"
+                           onkeydown="if(event.key==='Enter') buscarBoleta()" />
+                    <button class="btn-buscar" onclick="buscarBoleta()" id="btnBuscar">
+                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        Buscar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detalle de la boleta -->
+        <div class="cj-panel">
+            <div class="cj-panel-header">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-3 7H7v-2h3v2zm3-4H7v-2h6v2zm0 4h-2v-2h2v2zm5-3h-2v3h-2v-3h-2v-2h6v2z"/></svg>
+                <span id="headerBoleta">Detalle de boleta</span>
+            </div>
+            <div class="cj-panel-body">
+
+                <div class="bol-info" id="bolInfo">
+                    <div class="bol-info-header" id="bolInfoHeader"></div>
+
+                    <!-- Tabla detalle editable -->
+                    <div class="detalle-wrap">
+                        <table class="detalle-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Precio</th>
+                                    <th>Cant.</th>
+                                    <th>Subtotal</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="detalleTbody"></tbody>
+                            <tfoot>
+                                <tr class="detalle-total-row">
+                                    <td colspan="3" style="text-align:right; font-size:.85rem;">Total</td>
+                                    <td id="totalDisplay" style="font-size:.9rem; color:var(--color-primario);">$0</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="bol-actions" id="bolActions">
+                        <button class="btn-agregar-modal" id="btnAbrirModal" onclick="abrirModal()" disabled>
+                            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+                            Agregar producto
+                        </button>
+                        <button class="btn-guardar" id="btnGuardar" onclick="guardarCambios()" disabled>
+                            <svg viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                            Guardar cambios
+                        </button>
+                        <button class="btn-anular" id="btnAnular" onclick="confirmarAnular()" disabled>
+                            <svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+                            Anular boleta
+                        </button>
+                    </div>
+
+                    <!-- Estado final -->
+                    <div class="estado-final pagada" id="estadoPagada">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        <p>Boleta cobrada exitosamente</p>
+                    </div>
+                    <div class="estado-final anulada" id="estadoAnulada">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+                        <p>Boleta anulada</p>
+                    </div>
+                </div>
+
+                <!-- Placeholder sin boleta -->
+                <div id="bolPlaceholder" style="text-align:center; padding:2rem; color:#b8a898; font-size:.86rem;">
+                    <svg viewBox="0 0 24 24" style="width:44px;height:44px;fill:#ddd0c4;display:block;margin:0 auto .6rem"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-3 7H7v-2h3v2zm3-4H7v-2h6v2zm0 4h-2v-2h2v2z"/></svg>
+                    Ingresa un N° de boleta para comenzar
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ COLUMNA DERECHA: cobro ══ -->
+    @if (Model.PuedeCobrar)
+    {
+        <div class="cobro-panel" id="cobroPanel">
+            <div class="cobro-panel-header">
+                <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1H6.6c.12 2.19 1.76 3.42 3.7 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                <span>Cobro</span>
+            </div>
+            <div class="cobro-body" id="cobroBody">
+
+                <div id="cobroPlaceholder" style="text-align:center; padding:1.25rem; color:#b8a898; font-size:.86rem;">
+                    <svg viewBox="0 0 24 24" style="width:38px;height:38px;fill:#ddd0c4;display:block;margin:0 auto .5rem"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                    Carga una boleta para cobrar
+                </div>
+
+                <div id="cobroForm" style="display:none; flex-direction:column; gap:.8rem;">
+
+                    <!-- Método principal: selecciona y ya queda listo para cobrar -->
+                    <div>
+                        <div style="font-size:.78rem; font-weight:700; color:#a89080; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.45rem;">Método de pago</div>
+                        <div class="cobro-metodo-principal">
+                            <select class="cobro-select" id="selMetodoPrincipal" onchange="seleccionarMetodoPrincipal()">
+                                @foreach (var m in Model.MetodosPago)
+                                {
+                                    <option value="@m.IdMetodoPago" data-nombre="@m.NombreMetodoPago">@m.NombreMetodoPago</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Lista de métodos registrados -->
+                    <div class="cobro-list" id="cobroList"></div>
+
+                    <!-- Sección pago adicional (oculta por defecto) -->
+                    <div class="cobro-adicional" id="cobroAdicionalSection">
+                        <div class="cobro-adicional-title">Agregar otro método de pago</div>
+                        <div class="cobro-adicional-row">
+                            <select id="selMetodoAdicional">
+                                @foreach (var m in Model.MetodosPago)
+                                {
+                                    <option value="@m.IdMetodoPago" data-nombre="@m.NombreMetodoPago">@m.NombreMetodoPago</option>
+                                }
+                            </select>
+                            <input type="number" class="cobro-monto-input" id="inputMontoAdicional" placeholder="Monto" min="1" />
+                            <button class="btn-add-metodo" onclick="agregarMetodoAdicional()">+ Agregar</button>
+                        </div>
+                    </div>
+
+                    <!-- Botón para mostrar/ocultar pago adicional -->
+                    <button onclick="toggleAdicional()" id="btnToggleAdicional"
+                        style="background:none; border:none; font-size:.8rem; font-weight:600; color:var(--color-primario); cursor:pointer; text-align:left; padding:0; text-decoration:underline;">
+                        + Agregar otro método de pago
+                    </button>
+
+                    <!-- Resumen -->
+                    <div class="cobro-resumen">
+                        <div class="cobro-res-row gran">
+                            <span class="lbl">Total boleta</span>
+                            <span class="val" id="resTotalBoleta">$0</span>
+                        </div>
+                        <div class="cobro-res-row" id="resRegistradoRow" style="display:none;">
+                            <span class="lbl">Registrado</span>
+                            <span class="val" id="resRegistrado">$0</span>
+                        </div>
+                        <div class="cobro-res-row" id="resDiferenciaRow" style="display:none;">
+                            <span class="lbl">Diferencia</span>
+                            <span class="val" id="resDiferencia">$0</span>
+                        </div>
+                        <!-- Efectivo: campo monto recibido -->
+                        <div class="cobro-recibido-row" id="cobroRecibidoRow" style="display:none;">
+                            <label>Monto recibido:</label>
+                            <input type="number" id="inputRecibido" placeholder="0" min="0" oninput="recalcVuelto()" />
+                        </div>
+                        <!-- Vuelto -->
+                        <div class="cobro-vuelto-row" id="cobroVueltoRow" style="display:none;">
+                            <span class="cobro-vuelto-label">Vuelto</span>
+                            <span id="lblVuelto">$0</span>
+                        </div>
+                    </div>
+
+                    <button class="btn-finalizar" id="btnFinalizar" onclick="finalizarCobro()" disabled>
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        Finalizar Cobro
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="cobro-panel">
+            <div class="cobro-panel-header">
+                <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1H6.6c.12 2.19 1.76 3.42 3.7 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                <span>Cobro</span>
+            </div>
+            <div class="cobro-no-perm">
+                <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 14l-3-3 1.41-1.41L11 12.17l4.59-4.58L17 9l-6 6z"/></svg>
+                <p>Solo el cajero puede realizar cobros en esta boleta.</p>
+            </div>
+        </div>
+    }
+
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    /* ── Datos del servidor ──────────────────────────────────────────────── */
+    const PUEDE_COBRAR = @Html.Raw(Model.PuedeCobrar.ToString().ToLower());
+    const METODOS_PAGO = @Html.Raw(metodosPagoJson);
+    const CATALOGO     = @Html.Raw(catalogoJson);
+    const TOKEN        = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+    const URL_BUSCAR   = '@Html.Raw(urlBuscar)';
+    const URL_MODIFICA = '@Html.Raw(urlModifica)';
+    const URL_COBRAR   = '@Html.Raw(urlCobrar)';
+    const URL_ANULAR   = '@Html.Raw(urlAnular)';
+
+    /* ── Estado ──────────────────────────────────────────────────────────── */
+    let boletaActual  = null;
+    let detalleActual = [];
+    let metodosCobro  = [];   // [{idMetodoPago, nombre, monto, esEfectivo}]
+    let modalProdSel  = null; // producto seleccionado en el modal
+    let modalQty      = 1;
+    let adicionalVisible = false;
+
+    /* ── Utilitarios ─────────────────────────────────────────────────────── */
+    function fmt(n)  { return '$' + Number(n).toLocaleString('es-CL'); }
+    function x(s)    { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+    function toast(msg, tipo) {
+        const wrap = document.getElementById('toastWrap');
+        const div  = document.createElement('div');
+        div.className = 'toast-msg ' + tipo;
+        div.innerHTML = tipo === 'exito'
+            ? `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`
+            : `<svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`;
+        div.innerHTML += x(msg);
+        wrap.appendChild(div);
+        setTimeout(() => div.remove(), 4000);
+    }
+    async function post(url, data) {
+        const r = await fetch(url, {
+            method : 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': TOKEN },
+            body   : JSON.stringify(data)
+        });
+        return r.json();
+    }
+    function setBotonCargando(btn, cargando) {
+        btn.disabled = cargando;
+        if (cargando) btn.dataset.oldHtml = btn.innerHTML;
+        btn.innerHTML = cargando ? '<span class="spin-sm"></span> Procesando…' : btn.dataset.oldHtml;
+    }
+
+    /* ════════════════════════════════════════════════════
+       MODAL AGREGAR PRODUCTO
+    ════════════════════════════════════════════════════ */
+    const CATALOGO_ACTIVO = CATALOGO.filter(p => p.stock > 0)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+    function renderModalProductos(filtro) {
+        const list    = document.getElementById('modalProdList');
+        const q       = (filtro || '').toLowerCase().trim();
+        const items   = q ? CATALOGO_ACTIVO.filter(p => p.nombre.toLowerCase().includes(q)) : CATALOGO_ACTIVO;
+        list.innerHTML = '';
+        if (!items.length) {
+            list.innerHTML = `<div style="text-align:center;padding:1.5rem;color:#b8a898;font-size:.84rem;">Sin resultados</div>`;
+            return;
+        }
+        items.forEach(p => {
+            const tieneOferta = !!p.ofertaId;
+            const precio      = tieneOferta ? p.ofertaPrecio : p.precio;
+            const div = document.createElement('div');
+            div.className = 'modal-prod-item' + (modalProdSel?.id === p.id ? ' seleccionado' : '');
+            div.dataset.id = p.id;
+            div.innerHTML  =
+                `<div style="flex:1;min-width:0;">` +
+                    `<div class="modal-prod-nombre">${x(p.nombre)}</div>` +
+                    `<div class="modal-prod-meta">Stock: ${p.stock}${tieneOferta ? ' · <span style="color:#7c3aed;font-weight:700;">Oferta</span>' : ''}</div>` +
+                `</div>` +
+                `<div style="text-align:right;flex-shrink:0;">` +
+                    (tieneOferta ? `<div class="modal-prod-precio-normal">${fmt(p.precio)}</div>` : '') +
+                    `<div class="modal-prod-precio">${fmt(precio)}</div>` +
+                `</div>`;
+            div.onclick = () => seleccionarProdModal(p, div);
+            list.appendChild(div);
+        });
+    }
+
+    function seleccionarProdModal(p, el) {
+        modalProdSel = p;
+        document.querySelectorAll('.modal-prod-item').forEach(i => i.classList.remove('seleccionado'));
+        el.classList.add('seleccionado');
+        document.getElementById('btnModalAgregar').disabled = false;
+    }
+
+    window.filtrarModalProductos = function () {
+        const q = document.getElementById('modalBuscarProd').value;
+        modalProdSel = null;
+        document.getElementById('btnModalAgregar').disabled = true;
+        renderModalProductos(q);
+    };
+
+    window.modalQtyChange = function (delta) {
+        modalQty = Math.max(1, modalQty + delta);
+        document.getElementById('modalQty').textContent = modalQty;
+    };
+
+    window.abrirModal = function () {
+        if (!boletaActual || boletaActual.idEstado !== 1) return;
+        modalProdSel = null;
+        modalQty     = 1;
+        document.getElementById('modalQty').textContent = 1;
+        document.getElementById('modalBuscarProd').value = '';
+        document.getElementById('btnModalAgregar').disabled = true;
+        renderModalProductos('');
+        document.getElementById('modalAgregar').style.display = 'flex';
+        document.getElementById('modalBuscarProd').focus();
+    };
+
+    window.cerrarModal = function () {
+        document.getElementById('modalAgregar').style.display = 'none';
+    };
+
+    window.confirmarAgregarModal = function () {
+        if (!modalProdSel) return;
+        const p         = modalProdSel;
+        const qty       = modalQty;
+        const tieneOfer = !!p.ofertaId;
+        const precio    = tieneOfer ? p.ofertaPrecio : p.precio;
+        const existente = detalleActual.find(d => d.idProducto === p.id);
+        if (existente) {
+            existente.cantidad += qty;
+            existente.subtotal  = existente.cantidad * existente.precioUnitario;
+        } else {
+            detalleActual.push({
+                idProducto:     p.id,
+                nombre:         p.nombre,
+                cantidad:       qty,
+                precioNormal:   p.precio,
+                precioUnitario: precio,
+                subtotal:       qty * precio,
+                idPromocion:    null,
+                nombrePromocion:null,
+                idOferta:       tieneOfer ? p.ofertaId : null,
+                tieneOferta:    tieneOfer
+            });
+        }
+        renderDetalle();
+        cerrarModal();
+    };
+
+    /* ════════════════════════════════════════════════════
+       BUSCAR BOLETA
+    ════════════════════════════════════════════════════ */
+    window.buscarBoleta = async function () {
+        const id = parseInt(document.getElementById('inputNBoleta').value);
+        if (!id || id < 1) { toast('Ingresa un N° de boleta válido.', 'error'); return; }
+        const btn = document.getElementById('btnBuscar');
+        setBotonCargando(btn, true);
+        const res = await post(URL_BUSCAR, { idBoleta: id });
+        setBotonCargando(btn, false);
+        if (!res.ok) { toast(res.mensaje, 'error'); return; }
+        cargarBoleta(res.boleta);
+    };
+
+    /* ════════════════════════════════════════════════════
+       CARGAR BOLETA EN UI
+    ════════════════════════════════════════════════════ */
+    function cargarBoleta(b) {
+        boletaActual  = b;
+        detalleActual = b.detalle.map(d => ({ ...d }));
+        metodosCobro  = [];
+
+        const esPagada   = b.idEstado === 3;
+        const esAnulada  = b.idEstado === 2;
+        const esEditable = b.idEstado === 1;
+
+        document.getElementById('headerBoleta').textContent = `Boleta N° ${b.idBoleta}`;
+
+        const estadoClass = esPagada ? 'est-3' : esAnulada ? 'est-2' : 'est-1';
+        document.getElementById('bolInfoHeader').innerHTML =
+            `<span class="bol-info-item"><span class="lbl">N°</span><span class="val">${b.idBoleta}</span></span>` +
+            `<span class="bol-info-item"><span class="lbl">Fecha</span><span class="val">${x(b.fechaEmision)}</span></span>` +
+            `<span class="bol-info-item"><span class="lbl">Vendedor</span><span class="val">${x(b.vendedor)}</span></span>` +
+            (b.cajero ? `<span class="bol-info-item"><span class="lbl">Cajero</span><span class="val">${x(b.cajero)}</span></span>` : '') +
+            `<span class="bol-info-item"><span class="lbl">Estado</span><span class="val"><span class="estado-badge ${estadoClass}">${x(b.estado)}</span></span></span>`;
+
+        document.getElementById('btnAbrirModal').disabled = !esEditable;
+        document.getElementById('btnGuardar').disabled    = !esEditable;
+        document.getElementById('btnAnular').disabled     = !esEditable;
+
+        document.getElementById('estadoPagada').style.display  = esPagada  ? 'block' : 'none';
+        document.getElementById('estadoAnulada').style.display = esAnulada ? 'block' : 'none';
+
+        if (PUEDE_COBRAR) {
+            document.getElementById('cobroPlaceholder').style.display = 'none';
+            const cobroForm = document.getElementById('cobroForm');
+            cobroForm.style.display = esEditable ? 'flex' : 'none';
+            document.getElementById('resTotalBoleta').textContent = fmt(b.montoTotal);
+            /* Inicializar cobro con método principal */
+            inicializarCobro(b.montoTotal);
+        }
+
+        renderDetalle();
+        document.getElementById('bolPlaceholder').style.display = 'none';
+        document.getElementById('bolInfo').classList.add('visible');
+    }
+
+    /* ════════════════════════════════════════════════════
+       COBRO
+    ════════════════════════════════════════════════════ */
+
+    /* Al cargar boleta, seleccionar automáticamente el primer método por el total */
+    function inicializarCobro(montoTotal) {
+        metodosCobro = [];
+        adicionalVisible = false;
+        document.getElementById('cobroAdicionalSection').style.display = 'none';
+        document.getElementById('btnToggleAdicional').textContent = '+ Agregar otro método de pago';
+        /* Colocar el total en el método principal automáticamente */
+        seleccionarMetodoPrincipal(montoTotal);
+    }
+
+    window.seleccionarMetodoPrincipal = function (montoForzado) {
+        const sel    = document.getElementById('selMetodoPrincipal');
+        const id     = parseInt(sel.value);
+        const nombre = sel.selectedOptions[0].dataset.nombre;
+        const efec   = METODOS_PAGO.find(m => m.id === id)?.esEfectivo ?? false;
+        const monto  = montoForzado ?? boletaActual?.montoTotal ?? 0;
+
+        /* Reemplazar el primer método (el principal) */
+        if (metodosCobro.length > 0 && metodosCobro[0].esPrincipal) {
+            metodosCobro[0] = { idMetodoPago: id, nombre, monto, esEfectivo: efec, esPrincipal: true };
+        } else {
+            metodosCobro = [{ idMetodoPago: id, nombre, monto, esEfectivo: efec, esPrincipal: true },
+                             ...metodosCobro.filter(m => !m.esPrincipal)];
+        }
+        renderMetodosCobro();
+    };
+
+    window.toggleAdicional = function () {
+        adicionalVisible = !adicionalVisible;
+        document.getElementById('cobroAdicionalSection').style.display = adicionalVisible ? 'flex' : 'none';
+        document.getElementById('btnToggleAdicional').textContent = adicionalVisible
+            ? '− Cancelar pago adicional'
+            : '+ Agregar otro método de pago';
+    };
+
+    window.agregarMetodoAdicional = function () {
+        const sel   = document.getElementById('selMetodoAdicional');
+        const monto = parseInt(document.getElementById('inputMontoAdicional').value);
+        if (!monto || monto < 1) { toast('Ingresa un monto válido.', 'error'); return; }
+        const id     = parseInt(sel.value);
+        const nombre = sel.selectedOptions[0].dataset.nombre;
+        const efec   = METODOS_PAGO.find(m => m.id === id)?.esEfectivo ?? false;
+
+        /* Ajustar el método principal para cubrir solo el resto */
+        const totalExtra  = metodosCobro.filter(m => !m.esPrincipal).reduce((s, m) => s + m.monto, 0) + monto;
+        const totalBoleta = boletaActual?.montoTotal ?? 0;
+        const nuevoPrinc  = Math.max(0, totalBoleta - totalExtra);
+
+        metodosCobro = metodosCobro.map(m => m.esPrincipal ? { ...m, monto: nuevoPrinc } : m);
+        metodosCobro.push({ idMetodoPago: id, nombre, monto, esEfectivo: efec, esPrincipal: false });
+
+        document.getElementById('inputMontoAdicional').value = '';
+        renderMetodosCobro();
+    };
+
+    window.quitarMetodo = function (i) {
+        const quitado = metodosCobro[i];
+        metodosCobro.splice(i, 1);
+        /* Si quita uno adicional, devolver su monto al principal */
+        if (!quitado.esPrincipal) {
+            const princ = metodosCobro.find(m => m.esPrincipal);
+            if (princ) princ.monto += quitado.monto;
+        }
+        renderMetodosCobro();
+    };
+
+    function renderMetodosCobro() {
+        const list = document.getElementById('cobroList');
+        list.innerHTML = '';
+        let totalReg = 0;
+        let hayEfec  = false;
+
+        metodosCobro.forEach((m, i) => {
+            if (m.monto <= 0 && m.esPrincipal && metodosCobro.length > 1) return; // ocultar principal si quedó en 0 por adicionales
+            totalReg += m.monto;
+            if (m.esEfectivo) hayEfec = true;
+            const div = document.createElement('div');
+            div.className = 'cobro-item';
+            div.innerHTML =
+                `<span class="cobro-item-nombre">${x(m.nombre)}</span>` +
+                `<span class="cobro-item-monto">${fmt(m.monto)}</span>` +
+                (!m.esPrincipal
+                    ? `<button class="btn-quitar-metodo" onclick="quitarMetodo(${i})" title="Quitar">` +
+                      `<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>`
+                    : '');
+            list.appendChild(div);
+        });
+
+        const total = boletaActual?.montoTotal ?? 0;
+        const diff  = totalReg - total;
+        const tieneAdicionales = metodosCobro.some(m => !m.esPrincipal);
+
+        /* Mostrar registrado/diferencia solo si hay pago dividido */
+        document.getElementById('resRegistradoRow').style.display  = tieneAdicionales ? 'flex' : 'none';
+        document.getElementById('resDiferenciaRow').style.display  = tieneAdicionales ? 'flex' : 'none';
+        if (tieneAdicionales) {
+            document.getElementById('resRegistrado').textContent = fmt(totalReg);
+            const diffEl = document.getElementById('resDiferencia');
+            diffEl.textContent = fmt(Math.abs(diff));
+            diffEl.className   = 'val ' + (diff === 0 ? 'diferencia-ok' : 'diferencia-err');
+        }
+
+        /* Efectivo */
+        document.getElementById('cobroRecibidoRow').style.display = hayEfec ? 'flex' : 'none';
+        document.getElementById('cobroVueltoRow').style.display   = hayEfec ? 'flex' : 'none';
+        if (!hayEfec) document.getElementById('inputRecibido').value = '';
+        recalcVuelto();
+
+        document.getElementById('btnFinalizar').disabled =
+            diff !== 0 || metodosCobro.length === 0 || metodosCobro.every(m => m.monto <= 0);
+    }
+
+    window.recalcVuelto = function () {
+        const montoEfec = metodosCobro.filter(m => m.esEfectivo).reduce((s, m) => s + m.monto, 0);
+        const recibido  = parseInt(document.getElementById('inputRecibido')?.value) || 0;
+        const vuelto    = Math.max(0, recibido - montoEfec);
+        const lbl       = document.getElementById('lblVuelto');
+        if (lbl) lbl.textContent = fmt(vuelto);
+    };
+
+    window.finalizarCobro = async function () {
+        if (!boletaActual || boletaActual.idEstado !== 1) return;
+        const btn = document.getElementById('btnFinalizar');
+        setBotonCargando(btn, true);
+        const pagos = metodosCobro.filter(m => m.monto > 0).map(m => ({ idMetodoPago: m.idMetodoPago, monto: m.monto }));
+        const res   = await post(URL_COBRAR, { idBoleta: boletaActual.idBoleta, metodosPago: pagos });
+        setBotonCargando(btn, false);
+        if (!res.ok) { toast(res.mensaje, 'error'); return; }
+        toast(res.mensaje, 'exito');
+        cargarBoleta(res.boleta);
+    };
+
+    /* ════════════════════════════════════════════════════
+       DETALLE BOLETA
+    ════════════════════════════════════════════════════ */
+    function renderDetalle() {
+        const tbody  = document.getElementById('detalleTbody');
+        const esEdit = boletaActual?.idEstado === 1;
+        tbody.innerHTML = '';
+        let total = 0;
+
+        detalleActual.forEach((d, i) => {
+            total += d.subtotal;
+            const tieneDesc  = d.precioNormal && d.precioNormal !== d.precioUnitario;
+            const precioHtml = tieneDesc
+                ? `<span class="td-precio-normal">${fmt(d.precioNormal)}</span><br><span class="td-precio-descuento">${fmt(d.precioUnitario)}</span>`
+                : fmt(d.precioUnitario);
+            const badgeHtml =
+                (d.nombrePromocion ? `<span class="td-badge td-badge-promo">${x(d.nombrePromocion)}</span>` : '') +
+                (d.tieneOferta     ? `<span class="td-badge td-badge-oferta">Oferta</span>` : '');
+
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                `<td class="td-nombre">${x(d.nombre)}${badgeHtml}</td>` +
+                `<td>${precioHtml}</td>` +
+                `<td>${esEdit
+                    ? `<input type="number" class="qty-input" value="${d.cantidad}" min="1" onchange="cambiarCantidad(${i}, this.value)">`
+                    : d.cantidad}</td>` +
+                `<td>${fmt(d.subtotal)}</td>` +
+                `<td>${esEdit
+                    ? `<button class="btn-row-del" onclick="eliminarFila(${i})" title="Eliminar"><svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>`
+                    : ''}</td>`;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('totalDisplay').textContent = fmt(total);
+
+        /* Actualizar el total en el panel cobro si está visible */
+        if (PUEDE_COBRAR && boletaActual && boletaActual.idEstado === 1) {
+            document.getElementById('resTotalBoleta').textContent = fmt(total);
+            /* Actualizar el método principal con el nuevo total */
+            const princ = metodosCobro.find(m => m.esPrincipal);
+            if (princ) {
+                const extras = metodosCobro.filter(m => !m.esPrincipal).reduce((s, m) => s + m.monto, 0);
+                princ.monto  = Math.max(0, total - extras);
+                renderMetodosCobro();
+            }
+        }
+    }
+
+    window.cambiarCantidad = function (i, val) {
+        const qty = Math.max(1, parseInt(val) || 1);
+        detalleActual[i].cantidad = qty;
+        detalleActual[i].subtotal = qty * detalleActual[i].precioUnitario;
+        renderDetalle();
+    };
+
+    window.eliminarFila = function (i) {
+        detalleActual.splice(i, 1);
+        renderDetalle();
+    };
+
+    /* ════════════════════════════════════════════════════
+       GUARDAR / ANULAR
+    ════════════════════════════════════════════════════ */
+    window.guardarCambios = async function () {
+        if (!detalleActual.length) { toast('La boleta no puede quedar vacía.', 'error'); return; }
+        const btn = document.getElementById('btnGuardar');
+        setBotonCargando(btn, true);
+        const items = detalleActual.map(d => ({
+            idProducto:       d.idProducto,
+            cantidad:         d.cantidad,
+            precioNormal:     d.precioNormal,
+            precioUnitario:   d.precioUnitario,
+            idPromocion:      d.idPromocion ?? null,
+            idOfertaProducto: d.idOferta ?? null
+        }));
+        const res = await post(URL_MODIFICA, { idBoleta: boletaActual.idBoleta, items });
+        setBotonCargando(btn, false);
+        if (!res.ok) { toast(res.mensaje, 'error'); return; }
+        toast(res.mensaje, 'exito');
+        cargarBoleta(res.boleta);
+    };
+
+    window.confirmarAnular = function () {
+        if (!confirm(`¿Seguro que deseas anular la boleta N° ${boletaActual.idBoleta}? Esta acción restaura el stock.`)) return;
+        anularBoleta();
+    };
+    async function anularBoleta() {
+        const btn = document.getElementById('btnAnular');
+        setBotonCargando(btn, true);
+        const res = await post(URL_ANULAR, { idBoleta: boletaActual.idBoleta });
+        setBotonCargando(btn, false);
+        if (!res.ok) { toast(res.mensaje, 'error'); return; }
+        toast(res.mensaje, 'exito');
+        boletaActual.idEstado = 2;
+        boletaActual.estado   = 'Anulada';
+        cargarBoleta(boletaActual);
+    }
+
+    /* Cerrar modal con Escape */
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+
+})();
+</script>
+}

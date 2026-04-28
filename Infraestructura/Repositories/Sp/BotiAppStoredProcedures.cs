@@ -11,10 +11,10 @@ namespace Infraestructura.Repositories.Sp
         {
             this.db = db;
         }
-        public async Task<string> SpEmpCreaUsuarioEmpleado(int rut)
+        public async Task<string> SpEmpCreaUsuarioEmpleado(int rut, int idTipoUsuario)
         {
             var resultado = db.Database
-                .SqlQueryRaw<string>("EXEC Sp_Emp_Crea_UsuarioEmpleado {0}", rut)
+                .SqlQueryRaw<string>("EXEC Sp_Emp_Crea_UsuarioEmpleado {0}, {1}", rut, idTipoUsuario)
                 .AsEnumerable()
                 .FirstOrDefault();
 

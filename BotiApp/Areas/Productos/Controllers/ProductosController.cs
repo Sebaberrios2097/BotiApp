@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace BotiApp.Areas.Productos.Controllers;
 
 [Area("Productos")]
-[Authorize]
+[Authorize(Policy = "SoloAdmin")]
 public class ProductosController(IProductosRepository productosRepository) : Controller
 {
     // ── Index ───────────────────────────────────────────────────────────────

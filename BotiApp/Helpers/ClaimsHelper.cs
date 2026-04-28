@@ -55,5 +55,11 @@ namespace BotiApp.Helpers
 
         public static bool EsAdmin(ClaimsPrincipal user)
             => user.FindFirstValue("TipoUsuario") == "Administrador";
+
+        public static bool EsVendedor(ClaimsPrincipal user)
+            => user.FindFirstValue("TipoUsuario") == "Vendedor";
+
+        public static bool EsCajero(ClaimsPrincipal user)
+            => user.FindFirstValue("TipoUsuario") == "Cajero";
     }
 }

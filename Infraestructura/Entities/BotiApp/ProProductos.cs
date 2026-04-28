@@ -1,5 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infraestructura.Entities.BotiApp;
 
@@ -53,6 +56,9 @@ public partial class ProProductos
 
     [InverseProperty("IdProductoNavigation")]
     public virtual ICollection<ProOfertaProducto> ProOfertaProducto { get; set; } = new List<ProOfertaProducto>();
+
+    [InverseProperty("IdProductoNavigation")]
+    public virtual ProProductosRetornables? ProProductosRetornables { get; set; }
 
     [InverseProperty("IdProductoNavigation")]
     public virtual ICollection<ProPromocionDetalle> ProPromocionDetalle { get; set; } = new List<ProPromocionDetalle>();

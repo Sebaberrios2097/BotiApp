@@ -75,5 +75,15 @@ namespace Infraestructura.Repositories.BotiApp
             await _db.SaveChangesAsync();
             return true;
         }
+
+        public async Task<bool?> ToggleEstado(int idUsuario)
+        {
+            var usuario = await _db.EmpUsuario.FindAsync(idUsuario);
+            if (usuario is null) return null;
+
+            usuario.Estado = !usuario.Estado;
+            await _db.SaveChangesAsync();
+            return usuario.Estado;
+        }
     }
 }

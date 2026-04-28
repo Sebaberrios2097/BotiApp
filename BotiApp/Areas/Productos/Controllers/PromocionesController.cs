@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BotiApp.Areas.Productos.Controllers;
 
 [Area("Productos")]
-[Authorize]
+[Authorize(Policy = "SoloAdmin")]
 public class PromocionesController(IPromocionesRepository promoRepo) : Controller
 {
     // ── Index ────────────────────────────────────────────────────────────────

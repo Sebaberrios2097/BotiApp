@@ -9,12 +9,24 @@ builder.Services.AddInfraestructura(builder.Configuration);
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/Login/Login";
-        options.LogoutPath = "/Login/Logout";
-        options.AccessDeniedPath = "/Login/Login";
-        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.LoginPath        = "/Login/Login";
+        options.LogoutPath       = "/Login/Logout";
+        options.AccessDeniedPath = "/Home/AccesoDenegado";
+        options.ExpireTimeSpan   = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
     });
+
+builder.Services.AddAuthorization(options =>
+{
+    // Solo administrador
+    options.AddPolicy("SoloAdmin",      p => p.RequireClaim("TipoUsuario", "Administrador"));
+    // Administrador + Vendedor (Generar venta, Historial)
+    options.AddPolicy("AdminOVendedor", p => p.RequireClaim("TipoUsuario", "Administrador", "Vendedor"));
+    // Administrador + Cajero (Caja, cobros)
+    options.AddPolicy("AdminOCajero",   p => p.RequireClaim("TipoUsuario", "Administrador", "Cajero"));
+    // Todos los roles (catálogo de lectura)
+    options.AddPolicy("TodosRoles",     p => p.RequireClaim("TipoUsuario", "Administrador", "Vendedor", "Cajero"));
+});
 
 var app = builder.Build();
 
@@ -42,6 +54,11 @@ app.MapAreaControllerRoute(
     name: "areas-productos",
     areaName: "Productos",
     pattern: "Productos/{controller=Productos}/{action=Index}/{id?}");
+
+app.MapAreaControllerRoute(
+    name: "areas-empleados",
+    areaName: "Empleados",
+    pattern: "Empleados/{controller=Empleados}/{action=Index}/{id?}");
 
 app.MapControllerRoute(
     name: "default",
