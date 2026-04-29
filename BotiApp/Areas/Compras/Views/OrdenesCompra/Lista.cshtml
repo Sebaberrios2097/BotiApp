@@ -35,16 +35,23 @@
     .pro-table td { padding:.75rem 1rem; color:var(--color-secundario); vertical-align:middle; }
 
     .badge-estado { display:inline-flex; align-items:center; padding:.25rem .7rem; border-radius:20px; font-size:.75rem; font-weight:700; white-space:nowrap; }
-    .badge-1 { background:rgba(251,191,36,.15);  color:#d97706; }  /* Pendiente */
-    .badge-2 { background:rgba(99,102,241,.12);  color:#6366f1; }  /* En camino */
-    .badge-3 { background:rgba(34,197,94,.12);   color:#16a34a; }  /* Recibida  */
-    .badge-4 { background:rgba(239,68,68,.10);   color:#dc2626; }  /* Cancelada */
+    .badge-1 { background:rgba(251,191,36,.15);  color:#d97706; }  /* Generada  */
+    .badge-2 { background:rgba(34,197,94,.12);   color:#16a34a; }  /* Recibida  */
+    .badge-3 { background:rgba(239,68,68,.10);   color:#dc2626; }  /* Anulada   */
 
     .td-precio { font-weight:700; color:var(--color-primario); }
     .td-fecha  { font-size:.82rem; color:#9a8070; white-space:nowrap; }
 
-    .estado-select { padding:.28rem .6rem; border:1.5px solid #e8ddd4; border-radius:6px; font-size:.82rem; background:#fff; outline:none; cursor:pointer; }
-    .estado-select:focus { border-color:var(--color-primario); }
+    .btn-accion { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border:none; border-radius:6px; cursor:pointer; transition:background .15s; flex-shrink:0; }
+    .btn-accion svg { width:15px; height:15px; fill:currentColor; }
+    .btn-detalle  { background:rgba(99,102,241,.10); color:#6366f1; }
+    .btn-detalle:hover  { background:rgba(99,102,241,.2); }
+    .btn-replicar { background:rgba(14,165,233,.10); color:#0284c7; }
+    .btn-replicar:hover { background:rgba(14,165,233,.2); }
+    .btn-recibir  { background:rgba(34,197,94,.12);  color:#16a34a; }
+    .btn-recibir:hover  { background:rgba(34,197,94,.22); }
+    .btn-anular   { background:rgba(239,68,68,.10);  color:#dc2626; }
+    .btn-anular:hover   { background:rgba(239,68,68,.2); }
 
     .det-toggle { background:none; border:none; cursor:pointer; color:#9a8070; font-size:.82rem; font-weight:600; padding:0 .25rem; }
     .det-toggle:hover { color:var(--color-primario); }
@@ -74,8 +81,9 @@
     .btn-precios { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:6px; border:none; cursor:pointer; background:rgba(34,197,94,.12); color:#16a34a; transition:background .15s; flex-shrink:0; }
     .btn-precios:hover { background:rgba(34,197,94,.22); }
     .btn-precios svg { width:14px; height:14px; fill:currentColor; }
-    .precio-input { width:95px; padding:.3rem .5rem; border:1.5px solid #e8ddd4; border-radius:6px; font-size:.86rem; text-align:right; outline:none; }
+    .precio-input { width:88px; padding:.3rem .5rem; border:1.5px solid #e8ddd4; border-radius:6px; font-size:.86rem; text-align:right; outline:none; }
     .precio-input:focus { border-color:var(--color-primario); }
+    .precio-input:disabled { background:#f5f0ec; color:#aaa; cursor:not-allowed; }
 </style>
 
 <div class="toast-wrap" id="toastWrap"></div>
@@ -154,26 +162,27 @@
                         </span>
                     </td>
                     <td>
-                        <div style="display:flex; gap:.5rem; align-items:center;">
-                            <select class="estado-select" onchange="cambiarEstado(@o.IdOrdenCompra, this.value, this)">
-                                @foreach (var e in estados)
-                                {
-                                    if (e.IdEstadoOrdenCompra == o.IdEstadoOrdenCompra)
-                                    {
-                                        <option value="@e.IdEstadoOrdenCompra" selected>@e.NombreEstadoOc</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="@e.IdEstadoOrdenCompra">@e.NombreEstadoOc</option>
-                                    }
-                                }
-                            </select>
-                            <button class="det-toggle" onclick="toggleDetalle(@o.IdOrdenCompra)" title="Ver detalle">▼</button>
-                            @if (o.IdEstadoOrdenCompra != 4)
+                        <div style="display:flex; gap:.4rem; align-items:center; flex-wrap:wrap;">
+                            <button class="btn-accion btn-detalle" onclick="toggleDetalle(@o.IdOrdenCompra)" title="Ver detalle de la orden">
+                                <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            </button>
+                            <button class="btn-accion btn-replicar" onclick="replicarOrden(@o.IdOrdenCompra)" title="Replicar esta orden de compra">
+                                <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                            </button>
+                            @if (o.IdEstadoOrdenCompra == 1 || o.IdEstadoOrdenCompra == 2)
                             {
-                                <button class="btn-precios" onclick="abrirEditarPrecios(@o.IdOrdenCompra)" title="Registrar precios">
+                                <button class="btn-precios" data-precios="@o.IdOrdenCompra" onclick="abrirEditarPrecios(@o.IdOrdenCompra)" title="@(o.IdEstadoOrdenCompra == 1 ? "Gestionar precios y productos" : "Editar precios")">
                                     <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                                 </button>
+                                @if (o.IdEstadoOrdenCompra == 1)
+                                {
+                                    <button class="btn-accion btn-recibir" data-recibir="@o.IdOrdenCompra" onclick="recibirOrden(@o.IdOrdenCompra)" title="Marcar como recibida">
+                                        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                    </button>
+                                    <button class="btn-accion btn-anular" data-anular="@o.IdOrdenCompra" onclick="anularOrden(@o.IdOrdenCompra)" title="Anular orden">
+                                        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                                    </button>
+                                }
                             }
                         </div>
                     </td>
@@ -187,17 +196,21 @@
                                     <tr>
                                         <th>Producto</th>
                                         <th>Cantidad</th>
-                                        <th>Precio Unitario</th>
+                                        <th>Precio sin IVA</th>
+                                        <th style="color:var(--color-primario);">Precio con IVA</th>
                                         <th>Subtotal</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="tbody-det-@o.IdOrdenCompra">
                                     @foreach (var det in o.ComOrdenDetalle)
                                     {
+                                        var conIvaD = det.PrecioUnitario;
+                                        var sinIvaD = (int)Math.Round(det.PrecioUnitario / 1.19);
                                         <tr>
                                             <td>@det.IdProveedorProductoNavigation?.IdProductoNavigation?.NombreProducto</td>
                                             <td>@det.Cantidad</td>
-                                            <td>$@det.PrecioUnitario.ToString("N0")</td>
+                                            <td>$@sinIvaD.ToString("N0")</td>
+                                            <td style="font-weight:700;color:var(--color-primario);">$@conIvaD.ToString("N0")</td>
                                             <td>$@det.Subtotal.ToString("N0")</td>
                                         </tr>
                                     }
@@ -221,6 +234,7 @@
 @Html.AntiForgeryToken()
 
 @section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 <script>
 // ── Filtro ────────────────────────────────────────────────────────────────────
 function filtrar() {
@@ -248,7 +262,39 @@ function toggleDetalle(id) {
 }
 
 // ── Cambiar estado ────────────────────────────────────────────────────────────
-async function cambiarEstado(id, idEstado, sel) {
+async function recibirOrden(id) {
+    const result = await Swal.fire({
+        title: `¿Recibir orden #${id}?`,
+        html: 'Se marcará como <strong>Recibida</strong> y se actualizará el stock de los productos.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, recibir',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#16a34a',
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true
+    });
+    if (!result.isConfirmed) return;
+    await _cambiarEstado(id, 2, 'Recibida');
+}
+
+async function anularOrden(id) {
+    const result = await Swal.fire({
+        title: `¿Anular orden #${id}?`,
+        text: 'Esta acción no se puede deshacer.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, anular',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        reverseButtons: true
+    });
+    if (!result.isConfirmed) return;
+    await _cambiarEstado(id, 3, 'Anulada');
+}
+
+async function _cambiarEstado(id, idEstado, nombreEstado) {
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
     const form = new URLSearchParams({ id, idEstado, __RequestVerificationToken: token });
     const res = await fetch('@Url.Action("CambiarEstado", "OrdenesCompra", new { area = "Compras" })', {
@@ -259,15 +305,34 @@ async function cambiarEstado(id, idEstado, sel) {
 
     if (!res.ok) { mostrarToast(res.mensaje, 'error'); return; }
 
-    const tr    = sel.closest('tr[data-id]');
+    const tr = document.querySelector(`#tbodyOrdenes tr[data-id="${id}"]`);
     tr.dataset.estado = idEstado;
 
     const badge = document.getElementById(`badge-${id}`);
-    badge.textContent  = sel.options[sel.selectedIndex].text;
-    badge.className    = `badge-estado badge-${idEstado}`;
+    badge.textContent = nombreEstado;
+    badge.className   = `badge-estado badge-${idEstado}`;
+
+    // Ocultar botones de acción (ya no aplican)
+    tr.querySelectorAll('[data-recibir],[data-anular],[data-precios]').forEach(b => b.remove());
 
     mostrarToast(res.mensaje, 'exito');
     filtrar();
+}
+
+// ── Replicar orden ────────────────────────────────────────────────────────────
+async function replicarOrden(id) {
+    if (!confirm(`¿Está seguro que desea replicar la orden #${id}?\nSe creará una nueva orden en estado Generada con los mismos productos.`)) return;
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const form = new URLSearchParams({ id, __RequestVerificationToken: token });
+    const res = await fetch('@Url.Action("ReplicarOrden", "OrdenesCompra", new { area = "Compras" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString()
+    }).then(r => r.json());
+
+    if (!res.ok) { mostrarToast(res.mensaje, 'error'); return; }
+    mostrarToast(res.mensaje, 'exito');
+    setTimeout(() => location.reload(), 1500);
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -280,10 +345,12 @@ function mostrarToast(msg, tipo) {
     setTimeout(() => d.remove(), 4000);
 }
 
-// ── Modal registrar precios ───────────────────────────────────────────────────
+// ── Modal registrar precios / editar orden ────────────────────────────────────
 function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+let _currentOrden = null;
 
 async function abrirEditarPrecios(id) {
     const overlay = document.getElementById('overlayPrecios');
@@ -294,48 +361,94 @@ async function abrirEditarPrecios(id) {
     const o = await fetch(`@Url.Action("OrdenParaEditar", "OrdenesCompra", new { area = "Compras" })?id=${id}`)
         .then(r => r.json());
 
+    _currentOrden = o;
     document.getElementById('bodyPrecios').innerHTML = renderModalPrecios(o);
     calcTotales();
+    loadCategoriasParaAgregar(o.idProveedor);
+}
+
+function buildModalRow(idDetalle, producto, cantidad, sinIva, conIva, idOrden, incluyeIva, esGenerada) {
+    const sinDis = incluyeIva ? 'disabled' : '';
+    const conDis = incluyeIva ? '' : 'disabled';
+    const sub = conIva * cantidad;
+    const colCant = esGenerada
+        ? `<input type="number" class="precio-input" data-tipo="cant" data-id="${idDetalle}" min="1" value="${cantidad}"
+               style="width:62px;" oninput="calcTotales()" onchange="actualizarCantidadFila(this)" onfocus="this.select()">`
+        : `${cantidad}`;
+    const colAccion = esGenerada
+        ? `<button onclick="eliminarDetalleModal(${idOrden}, ${idDetalle}, this)"
+                style="background:rgba(239,68,68,.1);color:#dc2626;border:none;border-radius:4px;width:22px;height:22px;cursor:pointer;font-size:1.1rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;"
+                title="Eliminar producto">&times;</button>`
+        : '';
+    return `
+        <td style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;color:var(--color-secundario);">${escHtml(String(producto))}</td>
+        <td style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;text-align:center;">${colCant}</td>
+        <td style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;">
+            <input type="number" class="precio-input" data-tipo="siniva" data-id="${idDetalle}" data-qty="${cantidad}"
+                value="${sinIva}" min="0" ${sinDis} oninput="calcTotales()" onfocus="this.select()">
+        </td>
+        <td style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;">
+            <input type="number" class="precio-input" data-tipo="coniva" data-id="${idDetalle}" data-qty="${cantidad}"
+                value="${conIva}" min="0" ${conDis} oninput="calcTotales()" onfocus="this.select()">
+        </td>
+        <td class="subtotal-cell" style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;text-align:right;font-weight:700;color:var(--color-primario);">$${sub.toLocaleString('es-CL')}</td>
+        <td style="padding:.42rem .35rem;border-bottom:1px solid #f4f0eb;text-align:center;">${colAccion}</td>`;
 }
 
 function renderModalPrecios(o) {
-    const rows = o.detalles.map(d => `
-        <tr>
-            <td style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;color:var(--color-secundario);">${escHtml(d.producto)}</td>
-            <td style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;text-align:center;color:var(--color-secundario);">${d.cantidad}</td>
-            <td style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;">
-                <input type="number" class="precio-input" min="0" value="${d.precioUnitario}"
-                    data-id="${d.idOrdenDetalle}" data-qty="${d.cantidad}"
-                    oninput="calcTotales()" onfocus="this.select()">
-            </td>
-            <td class="subtotal-cell" style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;text-align:right;font-weight:700;color:var(--color-primario);">$0</td>
-        </tr>`).join('');
+    const IVA = 0.19;
+    const esGenerada = o.idEstado === 1;
+    const rows = o.detalles.map(d => {
+        const conIva = d.precioUnitario;
+        const sinIva = Math.round(d.precioUnitario / (1 + IVA));
+        return `<tr data-detalle-id="${d.idOrdenDetalle}">${buildModalRow(d.idOrdenDetalle, d.producto, d.cantidad, sinIva, conIva, o.idOrdenCompra, o.incluyeIva, esGenerada)}</tr>`;
+    }).join('');
+
+    const seccionAgregar = esGenerada ? `
+        <div style="background:#f9f5f2;border:1.5px dashed #ddd0c4;border-radius:8px;padding:.65rem .85rem;margin-bottom:1rem;">
+            <p style="font-size:.76rem;font-weight:700;color:#9a8070;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.4px;">Añadir producto</p>
+            <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+                <select id="addCat" onchange="loadProductosParaAgregar()" style="flex:1;min-width:130px;max-width:180px;padding:.3rem .5rem;border:1.5px solid #e8ddd4;border-radius:6px;font-size:.82rem;outline:none;background:#fff;">
+                    <option value="">Categoría…</option>
+                </select>
+                <select id="addProd" disabled style="flex:2;min-width:160px;padding:.3rem .5rem;border:1.5px solid #e8ddd4;border-radius:6px;font-size:.82rem;outline:none;background:#fff;">
+                    <option value="">Producto…</option>
+                </select>
+                <input type="number" id="addCant" value="1" min="1" style="width:56px;padding:.3rem .5rem;border:1.5px solid #e8ddd4;border-radius:6px;font-size:.82rem;text-align:center;outline:none;" placeholder="Cant.">
+                <input type="number" id="addPrecioSin" min="0" style="width:88px;padding:.3rem .5rem;border:1.5px solid #e8ddd4;border-radius:6px;font-size:.82rem;text-align:right;outline:none;" placeholder="Sin IVA" oninput="syncAddPrices('sin')">
+                <input type="number" id="addPrecioConIva" min="0" style="width:88px;padding:.3rem .5rem;border:1.5px solid #e8ddd4;border-radius:6px;font-size:.82rem;text-align:right;outline:none;" placeholder="Con IVA" oninput="syncAddPrices('con')">
+                <button onclick="agregarDetalleModal()" style="padding:.3rem .7rem;background:var(--color-primario);color:#fff;border:none;border-radius:6px;font-size:.88rem;font-weight:700;cursor:pointer;white-space:nowrap;">+ Añadir</button>
+            </div>
+        </div>` : '';
 
     return `
         <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0ebe5;padding-bottom:1rem;margin-bottom:1rem;">
             <div>
-                <h2 style="font-size:1.1rem;font-weight:700;color:var(--color-secundario);margin:0;">Registrar Precios</h2>
+                <h2 style="font-size:1.1rem;font-weight:700;color:var(--color-secundario);margin:0;">${esGenerada ? 'Gestionar Orden' : 'Editar Precios'}</h2>
                 <p style="font-size:.82rem;color:#9a8070;margin:.2rem 0 0;">#${o.idOrdenCompra} &mdash; ${escHtml(o.proveedor)}</p>
             </div>
             <button onclick="cerrarModalPrecios()" style="background:none;border:none;cursor:pointer;color:#9a8070;font-size:1.5rem;line-height:1;">&times;</button>
         </div>
         <div style="display:flex;align-items:center;gap:.65rem;padding:.6rem .85rem;background:#f9f5f2;border-radius:8px;border:1.5px solid #ede5dc;margin-bottom:1rem;">
-            <input type="checkbox" id="chkIva" ${o.incluyeIva ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--color-primario);">
-            <label for="chkIva" style="font-size:.88rem;font-weight:600;color:var(--color-secundario);cursor:pointer;margin:0;">La factura de esta orden incluye IVA</label>
+            <input type="checkbox" id="chkIva" ${o.incluyeIva ? 'checked' : ''} onchange="onIvaChange()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--color-primario);">
+            <label for="chkIva" style="font-size:.88rem;font-weight:600;color:var(--color-secundario);cursor:pointer;margin:0;">La factura incluye IVA (19%) — el total siempre refleja el precio con IVA</label>
         </div>
-        <table style="width:100%;border-collapse:collapse;font-size:.86rem;margin-bottom:1rem;">
+        <table style="width:100%;border-collapse:collapse;font-size:.86rem;margin-bottom:.75rem;">
             <thead>
                 <tr style="background:#faf6f3;">
                     <th style="padding:.48rem .65rem;text-align:left;font-size:.78rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Producto</th>
                     <th style="padding:.48rem .65rem;text-align:center;font-size:.78rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Cant.</th>
-                    <th style="padding:.48rem .65rem;text-align:left;font-size:.78rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Precio Unit.</th>
+                    <th style="padding:.48rem .65rem;text-align:left;font-size:.78rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Precio sin IVA</th>
+                    <th style="padding:.48rem .65rem;text-align:left;font-size:.78rem;color:var(--color-primario);border-bottom:1px solid #ede5dc;">Precio con IVA</th>
                     <th style="padding:.48rem .65rem;text-align:right;font-size:.78rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Subtotal</th>
+                    <th style="padding:.48rem .35rem;border-bottom:1px solid #ede5dc;width:28px;"></th>
                 </tr>
             </thead>
             <tbody id="tbodyPrecios">${rows}</tbody>
         </table>
+        ${seccionAgregar}
         <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #f0ebe5;padding-top:.85rem;margin-bottom:1rem;">
-            <span style="font-size:.88rem;color:#9a8070;">Total de la orden</span>
+            <span style="font-size:.88rem;color:#9a8070;">Total (con IVA)</span>
             <span id="totalPrecios" style="font-size:1.1rem;font-weight:800;color:var(--color-secundario);">$0</span>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:.75rem;">
@@ -345,16 +458,44 @@ function renderModalPrecios(o) {
 }
 
 function calcTotales() {
+    const incluyeIva = document.getElementById('chkIva')?.checked ?? false;
+    const IVA = 0.19;
     let total = 0;
-    document.querySelectorAll('#tbodyPrecios input[data-id]').forEach(inp => {
-        const precio = parseInt(inp.value) || 0;
-        const qty    = parseInt(inp.dataset.qty) || 1;
-        const sub    = precio * qty;
-        total       += sub;
-        inp.closest('tr').querySelector('.subtotal-cell').textContent = '$' + sub.toLocaleString('es-CL');
+    document.querySelectorAll('#tbodyPrecios tr[data-detalle-id]').forEach(row => {
+        const inpSin  = row.querySelector('input[data-tipo="siniva"]');
+        const inpCon  = row.querySelector('input[data-tipo="coniva"]');
+        const inpCant = row.querySelector('input[data-tipo="cant"]');
+        // Usar la cantidad editable si existe, o la almacenada en data-qty
+        const qty = inpCant ? (parseInt(inpCant.value) || 1) : (parseInt(inpSin.dataset.qty) || 1);
+        // Sincronizar data-qty para guardar correcto
+        inpSin.dataset.qty = qty;
+        inpCon.dataset.qty = qty;
+        if (incluyeIva) {
+            const conIva = parseInt(inpCon.value) || 0;
+            inpSin.value = Math.round(conIva / (1 + IVA));
+            const sub = conIva * qty;
+            total += sub;
+            row.querySelector('.subtotal-cell').textContent = '$' + sub.toLocaleString('es-CL');
+        } else {
+            const sinIva = parseInt(inpSin.value) || 0;
+            const conIva = Math.round(sinIva * (1 + IVA));
+            inpCon.value = conIva;
+            const sub = conIva * qty;
+            total += sub;
+            row.querySelector('.subtotal-cell').textContent = '$' + sub.toLocaleString('es-CL');
+        }
     });
     const el = document.getElementById('totalPrecios');
     if (el) el.textContent = '$' + total.toLocaleString('es-CL');
+}
+
+function onIvaChange() {
+    const incluyeIva = document.getElementById('chkIva').checked;
+    document.querySelectorAll('#tbodyPrecios tr[data-detalle-id]').forEach(row => {
+        row.querySelector('input[data-tipo="siniva"]').disabled = incluyeIva;
+        row.querySelector('input[data-tipo="coniva"]').disabled = !incluyeIva;
+    });
+    calcTotales();
 }
 
 function cerrarModalPrecios(e) {
@@ -365,30 +506,176 @@ function cerrarModalPrecios(e) {
 async function guardarPrecios(idOrden) {
     const incluyeIva = document.getElementById('chkIva').checked;
     const detalles   = [];
-    document.querySelectorAll('#tbodyPrecios input[data-id]').forEach(inp => {
-        detalles.push({ idOrdenDetalle: parseInt(inp.dataset.id), precioUnitario: parseInt(inp.value) || 0 });
+    document.querySelectorAll('#tbodyPrecios tr[data-detalle-id]').forEach(row => {
+        const id     = parseInt(row.dataset.detalleId);
+        // Siempre guardar precio con IVA como PrecioUnitario
+        const precio = parseInt(row.querySelector('input[data-tipo="coniva"]').value) || 0;
+        const qty    = parseInt(row.querySelector('input[data-tipo="siniva"]').dataset.qty) || 1;
+        detalles.push({ idOrdenDetalle: id, precioUnitario: precio, qty });
     });
 
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
     const res = await fetch('@Url.Action("ActualizarPrecios", "OrdenesCompra", new { area = "Compras" })', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
-        body: JSON.stringify({ idOrdenCompra: idOrden, incluyeIva, detalles })
+        body: JSON.stringify({ idOrdenCompra: idOrden, incluyeIva, detalles: detalles.map(d => ({ idOrdenDetalle: d.idOrdenDetalle, precioUnitario: d.precioUnitario })) })
     }).then(r => r.json());
 
     if (!res.ok) { mostrarToast(res.mensaje, 'error'); return; }
 
-    // Actualizar el total visible en la fila
-    const nuevoTotal = detalles.reduce((s, d) => {
-        const inp = document.querySelector(`#tbodyPrecios input[data-id="${d.idOrdenDetalle}"]`);
-        const qty = inp ? parseInt(inp.dataset.qty) : 0;
-        return s + d.precioUnitario * qty;
-    }, 0);
+    // Actualizar total en la fila principal (precio con IVA)
+    const nuevoTotal = detalles.reduce((s, d) => s + d.precioUnitario * d.qty, 0);
     const tr = document.querySelector(`#tbodyOrdenes tr[data-id="${idOrden}"]`);
     if (tr) tr.querySelector('.td-precio').textContent = '$' + nuevoTotal.toLocaleString('es-CL');
 
+    // Actualizar tabla de detalle expandible
+    const IVA = 0.19;
+    const detTbody = document.getElementById(`tbody-det-${idOrden}`);
+    if (detTbody && _currentOrden) {
+        const rows = detalles.map(d => {
+            const info   = _currentOrden.detalles.find(x => x.idOrdenDetalle === d.idOrdenDetalle);
+            const conIva = d.precioUnitario;
+            const sinIva = Math.round(conIva / (1 + IVA));
+            const sub    = conIva * d.qty;
+            return `<tr>
+                <td>${escHtml(info?.producto ?? '')}</td>
+                <td>${d.qty}</td>
+                <td>$${sinIva.toLocaleString('es-CL')}</td>
+                <td style="font-weight:700;color:var(--color-primario);">$${conIva.toLocaleString('es-CL')}</td>
+                <td>$${sub.toLocaleString('es-CL')}</td>
+            </tr>`;
+        }).join('');
+        detTbody.innerHTML = rows;
+    }
+
     document.getElementById('overlayPrecios').classList.remove('open');
     mostrarToast(res.mensaje, 'exito');
+}
+// ── Actualizar cantidad en fila del modal (guarda inmediatamente) ─────────────
+async function actualizarCantidadFila(inp) {
+    const nuevaCantidad = parseInt(inp.value);
+    if (!nuevaCantidad || nuevaCantidad < 1) return;
+    const idDetalle = parseInt(inp.dataset.id);
+    const idOrden   = _currentOrden?.idOrdenCompra;
+    if (!idOrden) return;
+
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const form  = new URLSearchParams({ idOrden, idDetalle, cantidad: nuevaCantidad, __RequestVerificationToken: token });
+    const res   = await fetch('@Url.Action("ActualizarCantidad", "OrdenesCompra", new { area = "Compras" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString()
+    }).then(r => r.json());
+
+    if (!res.ok) mostrarToast(res.mensaje, 'error');
+}
+
+// ── Eliminar producto del modal ───────────────────────────────────────────────
+async function eliminarDetalleModal(idOrden, idDetalle, btn) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const form = new URLSearchParams({ idOrden, idDetalle, __RequestVerificationToken: token });
+    const res = await fetch('@Url.Action("EliminarDetalle", "OrdenesCompra", new { area = "Compras" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString()
+    }).then(r => r.json());
+
+    if (!res.ok) { mostrarToast(res.mensaje, 'error'); return; }
+
+    btn.closest('tr[data-detalle-id]').remove();
+    if (_currentOrden) _currentOrden.detalles = _currentOrden.detalles.filter(d => d.idOrdenDetalle !== idDetalle);
+    calcTotales();
+    mostrarToast(res.mensaje, 'exito');
+}
+
+// ── Agregar producto al modal ─────────────────────────────────────────────────
+async function agregarDetalleModal() {
+    const idProveedorProducto = parseInt(document.getElementById('addProd').value);
+    if (!idProveedorProducto) { mostrarToast('Selecciona un producto.', 'error'); return; }
+    const cantidad     = parseInt(document.getElementById('addCant').value) || 1;
+    const precioConIva = parseInt(document.getElementById('addPrecioConIva').value) || 0;
+    if (precioConIva <= 0) { mostrarToast('Ingresa el precio del producto.', 'error'); return; }
+
+    const idOrden = _currentOrden.idOrdenCompra;
+    const token   = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const res = await fetch('@Url.Action("AgregarDetalle", "OrdenesCompra", new { area = "Compras" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+        body: JSON.stringify({ idOrdenCompra: idOrden, idProveedorProducto, cantidad, precioUnitario: precioConIva })
+    }).then(r => r.json());
+
+    if (!res.ok) { mostrarToast(res.mensaje, 'error'); return; }
+
+    const IVA    = 0.19;
+    const sinIva = Math.round(precioConIva / (1 + IVA));
+    const incluyeIva = document.getElementById('chkIva').checked;
+    const esGenerada = _currentOrden?.idEstado === 1;
+
+    if (_currentOrden) _currentOrden.detalles.push({
+        idOrdenDetalle: res.idOrdenDetalle, producto: res.producto,
+        cantidad, precioUnitario: precioConIva
+    });
+
+    const tbody = document.getElementById('tbodyPrecios');
+    const tr    = document.createElement('tr');
+    tr.dataset.detalleId = res.idOrdenDetalle;
+    tr.innerHTML = buildModalRow(res.idOrdenDetalle, res.producto, cantidad, sinIva, precioConIva, idOrden, incluyeIva, esGenerada);
+    tbody.appendChild(tr);
+
+    calcTotales();
+
+    // Limpiar formulario
+    document.getElementById('addProd').value         = '';
+    document.getElementById('addCant').value         = '1';
+    document.getElementById('addPrecioSin').value    = '';
+    document.getElementById('addPrecioConIva').value = '';
+    mostrarToast(res.mensaje, 'exito');
+}
+
+// ── Cargar categorías para el formulario de añadir ────────────────────────────
+async function loadCategoriasParaAgregar(idProveedor) {
+    const cats = await fetch(`@Url.Action("Categorias", "OrdenesCompra", new { area = "Compras" })?idProveedor=${idProveedor}`)
+        .then(r => r.json());
+    const sel = document.getElementById('addCat');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Categoría…</option>' +
+        cats.map(c => `<option value="${c.idTipoProducto}">${escHtml(c.nombreTipoProducto)}</option>`).join('');
+}
+
+// ── Cargar productos al cambiar categoría ─────────────────────────────────────
+async function loadProductosParaAgregar() {
+    const idCat  = document.getElementById('addCat')?.value;
+    const idProv = _currentOrden?.idProveedor;
+    if (!idProv) return;
+
+    const url = `@Url.Action("Productos", "OrdenesCompra", new { area = "Compras" })?idProveedor=${idProv}${idCat ? `&idCategoria=${idCat}` : ''}`;
+    const prods = await fetch(url).then(r => r.json());
+
+    const sel = document.getElementById('addProd');
+    sel.disabled = false;
+    sel.innerHTML = '<option value="">Seleccionar producto…</option>' +
+        prods.map(p => `<option value="${p.idProveedorProducto}" data-precio="${p.precioProveedor}">${escHtml(p.nombre)}</option>`).join('');
+
+    sel.onchange = () => {
+        const opt = sel.selectedOptions[0];
+        if (!opt?.value) return;
+        const precio = parseInt(opt.dataset.precio) || 0;
+        document.getElementById('addPrecioSin').value    = precio;
+        syncAddPrices('sin');
+    };
+}
+
+// ── Sincronizar campos de precio en formulario añadir ─────────────────────────
+function syncAddPrices(changed) {
+    const IVA    = 0.19;
+    const inpSin = document.getElementById('addPrecioSin');
+    const inpCon = document.getElementById('addPrecioConIva');
+    if (!inpSin || !inpCon) return;
+    if (changed === 'sin') {
+        inpCon.value = Math.round((parseInt(inpSin.value) || 0) * (1 + IVA));
+    } else {
+        inpSin.value = Math.round((parseInt(inpCon.value) || 0) / (1 + IVA));
+    }
 }
 </script>
 }

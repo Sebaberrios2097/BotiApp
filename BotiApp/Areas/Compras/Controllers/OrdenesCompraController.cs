@@ -42,6 +42,8 @@ public class OrdenesCompraController(IOrdenesCompraRepository repo) : Controller
         return Json(new
         {
             idOrdenCompra = orden.IdOrdenCompra,
+            idEstado      = orden.IdEstadoOrdenCompra,
+            idProveedor   = orden.IdProveedor,
             proveedor     = orden.IdProveedorNavigation.NombreProveedor,
             incluyeIva    = orden.IncluyeIva,
             detalles      = orden.ComOrdenDetalle.Select(d => new
@@ -117,6 +119,18 @@ public class OrdenesCompraController(IOrdenesCompraRepository repo) : Controller
         return Json(new { ok = true, idOrden = creada.IdOrdenCompra, mensaje = "Orden de compra creada correctamente." });
     }
 
+    // ── Replicar orden ─────────────────────────────────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReplicarOrden(int id)
+    {
+        var idUsuario = ClaimHelper.GetIdUsuario(User);
+        var nueva = await repo.ReplicarOrdenAsync(id, idUsuario);
+        if (nueva is null)
+            return Json(new { ok = false, mensaje = "Orden no encontrada." });
+        return Json(new { ok = true, idOrden = nueva.IdOrdenCompra, mensaje = $"Orden #{nueva.IdOrdenCompra} creada correctamente." });
+    }
+
     // ── Cambiar estado ────────────────────────────────────────────────────────
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -124,6 +138,44 @@ public class OrdenesCompraController(IOrdenesCompraRepository repo) : Controller
     {
         var ok = await repo.CambiarEstadoAsync(id, idEstado);
         return Json(new { ok, mensaje = ok ? "Estado actualizado." : "Orden no encontrada." });
+    }
+
+    // ── Agregar producto a orden ─────────────────────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AgregarDetalle([FromBody] AgregarDetalleDto dto)
+    {
+        var det = await repo.AgregarDetalleOrdenAsync(
+            dto.IdOrdenCompra, dto.IdProveedorProducto, dto.Cantidad, dto.PrecioUnitario);
+        if (det is null)
+            return Json(new { ok = false, mensaje = "No se pudo agregar el producto. Verifique que la orden esté en estado Generada." });
+
+        return Json(new
+        {
+            ok             = true,
+            idOrdenDetalle = det.IdOrdenDetalle,
+            producto       = det.IdProveedorProductoNavigation?.IdProductoNavigation?.NombreProducto ?? "—",
+            cantidad       = det.Cantidad,
+            precioUnitario = det.PrecioUnitario,
+            subtotal       = det.Subtotal,
+            mensaje        = "Producto agregado correctamente."
+        });
+    }
+    // ── Actualizar cantidad de un detalle ─────────────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ActualizarCantidad(int idOrden, int idDetalle, int cantidad)
+    {
+        var ok = await repo.ActualizarCantidadDetalleAsync(idOrden, idDetalle, cantidad);
+        return Json(new { ok, mensaje = ok ? "Cantidad actualizada." : "No se pudo actualizar. Verifique que la orden esté en estado Generada." });
+    }
+    // ── Eliminar producto de orden ───────────────────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EliminarDetalle(int idOrden, int idDetalle)
+    {
+        var ok = await repo.EliminarDetalleOrdenAsync(idOrden, idDetalle);
+        return Json(new { ok, mensaje = ok ? "Producto eliminado." : "No se pudo eliminar el producto." });
     }
 }
 
@@ -153,4 +205,12 @@ public class EditarDetalleDto
 {
     public int IdOrdenDetalle  { get; set; }
     public int PrecioUnitario  { get; set; }
+}
+
+public class AgregarDetalleDto
+{
+    public int IdOrdenCompra       { get; set; }
+    public int IdProveedorProducto { get; set; }
+    public int Cantidad            { get; set; }
+    public int PrecioUnitario      { get; set; }
 }

@@ -52,8 +52,23 @@ public class OrdenesCompraRepository(BotiAppContext context) : IOrdenesCompraRep
         var orden = await context.ComOrdenCompra.FindAsync(idOrden);
         if (orden is null) return false;
         orden.IdEstadoOrdenCompra = idEstado;
-        if (idEstado == 3) // Recibida
+        if (idEstado == 2) // Recibida: registrar fecha y actualizar stock
+        {
             orden.FechaLlegadaPedido = DateTime.Now;
+
+            var detalles = await context.ComOrdenDetalle
+                .Where(d => d.IdOrdenCompra == idOrden)
+                .Include(d => d.IdProveedorProductoNavigation)
+                    .ThenInclude(pp => pp.IdProductoNavigation)
+                .ToListAsync();
+
+            foreach (var detalle in detalles)
+            {
+                var producto = detalle.IdProveedorProductoNavigation?.IdProductoNavigation;
+                if (producto is not null)
+                    producto.Stock += detalle.Cantidad;
+            }
+        }
         await context.SaveChangesAsync();
         return true;
     }
@@ -123,6 +138,109 @@ public class OrdenesCompraRepository(BotiAppContext context) : IOrdenesCompraRep
         }
 
         orden.MontoTotal = orden.ComOrdenDetalle.Sum(d => d.Subtotal);
+        await context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<ComOrdenCompra?> ReplicarOrdenAsync(int idOrden, int idUsuario)
+    {
+        var original = await OrdenesConIncludes()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.IdOrdenCompra == idOrden);
+        if (original is null) return null;
+
+        await using var tx = await context.Database.BeginTransactionAsync();
+
+        var nueva = new ComOrdenCompra
+        {
+            IdProveedor         = original.IdProveedor,
+            IdUsuario           = idUsuario,
+            IdEstadoOrdenCompra = 1, // Generada
+            CantidadProductos   = original.CantidadProductos,
+            MontoTotal          = original.MontoTotal,
+            FechaSolicitud      = DateTime.Now,
+            IncluyeIva          = original.IncluyeIva
+        };
+        context.ComOrdenCompra.Add(nueva);
+        await context.SaveChangesAsync();
+
+        foreach (var det in original.ComOrdenDetalle)
+        {
+            context.ComOrdenDetalle.Add(new ComOrdenDetalle
+            {
+                IdOrdenCompra       = nueva.IdOrdenCompra,
+                IdProveedor         = det.IdProveedor,
+                IdProveedorProducto = det.IdProveedorProducto,
+                Cantidad            = det.Cantidad,
+                PrecioUnitario      = det.PrecioUnitario,
+                Subtotal            = det.Subtotal
+            });
+        }
+
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+        return nueva;
+    }
+
+    public async Task<ComOrdenDetalle?> AgregarDetalleOrdenAsync(
+        int idOrden, int idProveedorProducto, int cantidad, int precioUnitario)
+    {
+        var orden = await context.ComOrdenCompra
+            .Include(o => o.ComOrdenDetalle)
+            .FirstOrDefaultAsync(o => o.IdOrdenCompra == idOrden);
+        if (orden is null || orden.IdEstadoOrdenCompra != 1) return null;
+
+        var detalle = new ComOrdenDetalle
+        {
+            IdOrdenCompra       = idOrden,
+            IdProveedor         = orden.IdProveedor,
+            IdProveedorProducto = idProveedorProducto,
+            Cantidad            = cantidad,
+            PrecioUnitario      = precioUnitario,
+            Subtotal            = cantidad * precioUnitario
+        };
+        context.ComOrdenDetalle.Add(detalle);
+        orden.CantidadProductos += cantidad;
+        orden.MontoTotal        += detalle.Subtotal;
+        await context.SaveChangesAsync();
+
+        return await context.ComOrdenDetalle
+            .Include(d => d.IdProveedorProductoNavigation)
+                .ThenInclude(pp => pp.IdProductoNavigation)
+            .FirstOrDefaultAsync(d => d.IdOrdenDetalle == detalle.IdOrdenDetalle);
+    }
+
+    public async Task<bool> EliminarDetalleOrdenAsync(int idOrden, int idDetalle)
+    {
+        var orden = await context.ComOrdenCompra
+            .Include(o => o.ComOrdenDetalle)
+            .FirstOrDefaultAsync(o => o.IdOrdenCompra == idOrden);
+        if (orden is null || orden.IdEstadoOrdenCompra != 1) return false;
+
+        var det = orden.ComOrdenDetalle.FirstOrDefault(d => d.IdOrdenDetalle == idDetalle);
+        if (det is null) return false;
+
+        context.ComOrdenDetalle.Remove(det);
+        orden.CantidadProductos -= det.Cantidad;
+        orden.MontoTotal        -= det.Subtotal;
+        await context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> ActualizarCantidadDetalleAsync(int idOrden, int idDetalle, int nuevaCantidad)
+    {
+        var orden = await context.ComOrdenCompra
+            .Include(o => o.ComOrdenDetalle)
+            .FirstOrDefaultAsync(o => o.IdOrdenCompra == idOrden);
+        if (orden is null || orden.IdEstadoOrdenCompra != 1) return false;
+
+        var det = orden.ComOrdenDetalle.FirstOrDefault(d => d.IdOrdenDetalle == idDetalle);
+        if (det is null || nuevaCantidad < 1) return false;
+
+        orden.CantidadProductos += nuevaCantidad - det.Cantidad;
+        orden.MontoTotal        += (nuevaCantidad - det.Cantidad) * det.PrecioUnitario;
+        det.Cantidad             = nuevaCantidad;
+        det.Subtotal             = nuevaCantidad * det.PrecioUnitario;
         await context.SaveChangesAsync();
         return true;
     }
