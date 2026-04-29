@@ -95,6 +95,13 @@
     </div>
 </div>
 
+<!-- Modal: Precios de venta -->
+<div class="m-overlay" id="overlayPreciosVenta" onclick="cerrarModalPreciosVenta(event)">
+    <div class="m-box" style="max-width:780px;">
+        <div id="bodyPreciosVenta" style="padding:1.5rem 1.5rem 1.25rem"></div>
+    </div>
+</div>
+
 <!-- Encabezado -->
 <div class="page-header-card">
     <div class="page-header-left">
@@ -173,6 +180,9 @@
                             {
                                 <button class="btn-precios" data-precios="@o.IdOrdenCompra" onclick="abrirEditarPrecios(@o.IdOrdenCompra)" title="@(o.IdEstadoOrdenCompra == 1 ? "Gestionar precios y productos" : "Editar precios")">
                                     <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                </button>
+                                <button class="btn-accion" style="background:rgba(99,102,241,.12);color:#6366f1;" data-ventas="@o.IdOrdenCompra" onclick="abrirPreciosVenta(@o.IdOrdenCompra)" title="Actualizar precios de venta">
+                                    <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
                                 </button>
                                 @if (o.IdEstadoOrdenCompra == 1)
                                 {
@@ -676,6 +686,128 @@ function syncAddPrices(changed) {
     } else {
         inpSin.value = Math.round((parseInt(inpCon.value) || 0) / (1 + IVA));
     }
+}
+
+// ── Modal: Actualizar precios de venta ────────────────────────────────────────
+let _ordenVenta = null;
+
+async function abrirPreciosVenta(id) {
+    const overlay = document.getElementById('overlayPreciosVenta');
+    document.getElementById('bodyPreciosVenta').innerHTML =
+        '<div style="text-align:center;padding:3rem;color:#a89080;">Cargando…</div>';
+    overlay.classList.add('open');
+
+    const o = await fetch(`@Url.Action("OrdenParaEditar", "OrdenesCompra", new { area = "Compras" })?id=${id}`)
+        .then(r => r.json());
+    _ordenVenta = o;
+    document.getElementById('bodyPreciosVenta').innerHTML = renderModalPreciosVenta(o);
+}
+
+function renderModalPreciosVenta(o) {
+    const IVA = 0.19;
+    const rows = o.detalles.map(d => {
+        const precioCompra = d.precioUnitario;
+        const sinIva = Math.round(precioCompra / (1 + IVA));
+        return `<tr data-idproducto="${d.idProducto}">
+            <td style="padding:.45rem .65rem;border-bottom:1px solid #f4f0eb;color:var(--color-secundario);">${escHtml(String(d.producto))}</td>
+            <td style="padding:.45rem .65rem;border-bottom:1px solid #f4f0eb;text-align:right;color:#9a8070;">$${sinIva.toLocaleString('es-CL')}</td>
+            <td style="padding:.45rem .65rem;border-bottom:1px solid #f4f0eb;text-align:right;font-weight:600;color:var(--color-primario);">$${precioCompra.toLocaleString('es-CL')}</td>
+            <td style="padding:.45rem .65rem;border-bottom:1px solid #f4f0eb;text-align:right;">
+                <span class="precio-venta-actual" style="font-size:.84rem;color:#9a8070;margin-right:.35rem;">$${d.precioVenta.toLocaleString('es-CL')}</span>
+            </td>
+            <td style="padding:.45rem .65rem;border-bottom:1px solid #f4f0eb;">
+                <input type="number" class="precio-input precio-venta-input" min="0" value="${d.precioVenta}"
+                    style="width:110px;" data-compra="${precioCompra}" placeholder="Precio venta">
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0ebe5;padding-bottom:1rem;margin-bottom:1rem;">
+            <div>
+                <h2 style="font-size:1.1rem;font-weight:700;color:var(--color-secundario);margin:0;">Actualizar Precios de Venta</h2>
+                <p style="font-size:.82rem;color:#9a8070;margin:.2rem 0 0;">#${o.idOrdenCompra} &mdash; ${escHtml(o.proveedor)}</p>
+            </div>
+            <button onclick="cerrarModalPreciosVenta()" style="background:none;border:none;cursor:pointer;color:#9a8070;font-size:1.5rem;line-height:1;">&times;</button>
+        </div>
+
+        <div style="background:#f0f4ff;border:1.5px solid #c7d2fe;border-radius:10px;padding:.75rem 1rem;margin-bottom:1.25rem;">
+            <p style="font-size:.78rem;font-weight:700;color:#6366f1;margin:0 0 .6rem;text-transform:uppercase;letter-spacing:.4px;">Calcular por % de ganancia</p>
+            <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+                <label style="font-size:.86rem;color:#4338ca;font-weight:600;">Ganancia</label>
+                <div style="display:flex;align-items:center;border:1.5px solid #c7d2fe;border-radius:7px;overflow:hidden;background:#fff;">
+                    <input type="number" id="inputPorcentaje" min="0" max="999" value="30"
+                        style="width:72px;padding:.35rem .5rem;border:none;outline:none;font-size:.9rem;text-align:right;">
+                    <span style="padding:.35rem .55rem;background:#eef2ff;color:#6366f1;font-size:.86rem;font-weight:700;border-left:1.5px solid #c7d2fe;">%</span>
+                </div>
+                <button onclick="calcularPreciosVenta()"
+                    style="padding:.38rem .9rem;background:#6366f1;color:#fff;border:none;border-radius:7px;font-size:.86rem;font-weight:600;cursor:pointer;">
+                    Calcular
+                </button>
+                <span style="font-size:.78rem;color:#6b7280;">Los precios calculados se muestran en la columna "Precio venta nuevo" para que puedas ajustarlos antes de guardar.</span>
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+                <thead>
+                    <tr style="background:#faf6f3;">
+                        <th style="padding:.45rem .65rem;text-align:left;font-size:.77rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Producto</th>
+                        <th style="padding:.45rem .65rem;text-align:right;font-size:.77rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Compra sin IVA</th>
+                        <th style="padding:.45rem .65rem;text-align:right;font-size:.77rem;color:var(--color-primario);border-bottom:1px solid #ede5dc;">Compra con IVA</th>
+                        <th style="padding:.45rem .65rem;text-align:right;font-size:.77rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Precio venta actual</th>
+                        <th style="padding:.45rem .65rem;text-align:left;font-size:.77rem;color:#6366f1;border-bottom:1px solid #ede5dc;">Precio venta nuevo</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyPreciosVenta">${rows}</tbody>
+            </table>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.25rem;padding-top:.85rem;border-top:2px solid #f0ebe5;">
+            <button onclick="cerrarModalPreciosVenta()"
+                style="padding:.55rem 1.2rem;border:1.5px solid #e8ddd4;border-radius:8px;background:#fff;font-size:.88rem;font-weight:600;cursor:pointer;color:var(--color-secundario);">
+                Cancelar
+            </button>
+            <button onclick="guardarPreciosVenta(${o.idOrdenCompra})"
+                style="padding:.55rem 1.4rem;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;">
+                Confirmar y guardar precios
+            </button>
+        </div>`;
+}
+
+function calcularPreciosVenta() {
+    const pct = parseFloat(document.getElementById('inputPorcentaje').value) || 0;
+    document.querySelectorAll('#tbodyPreciosVenta tr[data-idproducto]').forEach(row => {
+        const inp       = row.querySelector('.precio-venta-input');
+        const precioCompra = parseInt(inp.dataset.compra) || 0;
+        inp.value = Math.round(precioCompra * (1 + pct / 100));
+    });
+}
+
+async function guardarPreciosVenta(idOrden) {
+    const items = [];
+    document.querySelectorAll('#tbodyPreciosVenta tr[data-idproducto]').forEach(row => {
+        const idProducto  = parseInt(row.dataset.idproducto);
+        const nuevoPrecio = parseInt(row.querySelector('.precio-venta-input').value) || 0;
+        if (idProducto > 0 && nuevoPrecio > 0) items.push({ idProducto, nuevoPrecio });
+    });
+    if (!items.length) { mostrarToast('No hay precios para guardar.', 'error'); return; }
+
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const res = await fetch('@Url.Action("ActualizarPreciosVenta", "OrdenesCompra", new { area = "Compras" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+        body: JSON.stringify({ items })
+    }).then(r => r.json());
+
+    if (!res.ok) { mostrarToast(res.mensaje, 'error'); return; }
+    document.getElementById('overlayPreciosVenta').classList.remove('open');
+    mostrarToast(res.mensaje, 'exito');
+}
+
+function cerrarModalPreciosVenta(e) {
+    if (e && e.target !== document.getElementById('overlayPreciosVenta')) return;
+    document.getElementById('overlayPreciosVenta').classList.remove('open');
 }
 </script>
 }

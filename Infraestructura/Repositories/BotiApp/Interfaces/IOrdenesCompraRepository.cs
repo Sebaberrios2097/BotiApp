@@ -18,4 +18,5 @@ public interface IOrdenesCompraRepository
     Task<ComOrdenDetalle?> AgregarDetalleOrdenAsync(int idOrden, int idProveedorProducto, int cantidad, int precioUnitario);
     Task<bool> EliminarDetalleOrdenAsync(int idOrden, int idDetalle);
     Task<bool> ActualizarCantidadDetalleAsync(int idOrden, int idDetalle, int nuevaCantidad);
+    Task<bool> ActualizarPreciosVentaAsync(IEnumerable<(int idProducto, int nuevoPrecio)> precios);
 }

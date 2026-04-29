@@ -49,9 +49,11 @@ public class OrdenesCompraController(IOrdenesCompraRepository repo) : Controller
             detalles      = orden.ComOrdenDetalle.Select(d => new
             {
                 idOrdenDetalle = d.IdOrdenDetalle,
+                idProducto     = d.IdProveedorProductoNavigation?.IdProductoNavigation?.IdProducto ?? 0,
                 producto       = d.IdProveedorProductoNavigation?.IdProductoNavigation?.NombreProducto ?? "—",
                 cantidad       = d.Cantidad,
-                precioUnitario = d.PrecioUnitario
+                precioUnitario = d.PrecioUnitario,
+                precioVenta    = d.IdProveedorProductoNavigation?.IdProductoNavigation?.Precio ?? 0
             })
         });
     }
@@ -140,6 +142,20 @@ public class OrdenesCompraController(IOrdenesCompraRepository repo) : Controller
         return Json(new { ok, mensaje = ok ? "Estado actualizado." : "Orden no encontrada." });
     }
 
+    // ── Actualizar precios de venta de productos ──────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ActualizarPreciosVenta([FromBody] ActualizarPreciosVentaDto dto)
+    {
+        if (dto.Items is null || !dto.Items.Any())
+            return Json(new { ok = false, mensaje = "Sin productos." });
+
+        var ok = await repo.ActualizarPreciosVentaAsync(
+            dto.Items.Select(i => (i.IdProducto, i.NuevoPrecio)));
+
+        return Json(new { ok, mensaje = ok ? "Precios de venta actualizados correctamente." : "No se encontraron los productos." });
+    }
+
     // ── Agregar producto a orden ─────────────────────────────────────────────
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -213,4 +229,15 @@ public class AgregarDetalleDto
     public int IdProveedorProducto { get; set; }
     public int Cantidad            { get; set; }
     public int PrecioUnitario      { get; set; }
+}
+
+public class ActualizarPreciosVentaDto
+{
+    public List<PrecioVentaItemDto>? Items { get; set; }
+}
+
+public class PrecioVentaItemDto
+{
+    public int IdProducto { get; set; }
+    public int NuevoPrecio { get; set; }
 }

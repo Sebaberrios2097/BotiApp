@@ -47,6 +47,22 @@ public class OrdenesCompraRepository(BotiAppContext context) : IOrdenesCompraRep
         return orden;
     }
 
+    public async Task<bool> ActualizarPreciosVentaAsync(IEnumerable<(int idProducto, int nuevoPrecio)> precios)
+    {
+        var ids = precios.Select(p => p.idProducto).ToList();
+        var productos = await context.ProProductos
+            .Where(p => ids.Contains(p.IdProducto))
+            .ToListAsync();
+        if (!productos.Any()) return false;
+        foreach (var item in precios)
+        {
+            var prod = productos.FirstOrDefault(p => p.IdProducto == item.idProducto);
+            if (prod is not null) prod.Precio = item.nuevoPrecio;
+        }
+        await context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<bool> CambiarEstadoAsync(int idOrden, int idEstado)
     {
         var orden = await context.ComOrdenCompra.FindAsync(idOrden);
