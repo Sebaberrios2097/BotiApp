@@ -86,8 +86,6 @@ public partial class BotiAppContext : DbContext
 
         modelBuilder.Entity<ComOrdenDetalle>(entity =>
         {
-            entity.Property(e => e.IdOrdenDetalle).ValueGeneratedNever();
-
             entity.HasOne(d => d.IdOrdenCompraNavigation).WithMany(p => p.ComOrdenDetalle)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Com_Orden_Detalle_Com_Orden_Compra");
@@ -191,6 +189,7 @@ public partial class BotiAppContext : DbContext
         modelBuilder.Entity<ProProveedores>(entity =>
         {
             entity.HasKey(e => e.IdProveedor).HasName("PK_Bta_Proveedores");
+            entity.Property(e => e.Estado).HasDefaultValue(true);
         });
 
         modelBuilder.Entity<ProProveedoresDiasEntrega>(entity =>

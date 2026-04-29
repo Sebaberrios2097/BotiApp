@@ -1,0 +1,412 @@
+@{
+    ViewData["Title"] = "Nueva Orden de Compra";
+    var proveedores = (IEnumerable<Infraestructura.Entities.BotiApp.ProProveedores>)ViewBag.Proveedores;
+}
+
+<style>
+    /* ── Header ── */
+    .oc-header-card { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.08); padding:1.25rem 1.5rem; margin-bottom:1.25rem; }
+    .oc-header-title { font-size:1.25rem; font-weight:700; color:var(--color-secundario); margin:0 0 .1rem; }
+    .oc-header-sub   { font-size:.82rem; color:#9a8070; }
+
+    /* ── Selector proveedor ── */
+    .prov-select-wrap { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+    .prov-select-label { font-size:.9rem; font-weight:600; color:var(--color-secundario); white-space:nowrap; }
+    .prov-select { flex:1; min-width:250px; max-width:420px; padding:.6rem .85rem; border:2px solid #e8ddd4; border-radius:10px; font-size:.95rem; outline:none; transition:border-color .15s; }
+    .prov-select:focus { border-color:var(--color-primario); }
+
+    /* ── Layout 3 columnas ── */
+    .oc-layout { display:grid; grid-template-columns:200px 1fr 320px; gap:1rem; align-items:start; }
+
+    /* ── Panel categorías ── */
+    .cat-panel { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; }
+    .cat-panel-title { padding:.75rem 1rem; font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#9a8070; border-bottom:1px solid #f0ebe5; background:#faf6f3; }
+    .cat-list { list-style:none; padding:.5rem 0; margin:0; }
+    .cat-btn { width:100%; text-align:left; padding:.65rem 1rem; font-size:.86rem; font-weight:500; color:var(--color-secundario); background:none; border:none; cursor:pointer; border-left:3px solid transparent; transition:background .15s, border-color .15s, color .15s; }
+    .cat-btn:hover  { background:rgba(231,111,46,.06); color:var(--color-primario); }
+    .cat-btn.active { background:rgba(231,111,46,.08); color:var(--color-primario); font-weight:700; border-left-color:var(--color-primario); }
+    .cat-count { float:right; background:rgba(231,111,46,.15); color:var(--color-primario); border-radius:10px; padding:0 6px; font-size:.72rem; font-weight:700; line-height:1.6; }
+    .cat-btn.active .cat-count { background:var(--color-primario); color:#fff; }
+
+    /* ── Panel productos ── */
+    .prod-panel { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; }
+    .prod-panel-toolbar { padding:.75rem 1rem; border-bottom:1px solid #f0ebe5; display:flex; gap:.75rem; align-items:center; background:#faf6f3; }
+    .prod-search { flex:1; padding:.45rem .75rem; border:1.5px solid #e8ddd4; border-radius:8px; font-size:.88rem; outline:none; }
+    .prod-search:focus { border-color:var(--color-primario); }
+    .btn-sort-stock { display:inline-flex; align-items:center; gap:.35rem; padding:.42rem .75rem; border:1.5px solid #e8ddd4; border-radius:8px; font-size:.8rem; font-weight:600; cursor:pointer; background:#fff; color:#9a8070; transition:background .15s, border-color .15s, color .15s; white-space:nowrap; }
+    .btn-sort-stock svg { width:14px; height:14px; fill:currentColor; }
+    .btn-sort-stock.asc  { background:rgba(231,111,46,.08); border-color:var(--color-primario); color:var(--color-primario); }
+    .btn-sort-stock.desc { background:rgba(231,111,46,.15); border-color:var(--color-primario); color:var(--color-primario); }
+    .prod-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:.85rem; padding:1rem; min-height:200px; }
+    .prod-card { background:#f9f5f2; border:1.5px solid #ede5dc; border-radius:10px; padding:.85rem; display:flex; flex-direction:column; gap:.4rem; cursor:pointer; transition:border-color .15s, box-shadow .15s, transform .12s; }
+    .prod-card:hover { border-color:var(--color-primario); box-shadow:0 4px 12px rgba(231,111,46,.15); transform:translateY(-2px); }
+    .prod-card-name  { font-size:.86rem; font-weight:700; color:var(--color-secundario); line-height:1.3; }
+    .prod-card-cat   { font-size:.73rem; color:#9a8070; }
+    .prod-card-price { font-size:.95rem; font-weight:700; color:var(--color-primario); margin-top:.2rem; }
+    .prod-card-stock { font-size:.73rem; }
+    .prod-card-stock.ok  { color:#16a34a; }
+    .prod-card-stock.low { color:#f59e0b; }
+    .prod-card-stock.out { color:#dc2626; }
+    .prod-empty { text-align:center; padding:3rem 1rem; color:#a89080; grid-column:1/-1; }
+    .prod-empty svg { width:48px; height:48px; fill:#ddd0c4; display:block; margin:0 auto .5rem; }
+    .prod-loading { grid-column:1/-1; text-align:center; padding:3rem 1rem; color:#a89080; }
+
+    /* ── Panel resumen ── */
+    .resumen-panel { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; position:sticky; top:1rem; }
+    .resumen-title { padding:.75rem 1rem; font-size:.9rem; font-weight:700; color:var(--color-secundario); border-bottom:1px solid #f0ebe5; background:#faf6f3; display:flex; align-items:center; justify-content:space-between; }
+    .resumen-empty { text-align:center; padding:2.5rem 1rem; color:#a89080; font-size:.88rem; }
+    .resumen-list { list-style:none; padding:.5rem 0; margin:0; max-height:360px; overflow-y:auto; }
+    .res-item { display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:.5rem; padding:.55rem 1rem; border-bottom:1px solid #f9f5f2; }
+    .res-item:last-child { border-bottom:none; }
+    .res-item-name  { font-size:.83rem; font-weight:600; color:var(--color-secundario); }
+    .res-item-sub   { font-size:.76rem; color:#9a8070; }
+    .res-qty { display:flex; align-items:center; gap:.3rem; }
+    .qty-btn { width:22px; height:22px; border-radius:5px; border:1.5px solid #e8ddd4; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; font-weight:700; color:var(--color-secundario); transition:background .12s; }
+    .qty-btn:hover { background:#f0ebe5; }
+    .qty-val { width:32px; text-align:center; font-size:.88rem; font-weight:700; color:var(--color-secundario); border:1.5px solid #e8ddd4; border-radius:5px; padding:0 2px; }
+    .res-del { background:none; border:none; cursor:pointer; color:#dc2626; opacity:.6; font-size:1rem; padding:0 .25rem; }
+    .res-del:hover { opacity:1; }
+    .res-subtotal { font-size:.83rem; font-weight:700; color:var(--color-primario); text-align:right; white-space:nowrap; }
+    .resumen-footer { padding:.85rem 1rem; border-top:2px solid #f0ebe5; }
+    .total-line { display:flex; justify-content:space-between; align-items:center; margin-bottom:.65rem; }
+    .total-label { font-size:.88rem; color:#9a8070; }
+    .total-valor { font-size:1.15rem; font-weight:800; color:var(--color-secundario); }
+    .btn-confirmar { width:100%; padding:.65rem; background:var(--color-primario); color:#fff; border:none; border-radius:9px; font-size:.92rem; font-weight:700; cursor:pointer; transition:background .2s; }
+    .btn-confirmar:hover:not(:disabled) { background:#cf5f22; }
+    .btn-confirmar:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-limpiar { width:100%; padding:.5rem; background:#fff; color:#9a8070; border:1.5px solid #e8ddd4; border-radius:9px; font-size:.82rem; font-weight:600; cursor:pointer; margin-top:.5rem; }
+    .btn-limpiar:hover { background:#f9f5f2; }
+
+    /* ── Sin proveedor placeholder ── */
+    .no-prov { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4rem 1rem; color:#a89080; text-align:center; gap:.5rem; }
+    .no-prov svg { width:56px; height:56px; fill:#ddd0c4; }
+
+    /* ── Toast ── */
+    .toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
+    .toast-msg { display:flex; align-items:center; gap:.6rem; padding:.75rem 1.1rem; border-radius:10px; font-size:.88rem; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease; }
+    .toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
+    .toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
+    .toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
+    @@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+</style>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Encabezado -->
+<div class="oc-header-card">
+    <h1 class="oc-header-title">Nueva Orden de Compra</h1>
+    <p class="oc-header-sub">Selecciona un proveedor y agrega productos para generar la orden.</p>
+    <div class="prov-select-wrap" style="margin-top:.85rem;">
+        <span class="prov-select-label">Proveedor:</span>
+        <select class="prov-select" id="selectProveedor" onchange="cargarProveedor(this.value)">
+            <option value="">— Selecciona un proveedor —</option>
+            @foreach (var p in proveedores)
+            {
+                <option value="@p.IdProveedor">@p.NombreProveedor</option>
+            }
+        </select>
+        <a href="@Url.Action("Lista", "OrdenesCompra", new { area = "Compras" })"
+           style="display:inline-flex; align-items:center; gap:.4rem; padding:.5rem 1rem; border:1.5px solid #e8ddd4; border-radius:8px; font-size:.84rem; font-weight:600; color:var(--color-secundario); text-decoration:none;">
+            <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+            Ver historial
+        </a>
+    </div>
+</div>
+
+<!-- Layout principal -->
+<div class="oc-layout" id="ocLayout">
+    <!-- Categorías -->
+    <div class="cat-panel">
+        <div class="cat-panel-title">Categorías</div>
+        <ul class="cat-list" id="catList">
+            <li style="padding:1.5rem .75rem; text-align:center; color:#b0a090; font-size:.84rem;">Selecciona un proveedor</li>
+        </ul>
+    </div>
+
+    <!-- Productos -->
+    <div class="prod-panel">
+        <div class="prod-panel-toolbar">
+            <input type="text" class="prod-search" id="buscarProducto" placeholder="Buscar producto…" oninput="filtrarProductos(this.value)" disabled>
+            <button class="btn-sort-stock" id="btnSortStock" onclick="toggleSortStock()" disabled title="Ordenar por stock">
+                <svg viewBox="0 0 24 24"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/></svg>
+                Stock
+            </button>
+            <span id="prodCount" style="font-size:.8rem; color:#9a8070; white-space:nowrap;"></span>
+        </div>
+        <div class="prod-grid" id="prodGrid">
+            <div class="no-prov">
+                <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.06 15.73 0 13 0c-1.5 0-2.81.67-3.7 1.71L8 3 6.7 1.71C5.81.67 4.5 0 3 0 .27 0-2 2.06-2 4.64c0 .48.11.92.18 1.36H-2v14h22V6z"/></svg>
+                <p>Selecciona un proveedor para ver los productos</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumen orden -->
+    <div class="resumen-panel">
+        <div class="resumen-title">
+            <span>Resumen de Orden</span>
+            <span id="resQtyBadge" style="background:var(--color-primario); color:#fff; border-radius:10px; padding:0 8px; font-size:.76rem; display:none;"></span>
+        </div>
+        <ul class="resumen-list" id="resumenList">
+            <div class="resumen-empty">Agrega productos a la orden</div>
+        </ul>
+        <div class="resumen-footer">
+            <div class="total-line">
+                <span class="total-label">Total Orden</span>
+                <span class="total-valor" id="totalValor">$0</span>
+            </div>
+            <button class="btn-confirmar" id="btnConfirmar" disabled onclick="confirmarOrden()">
+                Confirmar Orden
+            </button>
+            <button class="btn-limpiar" onclick="limpiarOrden()">Limpiar orden</button>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+<script>
+let idProveedorActual = 0;
+let idCategoriaActual = null;
+let todosProductos    = [];   // cache de productos del proveedor
+let orden             = {};   // { idProveedorProducto: { nombre, precio, idProducto, cantidad, subtotal } }
+let stockSortState    = '';   // '' | 'asc' | 'desc'
+// ── Cargar proveedor ──────────────────────────────────────────────────────────
+async function cargarProveedor(id) {
+    idProveedorActual  = parseInt(id) || 0;
+    idCategoriaActual  = null;
+    todosProductos     = [];
+    orden              = {};
+    stockSortState     = '';
+    renderResumen();
+    actualizarBtnSort();
+
+    if (!idProveedorActual) {
+        setCatList([]);
+        setProdGrid(null);
+        document.getElementById('btnSortStock').disabled = true;
+        document.getElementById('buscarProducto').disabled = true;
+        return;
+    }
+
+    const cats = await fetch(`@Url.Action("Categorias", "OrdenesCompra", new { area = "Compras" })?idProveedor=${idProveedorActual}`)
+        .then(r => r.json());
+    setCatList(cats);
+
+    document.getElementById('btnSortStock').disabled = false;
+    // Cargar todos los productos (sin filtro de categoría)
+    await cargarProductos(idProveedorActual, null);
+}
+
+// ── Categorías ────────────────────────────────────────────────────────────────
+function setCatList(cats) {
+    const ul = document.getElementById('catList');
+    if (!cats.length) {
+        ul.innerHTML = '<li style="padding:1.25rem .75rem; text-align:center; color:#b0a090; font-size:.84rem;">Sin categorías</li>';
+        return;
+    }
+    ul.innerHTML = `<li><button class="cat-btn active" data-id="" onclick="selCat(null, this)">
+                        Todos <span class="cat-count">all</span>
+                    </button></li>`
+        + cats.map(c => `<li><button class="cat-btn" data-id="${c.idTipoProducto}" onclick="selCat(${c.idTipoProducto}, this)">
+                            ${c.nombreTipoProducto}
+                          </button></li>`).join('');
+}
+
+async function selCat(idCat, btn) {
+    idCategoriaActual = idCat;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    await cargarProductos(idProveedorActual, idCat);
+}
+
+// ── Sort stock ────────────────────────────────────────────────────────────────
+function toggleSortStock() {
+    stockSortState = stockSortState === '' ? 'asc' : stockSortState === 'asc' ? 'desc' : '';
+    actualizarBtnSort();
+    filtrarProductos(document.getElementById('buscarProducto').value);
+}
+function actualizarBtnSort() {
+    const btn = document.getElementById('btnSortStock');
+    btn.className = 'btn-sort-stock' + (stockSortState ? ' ' + stockSortState : '');
+    const labels = { '': 'Stock', 'asc': 'Stock ↑', 'desc': 'Stock ↓' };
+    const nodes = btn.childNodes;
+    for (let n of nodes) { if (n.nodeType === 3 && n.textContent.trim()) { n.textContent = ' ' + labels[stockSortState]; break; } }
+}
+function applySort(prods) {
+    if (stockSortState === 'asc')  return [...prods].sort((a, b) => a.stock - b.stock);
+    if (stockSortState === 'desc') return [...prods].sort((a, b) => b.stock - a.stock);
+    return prods;
+}
+
+// ── Productos ─────────────────────────────────────────────────────────────────
+async function cargarProductos(idProv, idCat) {
+    const grid = document.getElementById('prodGrid');
+    grid.innerHTML = '<div class="prod-loading">Cargando productos…</div>';
+    document.getElementById('buscarProducto').disabled = false;
+
+    const url = `@Url.Action("Productos", "OrdenesCompra", new { area = "Compras" })?idProveedor=${idProv}${idCat ? '&idCategoria='+idCat : ''}`;
+    todosProductos = await fetch(url).then(r => r.json());
+    renderProductos(todosProductos);
+}
+
+function renderProductos(prods) {
+    const grid = document.getElementById('prodGrid');
+    const lista = applySort(prods);
+    document.getElementById('prodCount').textContent = `${lista.length} producto(s)`;
+    if (!lista.length) {
+        grid.innerHTML = `<div class="prod-empty"><svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM5.17 5H2V3H0v2h2l3.6 7.59L4.25 15c-.16.28-.25.61-.25.96C4 17.1 4.9 18 6 18h14v-2H6.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0023.32 5H5.17z"/></svg><p>Sin productos en esta categoría</p></div>`;
+        return;
+    }
+    grid.innerHTML = lista.map(p => {
+        const precioLabel = p.precioProveedor > 0
+            ? formatPrecio(p.precioProveedor)
+            : '<span style="color:#f59e0b;font-size:.82rem;font-weight:600;">Sin precio</span>';
+        return `
+        <div class="prod-card" onclick="agregarProducto(${p.idProveedorProducto}, ${p.idProducto}, '${escHtml(p.nombre)}', ${p.precioProveedor})">
+            <div class="prod-card-name">${escHtml(p.nombre)}</div>
+            <div class="prod-card-cat">${escHtml(p.categoria)}</div>
+            <div class="prod-card-price">${precioLabel}</div>
+            <div class="prod-card-stock ${p.stock > 10 ? 'ok' : p.stock > 0 ? 'low' : 'out'}">Stock: ${p.stock}</div>
+        </div>`;
+    }).join('');
+}
+
+function filtrarProductos(txt) {
+    const f = txt.toLowerCase();
+    const lista = todosProductos.filter(p => p.nombre.toLowerCase().includes(f)
+        || p.categoria.toLowerCase().includes(f));
+    renderProductos(lista);
+}
+
+// ── Orden ─────────────────────────────────────────────────────────────────────
+function agregarProducto(idProvProd, idProducto, nombre, precio) {
+    if (orden[idProvProd]) {
+        orden[idProvProd].cantidad++;
+        orden[idProvProd].subtotal = orden[idProvProd].cantidad * precio;
+    } else {
+        orden[idProvProd] = { idProveedorProducto: idProvProd, idProducto, nombre, precio, cantidad: 1, subtotal: precio };
+    }
+    renderResumen();
+}
+
+function cambiarCantidad(idProvProd, delta) {
+    if (!orden[idProvProd]) return;
+    orden[idProvProd].cantidad = Math.max(1, orden[idProvProd].cantidad + delta);
+    orden[idProvProd].subtotal = orden[idProvProd].cantidad * orden[idProvProd].precio;
+    renderResumen();
+}
+
+function quitarItem(idProvProd) {
+    delete orden[idProvProd];
+    renderResumen();
+}
+
+function limpiarOrden() {
+    orden = {};
+    renderResumen();
+}
+
+function renderResumen() {
+    const ul    = document.getElementById('resumenList');
+    const items = Object.values(orden);
+    const total = items.reduce((s, i) => s + i.subtotal, 0);
+
+    document.getElementById('btnConfirmar').disabled = items.length === 0;
+    document.getElementById('totalValor').textContent = formatPrecio(total);
+
+    const badge = document.getElementById('resQtyBadge');
+    if (items.length) {
+        badge.textContent = items.length;
+        badge.style.display = '';
+    } else {
+        badge.style.display = 'none';
+    }
+
+    if (!items.length) {
+        ul.innerHTML = '<div class="resumen-empty">Agrega productos a la orden</div>';
+        return;
+    }
+
+    ul.innerHTML = items.map(it => `
+        <li class="res-item">
+          <div>
+            <div class="res-item-name">${escHtml(it.nombre)}</div>
+            <div class="res-item-sub">${formatPrecio(it.precio)} c/u</div>
+          </div>
+          <div class="res-qty">
+            <button class="qty-btn" onclick="cambiarCantidad(${it.idProveedorProducto}, -1)">−</button>
+            <input class="qty-val" type="number" min="1" value="${it.cantidad}"
+                   onchange="setCantidad(${it.idProveedorProducto}, this.value, ${it.precio})">
+            <button class="qty-btn" onclick="cambiarCantidad(${it.idProveedorProducto}, 1)">+</button>
+          </div>
+          <div class="res-subtotal">${formatPrecio(it.subtotal)}</div>
+          <button class="res-del" onclick="quitarItem(${it.idProveedorProducto})" title="Quitar">×</button>
+        </li>`).join('');
+}
+
+function setCantidad(idProvProd, val, precio) {
+    const n = Math.max(1, parseInt(val) || 1);
+    if (orden[idProvProd]) {
+        orden[idProvProd].cantidad = n;
+        orden[idProvProd].subtotal = n * precio;
+        renderResumen();
+    }
+}
+
+// ── Confirmar ─────────────────────────────────────────────────────────────────
+async function confirmarOrden() {
+    const items = Object.values(orden);
+    if (!items.length || !idProveedorActual) return;
+
+    const btn = document.getElementById('btnConfirmar');
+    btn.disabled = true;
+    btn.textContent = 'Procesando…';
+
+    const body = {
+        idProveedor: idProveedorActual,
+        detalles: items.map(i => ({
+            idProveedorProducto: i.idProveedorProducto,
+            cantidad:            i.cantidad,
+            precioUnitario:      i.precio,
+            subtotal:            i.subtotal
+        }))
+    };
+
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const res = await fetch('@Url.Action("CrearOrden", "OrdenesCompra", new { area = "Compras" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+        body: JSON.stringify(body)
+    }).then(r => r.json());
+
+    btn.disabled = false;
+    btn.textContent = 'Confirmar Orden';
+
+    if (!res.ok) { mostrarToast(res.mensaje, 'error'); return; }
+    mostrarToast(res.mensaje, 'exito');
+    limpiarOrden();
+    setTimeout(() => window.location.href = '@Url.Action("Lista", "OrdenesCompra", new { area = "Compras" })', 1800);
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function formatPrecio(n) {
+    return '$' + n.toLocaleString('es-CL');
+}
+function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function mostrarToast(msg, tipo) {
+    const wrap = document.getElementById('toastWrap');
+    const d = document.createElement('div');
+    d.className = `toast-msg ${tipo}`;
+    d.innerHTML = `<svg viewBox="0 0 24 24">${tipo==='exito'?'<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>':'<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>'}</svg>${msg}`;
+    wrap.appendChild(d);
+    setTimeout(() => d.remove(), 4000);
+}
+function setProdGrid(content) {
+    document.getElementById('prodGrid').innerHTML = content ?? `<div class="no-prov">
+        <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.06 15.73 0 13 0c-1.5 0-2.81.67-3.7 1.71L8 3 6.7 1.71C5.81.67 4.5 0 3 0 .27 0-2 2.06-2 4.64c0 .48.11.92.18 1.36H-2v14h22V6z"/></svg>
+        <p>Selecciona un proveedor para ver los productos</p></div>`;
+}
+</script>

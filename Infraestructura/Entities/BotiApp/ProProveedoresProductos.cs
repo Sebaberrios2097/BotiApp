@@ -24,6 +24,9 @@ public partial class ProProveedoresProductos
     /// </summary>
     public bool Estado { get; set; }
 
+    [Column("Precio_Proveedor")]
+    public int PrecioProveedor { get; set; }
+
     [Column("Fecha_Modificacion", TypeName = "datetime")]
     public DateTime? FechaModificacion { get; set; }
 

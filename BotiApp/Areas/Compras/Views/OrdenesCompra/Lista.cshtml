@@ -1,0 +1,394 @@
+@model IEnumerable<Infraestructura.Entities.BotiApp.ComOrdenCompra>
+@{
+    ViewData["Title"] = "Órdenes de Compra";
+    var estados = (IEnumerable<Infraestructura.Entities.BotiApp.ComEstadosOrdenCompra>)ViewBag.Estados;
+}
+
+<style>
+    .page-header-card { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.08); padding:1.25rem 1.5rem; margin-bottom:1.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
+    .page-header-left { display:flex; align-items:center; gap:.85rem; }
+    .page-header-icon { width:46px; height:46px; background:rgba(231,111,46,.12); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .page-header-icon svg { width:24px; height:24px; fill:var(--color-primario); }
+    .page-header-title { font-size:1.3rem; font-weight:700; color:var(--color-secundario); margin:0; }
+    .page-header-sub   { font-size:.82rem; color:#9a8070; margin:.1rem 0 0; }
+
+    .btn-nuevo { display:inline-flex; align-items:center; gap:.45rem; padding:.55rem 1.1rem; background:var(--color-primario); color:#fff; border:none; border-radius:8px; font-size:.88rem; font-weight:600; cursor:pointer; text-decoration:none; transition:background .2s; }
+    .btn-nuevo svg { width:16px; height:16px; fill:currentColor; }
+    .btn-nuevo:hover { background:#cf5f22; color:#fff; }
+
+    .pro-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem; margin-bottom:1.25rem; }
+    .pro-search-bar { display:flex; align-items:center; gap:.6rem; background:#fff; border:1.5px solid #e8ddd4; border-radius:8px; padding:.45rem .85rem; flex:1; min-width:220px; max-width:360px; }
+    .pro-search-bar:focus-within { border-color:var(--color-primario); }
+    .pro-search-bar svg { width:17px; height:17px; fill:var(--color-primario); opacity:.7; flex-shrink:0; }
+    .pro-search-bar input { border:none; outline:none; font-size:.9rem; width:100%; background:transparent; }
+    .pro-filter-select { padding:.46rem .75rem; border:1.5px solid #e8ddd4; border-radius:8px; font-size:.86rem; background:#fff; outline:none; cursor:pointer; }
+    .pro-filter-select:focus { border-color:var(--color-primario); }
+    .pro-results-info { font-size:.8rem; color:#9a8070; margin-left:auto; }
+
+    .pro-card  { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; }
+    .pro-table { width:100%; border-collapse:collapse; font-size:.88rem; }
+    .pro-table thead tr { background:var(--color-secundario); color:var(--crema); }
+    .pro-table thead th { padding:.85rem 1rem; font-weight:600; font-size:.79rem; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+    .pro-table tbody tr { border-bottom:1px solid #f0ebe5; transition:background .15s; }
+    .pro-table tbody tr:last-child { border-bottom:none; }
+    .pro-table tbody tr:hover { background:rgba(231,111,46,.04); }
+    .pro-table td { padding:.75rem 1rem; color:var(--color-secundario); vertical-align:middle; }
+
+    .badge-estado { display:inline-flex; align-items:center; padding:.25rem .7rem; border-radius:20px; font-size:.75rem; font-weight:700; white-space:nowrap; }
+    .badge-1 { background:rgba(251,191,36,.15);  color:#d97706; }  /* Pendiente */
+    .badge-2 { background:rgba(99,102,241,.12);  color:#6366f1; }  /* En camino */
+    .badge-3 { background:rgba(34,197,94,.12);   color:#16a34a; }  /* Recibida  */
+    .badge-4 { background:rgba(239,68,68,.10);   color:#dc2626; }  /* Cancelada */
+
+    .td-precio { font-weight:700; color:var(--color-primario); }
+    .td-fecha  { font-size:.82rem; color:#9a8070; white-space:nowrap; }
+
+    .estado-select { padding:.28rem .6rem; border:1.5px solid #e8ddd4; border-radius:6px; font-size:.82rem; background:#fff; outline:none; cursor:pointer; }
+    .estado-select:focus { border-color:var(--color-primario); }
+
+    .det-toggle { background:none; border:none; cursor:pointer; color:#9a8070; font-size:.82rem; font-weight:600; padding:0 .25rem; }
+    .det-toggle:hover { color:var(--color-primario); }
+    .det-row { display:none; background:#faf6f3; }
+    .det-row.open { display:table-row; }
+    .det-inner { padding:.85rem 1.25rem; }
+    .det-table { width:100%; border-collapse:collapse; font-size:.83rem; }
+    .det-table th { font-weight:600; color:#9a8070; padding:.35rem .6rem; text-align:left; border-bottom:1px solid #ede5dc; }
+    .det-table td { padding:.4rem .6rem; border-bottom:1px solid #f4f0eb; color:var(--color-secundario); }
+
+    .toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
+    .toast-msg { display:flex; align-items:center; gap:.6rem; padding:.75rem 1.1rem; border-radius:10px; font-size:.88rem; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease; }
+    .toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
+    .toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
+    .toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
+    @@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+
+    .empty-state { text-align:center; padding:3.5rem 1rem; color:#a89080; }
+    .empty-state svg { width:56px; height:56px; fill:#ddd0c4; display:block; margin:0 auto .75rem; }
+
+    /* Modal registrar precios */
+    .m-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:600; justify-content:center; align-items:flex-start; overflow-y:auto; padding:2rem 1rem; }
+    .m-overlay.open { display:flex; animation:fadeOverlay .2s ease; }
+    @@keyframes fadeOverlay { from{opacity:0} to{opacity:1} }
+    .m-box { background:#fff; border-radius:16px; width:100%; max-width:700px; box-shadow:0 20px 60px rgba(0,0,0,.2); animation:slideModal .25s ease; margin:auto; overflow:hidden; }
+    @@keyframes slideModal { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:translateY(0)} }
+    .btn-precios { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:6px; border:none; cursor:pointer; background:rgba(34,197,94,.12); color:#16a34a; transition:background .15s; flex-shrink:0; }
+    .btn-precios:hover { background:rgba(34,197,94,.22); }
+    .btn-precios svg { width:14px; height:14px; fill:currentColor; }
+    .precio-input { width:95px; padding:.3rem .5rem; border:1.5px solid #e8ddd4; border-radius:6px; font-size:.86rem; text-align:right; outline:none; }
+    .precio-input:focus { border-color:var(--color-primario); }
+</style>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Modal: Registrar precios -->
+<div class="m-overlay" id="overlayPrecios" onclick="cerrarModalPrecios(event)">
+    <div class="m-box">
+        <div id="bodyPrecios" style="padding:1.5rem 1.5rem 1.25rem"></div>
+    </div>
+</div>
+
+<!-- Encabezado -->
+<div class="page-header-card">
+    <div class="page-header-left">
+        <div class="page-header-icon">
+            <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+        </div>
+        <div>
+            <h1 class="page-header-title">Órdenes de Compra</h1>
+            <p class="page-header-sub">Historial y gestión de órdenes de compra</p>
+        </div>
+    </div>
+    <a href="@Url.Action("Crear", "OrdenesCompra", new { area = "Compras" })" class="btn-nuevo">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        Nueva Orden
+    </a>
+</div>
+
+<!-- Toolbar -->
+<div class="pro-toolbar">
+    <div class="pro-search-bar">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" id="buscar" placeholder="Buscar por proveedor o N° orden…" oninput="filtrar()">
+    </div>
+    <select class="pro-filter-select" id="filtroEstado" onchange="filtrar()">
+        <option value="">Todos los estados</option>
+        @foreach (var e in estados)
+        {
+            <option value="@e.IdEstadoOrdenCompra">@e.NombreEstadoOc</option>
+        }
+    </select>
+    <span class="pro-results-info" id="resultInfo"></span>
+</div>
+
+<!-- Tabla -->
+<div class="pro-card">
+    <table class="pro-table">
+        <thead>
+            <tr>
+                <th>N° Orden</th>
+                <th>Proveedor</th>
+                <th>Solicitada por</th>
+                <th>Fecha Solicitud</th>
+                <th>Fecha Llegada</th>
+                <th>Productos</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="tbodyOrdenes">
+            @foreach (var o in Model)
+            {
+                var empleado = $"{o.IdUsuarioNavigation?.IdEmpleadoNavigation?.NombresEmpleado} {o.IdUsuarioNavigation?.IdEmpleadoNavigation?.Apellido1}".Trim();
+                <tr data-id="@o.IdOrdenCompra" data-prov="@o.IdProveedorNavigation.NombreProveedor.ToLower()" data-estado="@o.IdEstadoOrdenCompra">
+                    <td><strong>#@o.IdOrdenCompra</strong></td>
+                    <td>@o.IdProveedorNavigation.NombreProveedor</td>
+                    <td>@(string.IsNullOrWhiteSpace(empleado) ? "—" : empleado)</td>
+                    <td class="td-fecha">@(o.FechaSolicitud?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                    <td class="td-fecha">@(o.FechaLlegadaPedido?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                    <td>@o.CantidadProductos</td>
+                    <td class="td-precio">$@o.MontoTotal.ToString("N0")</td>
+                    <td>
+                        <span class="badge-estado badge-@o.IdEstadoOrdenCompra" id="badge-@o.IdOrdenCompra">
+                            @o.IdEstadoOrdenCompraNavigation.NombreEstadoOc
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display:flex; gap:.5rem; align-items:center;">
+                            <select class="estado-select" onchange="cambiarEstado(@o.IdOrdenCompra, this.value, this)">
+                                @foreach (var e in estados)
+                                {
+                                    if (e.IdEstadoOrdenCompra == o.IdEstadoOrdenCompra)
+                                    {
+                                        <option value="@e.IdEstadoOrdenCompra" selected>@e.NombreEstadoOc</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@e.IdEstadoOrdenCompra">@e.NombreEstadoOc</option>
+                                    }
+                                }
+                            </select>
+                            <button class="det-toggle" onclick="toggleDetalle(@o.IdOrdenCompra)" title="Ver detalle">▼</button>
+                            @if (o.IdEstadoOrdenCompra != 4)
+                            {
+                                <button class="btn-precios" onclick="abrirEditarPrecios(@o.IdOrdenCompra)" title="Registrar precios">
+                                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+                <!-- Fila de detalle expandible -->
+                <tr class="det-row" id="det-@o.IdOrdenCompra">
+                    <td colspan="9">
+                        <div class="det-inner">
+                            <table class="det-table">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Cantidad</th>
+                                        <th>Precio Unitario</th>
+                                        <th>Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var det in o.ComOrdenDetalle)
+                                    {
+                                        <tr>
+                                            <td>@det.IdProveedorProductoNavigation?.IdProductoNavigation?.NombreProducto</td>
+                                            <td>@det.Cantidad</td>
+                                            <td>$@det.PrecioUnitario.ToString("N0")</td>
+                                            <td>$@det.Subtotal.ToString("N0")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+            <p>No hay órdenes de compra registradas.</p>
+        </div>
+    }
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+<script>
+// ── Filtro ────────────────────────────────────────────────────────────────────
+function filtrar() {
+    const txt = document.getElementById('buscar').value.toLowerCase();
+    const est = document.getElementById('filtroEstado').value;
+    let vis = 0;
+    document.querySelectorAll('#tbodyOrdenes tr[data-id]').forEach(tr => {
+        const prov   = tr.dataset.prov ?? '';
+        const id     = tr.dataset.id ?? '';
+        const estado = tr.dataset.estado ?? '';
+        const ok = (prov.includes(txt) || id.includes(txt)) && (est === '' || estado === est);
+        tr.style.display = ok ? '' : 'none';
+        const detRow = document.getElementById(`det-${tr.dataset.id}`);
+        if (detRow) detRow.style.display = ok ? '' : 'none';
+        if (ok) vis++;
+    });
+    document.getElementById('resultInfo').textContent = `Mostrando ${vis} orden(es)`;
+}
+filtrar();
+
+// ── Detalle expandible ────────────────────────────────────────────────────────
+function toggleDetalle(id) {
+    const row = document.getElementById(`det-${id}`);
+    row.classList.toggle('open');
+}
+
+// ── Cambiar estado ────────────────────────────────────────────────────────────
+async function cambiarEstado(id, idEstado, sel) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const form = new URLSearchParams({ id, idEstado, __RequestVerificationToken: token });
+    const res = await fetch('@Url.Action("CambiarEstado", "OrdenesCompra", new { area = "Compras" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString()
+    }).then(r => r.json());
+
+    if (!res.ok) { mostrarToast(res.mensaje, 'error'); return; }
+
+    const tr    = sel.closest('tr[data-id]');
+    tr.dataset.estado = idEstado;
+
+    const badge = document.getElementById(`badge-${id}`);
+    badge.textContent  = sel.options[sel.selectedIndex].text;
+    badge.className    = `badge-estado badge-${idEstado}`;
+
+    mostrarToast(res.mensaje, 'exito');
+    filtrar();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function mostrarToast(msg, tipo) {
+    const wrap = document.getElementById('toastWrap');
+    const d = document.createElement('div');
+    d.className = `toast-msg ${tipo}`;
+    d.innerHTML = `<svg viewBox="0 0 24 24">${tipo==='exito'?'<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>':'<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>'}</svg>${msg}`;
+    wrap.appendChild(d);
+    setTimeout(() => d.remove(), 4000);
+}
+
+// ── Modal registrar precios ───────────────────────────────────────────────────
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function abrirEditarPrecios(id) {
+    const overlay = document.getElementById('overlayPrecios');
+    document.getElementById('bodyPrecios').innerHTML =
+        '<div style="text-align:center;padding:3rem;color:#a89080;">Cargando…</div>';
+    overlay.classList.add('open');
+
+    const o = await fetch(`@Url.Action("OrdenParaEditar", "OrdenesCompra", new { area = "Compras" })?id=${id}`)
+        .then(r => r.json());
+
+    document.getElementById('bodyPrecios').innerHTML = renderModalPrecios(o);
+    calcTotales();
+}
+
+function renderModalPrecios(o) {
+    const rows = o.detalles.map(d => `
+        <tr>
+            <td style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;color:var(--color-secundario);">${escHtml(d.producto)}</td>
+            <td style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;text-align:center;color:var(--color-secundario);">${d.cantidad}</td>
+            <td style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;">
+                <input type="number" class="precio-input" min="0" value="${d.precioUnitario}"
+                    data-id="${d.idOrdenDetalle}" data-qty="${d.cantidad}"
+                    oninput="calcTotales()" onfocus="this.select()">
+            </td>
+            <td class="subtotal-cell" style="padding:.42rem .65rem;border-bottom:1px solid #f4f0eb;text-align:right;font-weight:700;color:var(--color-primario);">$0</td>
+        </tr>`).join('');
+
+    return `
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0ebe5;padding-bottom:1rem;margin-bottom:1rem;">
+            <div>
+                <h2 style="font-size:1.1rem;font-weight:700;color:var(--color-secundario);margin:0;">Registrar Precios</h2>
+                <p style="font-size:.82rem;color:#9a8070;margin:.2rem 0 0;">#${o.idOrdenCompra} &mdash; ${escHtml(o.proveedor)}</p>
+            </div>
+            <button onclick="cerrarModalPrecios()" style="background:none;border:none;cursor:pointer;color:#9a8070;font-size:1.5rem;line-height:1;">&times;</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:.65rem;padding:.6rem .85rem;background:#f9f5f2;border-radius:8px;border:1.5px solid #ede5dc;margin-bottom:1rem;">
+            <input type="checkbox" id="chkIva" ${o.incluyeIva ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--color-primario);">
+            <label for="chkIva" style="font-size:.88rem;font-weight:600;color:var(--color-secundario);cursor:pointer;margin:0;">La factura de esta orden incluye IVA</label>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:.86rem;margin-bottom:1rem;">
+            <thead>
+                <tr style="background:#faf6f3;">
+                    <th style="padding:.48rem .65rem;text-align:left;font-size:.78rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Producto</th>
+                    <th style="padding:.48rem .65rem;text-align:center;font-size:.78rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Cant.</th>
+                    <th style="padding:.48rem .65rem;text-align:left;font-size:.78rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Precio Unit.</th>
+                    <th style="padding:.48rem .65rem;text-align:right;font-size:.78rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyPrecios">${rows}</tbody>
+        </table>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #f0ebe5;padding-top:.85rem;margin-bottom:1rem;">
+            <span style="font-size:.88rem;color:#9a8070;">Total de la orden</span>
+            <span id="totalPrecios" style="font-size:1.1rem;font-weight:800;color:var(--color-secundario);">$0</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;">
+            <button onclick="cerrarModalPrecios()" style="padding:.55rem 1.2rem;border:1.5px solid #e8ddd4;border-radius:8px;background:#fff;font-size:.88rem;font-weight:600;cursor:pointer;color:var(--color-secundario);">Cancelar</button>
+            <button onclick="guardarPrecios(${o.idOrdenCompra})" style="padding:.55rem 1.4rem;background:var(--color-primario);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;">Guardar precios</button>
+        </div>`;
+}
+
+function calcTotales() {
+    let total = 0;
+    document.querySelectorAll('#tbodyPrecios input[data-id]').forEach(inp => {
+        const precio = parseInt(inp.value) || 0;
+        const qty    = parseInt(inp.dataset.qty) || 1;
+        const sub    = precio * qty;
+        total       += sub;
+        inp.closest('tr').querySelector('.subtotal-cell').textContent = '$' + sub.toLocaleString('es-CL');
+    });
+    const el = document.getElementById('totalPrecios');
+    if (el) el.textContent = '$' + total.toLocaleString('es-CL');
+}
+
+function cerrarModalPrecios(e) {
+    if (e && e.target !== document.getElementById('overlayPrecios')) return;
+    document.getElementById('overlayPrecios').classList.remove('open');
+}
+
+async function guardarPrecios(idOrden) {
+    const incluyeIva = document.getElementById('chkIva').checked;
+    const detalles   = [];
+    document.querySelectorAll('#tbodyPrecios input[data-id]').forEach(inp => {
+        detalles.push({ idOrdenDetalle: parseInt(inp.dataset.id), precioUnitario: parseInt(inp.value) || 0 });
+    });
+
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const res = await fetch('@Url.Action("ActualizarPrecios", "OrdenesCompra", new { area = "Compras" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+        body: JSON.stringify({ idOrdenCompra: idOrden, incluyeIva, detalles })
+    }).then(r => r.json());
+
+    if (!res.ok) { mostrarToast(res.mensaje, 'error'); return; }
+
+    // Actualizar el total visible en la fila
+    const nuevoTotal = detalles.reduce((s, d) => {
+        const inp = document.querySelector(`#tbodyPrecios input[data-id="${d.idOrdenDetalle}"]`);
+        const qty = inp ? parseInt(inp.dataset.qty) : 0;
+        return s + d.precioUnitario * qty;
+    }, 0);
+    const tr = document.querySelector(`#tbodyOrdenes tr[data-id="${idOrden}"]`);
+    if (tr) tr.querySelector('.td-precio').textContent = '$' + nuevoTotal.toLocaleString('es-CL');
+
+    document.getElementById('overlayPrecios').classList.remove('open');
+    mostrarToast(res.mensaje, 'exito');
+}
+</script>
+}

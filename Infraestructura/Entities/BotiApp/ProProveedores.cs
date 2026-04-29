@@ -21,6 +21,8 @@ public partial class ProProveedores
     [StringLength(300)]
     public string? DescripcionProveedor { get; set; }
 
+    public bool Estado { get; set; } = true;
+
     [InverseProperty("IdProveedorNavigation")]
     public virtual ICollection<ComOrdenCompra> ComOrdenCompra { get; set; } = new List<ComOrdenCompra>();
 

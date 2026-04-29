@@ -34,6 +34,9 @@ public partial class ComOrdenCompra
     [Column("Fecha_Llegada_Pedido", TypeName = "datetime")]
     public DateTime? FechaLlegadaPedido { get; set; }
 
+    [Column("Incluye_Iva")]
+    public bool IncluyeIva { get; set; }
+
     [InverseProperty("IdOrdenCompraNavigation")]
     public virtual ICollection<ComOrdenDetalle> ComOrdenDetalle { get; set; } = new List<ComOrdenDetalle>();
 

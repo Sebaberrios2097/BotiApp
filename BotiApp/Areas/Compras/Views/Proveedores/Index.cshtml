@@ -1,0 +1,468 @@
+@model IEnumerable<Infraestructura.Entities.BotiApp.ProProveedores>
+@{
+    ViewData["Title"] = "Proveedores";
+}
+
+<style>
+    .page-header-card { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.08); padding:1.25rem 1.5rem; margin-bottom:1.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
+    .page-header-left { display:flex; align-items:center; gap:.85rem; }
+    .page-header-icon { width:46px; height:46px; background:rgba(231,111,46,.12); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .page-header-icon svg { width:24px; height:24px; fill:var(--color-primario); }
+    .page-header-title { font-size:1.3rem; font-weight:700; color:var(--color-secundario); margin:0; }
+    .page-header-sub   { font-size:.82rem; color:#9a8070; margin:.1rem 0 0; }
+
+    .btn-nuevo { display:inline-flex; align-items:center; gap:.45rem; padding:.55rem 1.1rem; background:var(--color-primario); color:#fff; border:none; border-radius:8px; font-size:.88rem; font-weight:600; cursor:pointer; transition:background .2s; }
+    .btn-nuevo svg { width:16px; height:16px; fill:currentColor; }
+    .btn-nuevo:hover { background:#cf5f22; }
+
+    .pro-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem; margin-bottom:1.25rem; }
+    .pro-search-bar { display:flex; align-items:center; gap:.6rem; background:#fff; border:1.5px solid #e8ddd4; border-radius:8px; padding:.45rem .85rem; flex:1; min-width:220px; max-width:360px; }
+    .pro-search-bar:focus-within { border-color:var(--color-primario); }
+    .pro-search-bar svg { width:17px; height:17px; fill:var(--color-primario); opacity:.7; flex-shrink:0; }
+    .pro-search-bar input { border:none; outline:none; font-size:.9rem; width:100%; background:transparent; }
+    .pro-filter-select { padding:.46rem .75rem; border:1.5px solid #e8ddd4; border-radius:8px; font-size:.86rem; background:#fff; outline:none; cursor:pointer; }
+    .pro-filter-select:focus { border-color:var(--color-primario); }
+    .pro-results-info { font-size:.8rem; color:#9a8070; margin-left:auto; }
+
+    .pro-card  { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; }
+    .pro-table { width:100%; border-collapse:collapse; font-size:.88rem; }
+    .pro-table thead tr { background:var(--color-secundario); color:var(--crema); }
+    .pro-table thead th { padding:.85rem 1rem; font-weight:600; font-size:.79rem; letter-spacing:.5px; text-transform:uppercase; white-space:nowrap; }
+    .pro-table tbody tr { border-bottom:1px solid #f0ebe5; transition:background .15s; }
+    .pro-table tbody tr:last-child { border-bottom:none; }
+    .pro-table tbody tr:hover { background:rgba(231,111,46,.04); }
+    .pro-table td { padding:.75rem 1rem; color:var(--color-secundario); vertical-align:middle; }
+
+    .badge-estado { display:inline-flex; align-items:center; padding:.25rem .65rem; border-radius:20px; font-size:.75rem; font-weight:600; }
+    .badge-estado.activo   { background:rgba(34,197,94,.12);  color:#16a34a; }
+    .badge-estado.inactivo { background:rgba(239,68,68,.10);  color:#dc2626; }
+
+    .acc-btns { display:flex; gap:.35rem; }
+    .btn-acc  { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; border:none; cursor:pointer; transition:background .15s; }
+    .btn-acc svg { width:15px; height:15px; fill:currentColor; }
+    .btn-acc.editar      { background:rgba(231,111,46,.1); color:var(--color-primario); }
+    .btn-acc.editar:hover { background:rgba(231,111,46,.2); }
+    .btn-acc.productos   { background:rgba(99,102,241,.1); color:#6366f1; }
+    .btn-acc.productos:hover { background:rgba(99,102,241,.2); }
+    .btn-acc.toggle-on   { background:rgba(239,68,68,.1);  color:#dc2626; }
+    .btn-acc.toggle-on:hover  { background:rgba(239,68,68,.2); }
+    .btn-acc.toggle-off  { background:rgba(34,197,94,.1);  color:#16a34a; }
+    .btn-acc.toggle-off:hover { background:rgba(34,197,94,.2); }
+
+    .m-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:600; align-items:flex-start; justify-content:center; overflow-y:auto; padding:2rem 1rem; }
+    .m-overlay.open { display:flex; animation:fadeOverlay .2s ease; }
+    @@keyframes fadeOverlay { from{opacity:0} to{opacity:1} }
+    .m-box { background:#fff; border-radius:16px; width:100%; max-width:640px; box-shadow:0 20px 60px rgba(0,0,0,.2); animation:slideModal .25s ease; margin:auto; overflow:hidden; }
+    .m-box-lg { max-width:900px; }
+    @@keyframes slideModal { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+    .m-spinner { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4rem 2rem; gap:1rem; color:#a89080; }
+    .spinner-ring { width:40px; height:40px; border:3px solid #f0ebe5; border-top-color:var(--color-primario); border-radius:50%; animation:spin .7s linear infinite; }
+    @@keyframes spin { to{transform:rotate(360deg)} }
+
+    .toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
+    .toast-msg { display:flex; align-items:center; gap:.6rem; padding:.75rem 1.1rem; border-radius:10px; font-size:.88rem; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease; }
+    .toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
+    .toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
+    .toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
+    @@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+
+    .empty-state { text-align:center; padding:3.5rem 1rem; color:#a89080; }
+    .empty-state svg { width:56px; height:56px; fill:#ddd0c4; margin-bottom:.75rem; display:block; margin-left:auto; margin-right:auto; }
+</style>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Modal Crear -->
+<div class="m-overlay" id="overlayCrear">
+    <div class="m-box">
+        <div class="m-spinner" id="spinnerCrear">
+            <div class="spinner-ring"></div>
+            <span>Cargando…</span>
+        </div>
+        <div id="bodyCrear"></div>
+    </div>
+</div>
+
+<!-- Modal Editar -->
+<div class="m-overlay" id="overlayEditar">
+    <div class="m-box">
+        <div class="m-spinner" id="spinnerEditar">
+            <div class="spinner-ring"></div>
+            <span>Cargando…</span>
+        </div>
+        <div id="bodyEditar"></div>
+    </div>
+</div>
+
+<!-- Modal Productos -->
+<div class="m-overlay" id="overlayProductos">
+    <div class="m-box m-box-lg">
+        <div class="m-spinner" id="spinnerProductos">
+            <div class="spinner-ring"></div>
+            <span>Cargando…</span>
+        </div>
+        <div id="bodyProductos"></div>
+    </div>
+</div>
+
+<!-- Encabezado -->
+<div class="page-header-card">
+    <div class="page-header-left">
+        <div class="page-header-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+        </div>
+        <div>
+            <h1 class="page-header-title">Proveedores</h1>
+            <p class="page-header-sub">Gestión y mantenedor de proveedores</p>
+        </div>
+    </div>
+    <button class="btn-nuevo" onclick="abrirCrear()">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        Nuevo Proveedor
+    </button>
+</div>
+
+<!-- Toolbar -->
+<div class="pro-toolbar">
+    <div class="pro-search-bar">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" id="buscar" placeholder="Buscar proveedor…" oninput="filtrar()">
+    </div>
+    <select class="pro-filter-select" id="filtroEstado" onchange="filtrar()">
+        <option value="">Todos los estados</option>
+        <option value="1">Activo</option>
+        <option value="0">Inactivo</option>
+    </select>
+    <span class="pro-results-info" id="resultInfo"></span>
+</div>
+
+<!-- Tabla -->
+<div class="pro-card">
+    <table class="pro-table" id="tablaProveedores">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Productos</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="tbodyProveedores">
+            @foreach (var p in Model)
+            {
+                <tr data-id="@p.IdProveedor" data-nombre="@p.NombreProveedor.ToLower()" data-estado="@(p.Estado ? "1" : "0")">
+                    <td>@p.IdProveedor</td>
+                    <td><strong>@p.NombreProveedor</strong></td>
+                    <td>@(p.DescripcionProveedor ?? "—")</td>
+                    <td>
+                        <span class="badge-estado activo">@p.ProProveedoresProductos.Count productos</span>
+                    </td>
+                    <td>
+                        <span class="badge-estado @(p.Estado ? "activo" : "inactivo")" id="badge-@p.IdProveedor">
+                            @(p.Estado ? "Activo" : "Inactivo")
+                        </span>
+                    </td>
+                    <td>
+                        <div class="acc-btns">
+                            <button class="btn-acc editar" title="Editar" onclick="abrirEditar(@p.IdProveedor)">
+                                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                            </button>
+                            <button class="btn-acc productos" title="Gestionar productos" onclick="abrirProductos(@p.IdProveedor)">
+                                <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.06 15.73 0 13 0c-1.5 0-2.81.67-3.7 1.71L8 3 6.7 1.71C5.81.67 4.5 0 3 0 .27 0-2 2.06-2 4.64c0 .48.11.92.18 1.36H-2v14h22V6zm-7-4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zM3 2c1.1 0 2 .9 2 2S4.1 6 3 6 1 5.1 1 4s.9-2 2-2z"/></svg>
+                            </button>
+                            <button class="btn-acc @(p.Estado ? "toggle-on" : "toggle-off")" title="@(p.Estado ? "Desactivar" : "Activar")"
+                                    id="btn-toggle-@p.IdProveedor"
+                                    onclick="toggleEstado(@p.IdProveedor, this)">
+                                <svg viewBox="0 0 24 24">
+                                    @if (p.Estado)
+                                    {
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/>
+                                    }
+                                    else
+                                    {
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                                    }
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.06 15.73 0 13 0c-1.5 0-2.81.67-3.7 1.71L8 3 6.7 1.71C5.81.67 4.5 0 3 0 .27 0-2 2.06-2 4.64c0 .48.11.92.18 1.36H-2v14h22V6z"/></svg>
+            <p>No hay proveedores registrados.</p>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+// ── Filtro ──────────────────────────────────────────────────────────────────
+function filtrar() {
+    const txt = document.getElementById('buscar').value.toLowerCase();
+    const est = document.getElementById('filtroEstado').value;
+    let vis = 0;
+    document.querySelectorAll('#tbodyProveedores tr').forEach(tr => {
+        const nombre = tr.dataset.nombre ?? '';
+        const estado = tr.dataset.estado ?? '';
+        const ok = nombre.includes(txt) && (est === '' || estado === est);
+        tr.style.display = ok ? '' : 'none';
+        if (ok) vis++;
+    });
+    document.getElementById('resultInfo').textContent = `Mostrando ${vis} proveedor(es)`;
+}
+filtrar();
+
+// ── Modal helpers ────────────────────────────────────────────────────────────
+function abrirOverlay(id) {
+    document.getElementById(id).classList.add('open');
+}
+function cerrarOverlay(id) {
+    document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.m-overlay').forEach(el => {
+    el.addEventListener('click', e => {
+        if (e.target === el) cerrarOverlay(el.id);
+    });
+});
+
+// ── Crear ────────────────────────────────────────────────────────────────────
+function abrirCrear() {
+    document.getElementById('bodyCrear').innerHTML = '';
+    document.getElementById('spinnerCrear').style.display = 'flex';
+    abrirOverlay('overlayCrear');
+    fetch('@Url.Action("ModalCrear", "Proveedores", new { area = "Compras" })')
+        .then(r => r.text())
+        .then(html => {
+            document.getElementById('spinnerCrear').style.display = 'none';
+            document.getElementById('bodyCrear').innerHTML = html;
+            initFormCrear();
+        });
+}
+
+function initFormCrear() {
+    document.getElementById('formCrear').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const fd = new FormData(this);
+        const res = await fetch('@Url.Action("CrearAjax", "Proveedores", new { area = "Compras" })', {
+            method: 'POST',
+            body: fd
+        });
+        const d = await res.json();
+        if (!d.ok) {
+            const el = document.getElementById('erroresCrear');
+            el.textContent = d.errores?.join(' | ') ?? 'Error al guardar.';
+            el.style.display = 'block';
+            return;
+        }
+        cerrarOverlay('overlayCrear');
+        agregarFilaProveedor(d.fila);
+        mostrarToast(d.mensaje, 'exito');
+    });
+}
+
+// ── Editar ───────────────────────────────────────────────────────────────────
+function abrirEditar(id) {
+    document.getElementById('bodyEditar').innerHTML = '';
+    document.getElementById('spinnerEditar').style.display = 'flex';
+    abrirOverlay('overlayEditar');
+    fetch(`@Url.Action("ModalEditar", "Proveedores", new { area = "Compras" })?id=${id}`)
+        .then(r => r.text())
+        .then(html => {
+            document.getElementById('spinnerEditar').style.display = 'none';
+            document.getElementById('bodyEditar').innerHTML = html;
+            initFormEditar();
+        });
+}
+
+function initFormEditar() {
+    document.getElementById('formEditar').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const id = this.querySelector('[name="IdProveedor"]').value;
+        const fd = new FormData(this);
+        const res = await fetch(`@Url.Action("EditarAjax", "Proveedores", new { area = "Compras" })?id=${id}`, {
+            method: 'POST',
+            body: fd
+        });
+        const d = await res.json();
+        if (!d.ok) {
+            const el = document.getElementById('erroresEditar');
+            el.textContent = d.errores?.join(' | ') ?? 'Error al guardar.';
+            el.style.display = 'block';
+            return;
+        }
+        cerrarOverlay('overlayEditar');
+        actualizarFilaProveedor(d.fila);
+        mostrarToast(d.mensaje, 'exito');
+    });
+}
+
+// ── Productos ────────────────────────────────────────────────────────────────
+function abrirProductos(id) {
+    document.getElementById('bodyProductos').innerHTML = '';
+    document.getElementById('spinnerProductos').style.display = 'flex';
+    abrirOverlay('overlayProductos');
+    fetch(`@Url.Action("ModalProductos", "Proveedores", new { area = "Compras" })?id=${id}`)
+        .then(r => r.text())
+        .then(html => {
+            document.getElementById('spinnerProductos').style.display = 'none';
+            document.getElementById('bodyProductos').innerHTML = html;
+        });
+}
+
+function switchTabPm(tab, btn) {
+    document.querySelectorAll('.tab-btn-pm').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-asoc').style.display   = tab === 'asoc'   ? '' : 'none';
+    document.getElementById('tab-libres').style.display = tab === 'libres' ? '' : 'none';
+}
+
+function filtrarPm(listId, txt) {
+    document.querySelectorAll(`#list-${listId} li.prod-item`).forEach(li => {
+        li.style.display = li.dataset.nombre.includes(txt.toLowerCase()) ? '' : 'none';
+    });
+}
+
+function recargarModalProductos(idProveedor) {
+    document.getElementById('bodyProductos').innerHTML = '';
+    document.getElementById('spinnerProductos').style.display = 'flex';
+    fetch(`/Compras/Proveedores/ModalProductos?id=${idProveedor}`)
+        .then(r => r.text())
+        .then(html => {
+            document.getElementById('spinnerProductos').style.display = 'none';
+            document.getElementById('bodyProductos').innerHTML = html;
+        });
+}
+
+function asociar(idProveedor, idProducto, precioProveedor) {
+    const form = new FormData();
+    form.append('idProveedor', idProveedor);
+    form.append('idProducto', idProducto);
+    form.append('precioProveedor', parseInt(precioProveedor) || 0);
+    form.append('__RequestVerificationToken', getToken());
+    fetch('/Compras/Proveedores/AsociarProducto', { method: 'POST', body: form })
+        .then(() => recargarModalProductos(idProveedor));
+}
+
+function desasociar(id, idProveedor) {
+    const form = new FormData();
+    form.append('id', id);
+    form.append('idProveedor', idProveedor);
+    form.append('__RequestVerificationToken', getToken());
+    fetch('/Compras/Proveedores/DesasociarProducto', { method: 'POST', body: form })
+        .then(() => recargarModalProductos(idProveedor));
+}
+
+function guardarPrecio(idProveedorProducto, idProveedor, btn) {
+    const input = document.getElementById(`precio-asoc-${idProveedorProducto}`);
+    const precio = parseInt(input.value) || 0;
+    const form = new FormData();
+    form.append('idProveedorProducto', idProveedorProducto);
+    form.append('idProveedor', idProveedor);
+    form.append('precioProveedor', precio);
+    form.append('__RequestVerificationToken', getToken());
+    btn.disabled = true;
+    btn.textContent = '...';
+    fetch('/Compras/Proveedores/ActualizarPrecioProducto', { method: 'POST', body: form })
+        .then(r => r.json())
+        .then(d => {
+            btn.disabled = false;
+            btn.textContent = d.ok ? '✓' : '✗';
+            setTimeout(() => { btn.textContent = 'Guardar'; }, 1500);
+        });
+}
+
+// ── Toggle estado ────────────────────────────────────────────────────────────
+function toggleEstado(id, btn) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value
+               ?? document.cookie.split(';').find(c=>c.includes('XSRF'))?.split('=')[1] ?? '';
+    fetch('@Url.Action("ToggleEstado", "Proveedores", new { area = "Compras" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': getToken() },
+        body: `id=${id}`
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (!d.ok) { mostrarToast(d.mensaje, 'error'); return; }
+        const badge = document.getElementById(`badge-${id}`);
+        const tr    = btn.closest('tr');
+        if (d.activo) {
+            badge.className = 'badge-estado activo';
+            badge.textContent = 'Activo';
+            btn.className = 'btn-acc toggle-on';
+            btn.title = 'Desactivar';
+            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>`;
+            tr.dataset.estado = '1';
+        } else {
+            badge.className = 'badge-estado inactivo';
+            badge.textContent = 'Inactivo';
+            btn.className = 'btn-acc toggle-off';
+            btn.title = 'Activar';
+            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>`;
+            tr.dataset.estado = '0';
+        }
+        mostrarToast(d.mensaje, 'exito');
+        filtrar();
+    });
+}
+
+// ── Agregar fila ─────────────────────────────────────────────────────────────
+function agregarFilaProveedor(p) {
+    const tbody = document.getElementById('tbodyProveedores');
+    const tr = document.createElement('tr');
+    tr.dataset.id     = p.idProveedor;
+    tr.dataset.nombre = p.nombreProveedor.toLowerCase();
+    tr.dataset.estado = '1';
+    tr.innerHTML = `
+        <td>${p.idProveedor}</td>
+        <td><strong>${p.nombreProveedor}</strong></td>
+        <td>${p.descripcionProveedor ?? '—'}</td>
+        <td><span class="badge-estado activo">0 productos</span></td>
+        <td><span class="badge-estado activo" id="badge-${p.idProveedor}">Activo</span></td>
+        <td>
+          <div class="acc-btns">
+            <button class="btn-acc editar" title="Editar" onclick="abrirEditar(${p.idProveedor})">
+              <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            </button>
+            <button class="btn-acc productos" title="Gestionar productos" onclick="abrirProductos(${p.idProveedor})">
+              <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM5.17 5H2V3H0v2h2l3.6 7.59L4.25 15c-.16.28-.25.61-.25.96C4 17.1 4.9 18 6 18h14v-2H6.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0023.32 5H5.17z"/></svg>
+            </button>
+            <button class="btn-acc toggle-on" title="Desactivar" id="btn-toggle-${p.idProveedor}" onclick="toggleEstado(${p.idProveedor}, this)">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+            </button>
+          </div>
+        </td>`;
+    tbody.appendChild(tr);
+    filtrar();
+}
+
+function actualizarFilaProveedor(p) {
+    const tr = document.querySelector(`#tbodyProveedores tr[data-id="${p.idProveedor}"]`);
+    if (!tr) return;
+    tr.dataset.nombre = p.nombreProveedor.toLowerCase();
+    tr.cells[1].innerHTML = `<strong>${p.nombreProveedor}</strong>`;
+    tr.cells[2].textContent = p.descripcionProveedor ?? '—';
+}
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+function mostrarToast(msg, tipo) {
+    const wrap = document.getElementById('toastWrap');
+    const d = document.createElement('div');
+    d.className = `toast-msg ${tipo}`;
+    d.innerHTML = `<svg viewBox="0 0 24 24">${tipo==='exito'?'<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>':'<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>'}</svg>${msg}`;
+    wrap.appendChild(d);
+    setTimeout(() => d.remove(), 4000);
+}
+
+function getToken() {
+    return document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+}
+</script>
+@Html.AntiForgeryToken()
+}

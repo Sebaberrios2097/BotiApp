@@ -1,0 +1,99 @@
+@{
+    var proveedor = (Infraestructura.Entities.BotiApp.ProProveedores)ViewBag.Proveedor;
+    var asociados = (IEnumerable<Infraestructura.Entities.BotiApp.ProProveedoresProductos>)ViewBag.ProductosAsociados;
+    var libres    = (IEnumerable<Infraestructura.Entities.BotiApp.ProProductos>)ViewBag.ProductosLibres;
+}
+<style>
+.tab-nav-pm { display:flex; gap:0; border-bottom:2px solid #f0ebe5; margin-bottom:1rem; }
+.tab-btn-pm { padding:.65rem 1.2rem; font-size:.86rem; font-weight:600; color:#9a8070; background:none; border:none; cursor:pointer; border-bottom:2.5px solid transparent; margin-bottom:-2px; }
+.tab-btn-pm.active { color:var(--color-primario); border-bottom-color:var(--color-primario); }
+.prod-list { list-style:none; padding:0; margin:0; max-height:320px; overflow-y:auto; display:flex; flex-direction:column; gap:.5rem; }
+.prod-item { display:flex; align-items:center; justify-content:space-between; padding:.6rem .85rem; background:#f9f5f2; border-radius:8px; border:1.5px solid #ede5dc; }
+.prod-item-name { font-size:.88rem; font-weight:600; color:var(--color-secundario); }
+.prod-item-cat  { font-size:.76rem; color:#9a8070; margin-top:.1rem; }
+.btn-asoc { padding:.3rem .75rem; background:var(--color-primario); color:#fff; border:none; border-radius:6px; font-size:.8rem; font-weight:600; cursor:pointer; }
+.btn-asoc:hover { background:#cf5f22; }
+.btn-desasoc { padding:.3rem .75rem; background:rgba(239,68,68,.1); color:#dc2626; border:none; border-radius:6px; font-size:.8rem; font-weight:600; cursor:pointer; }
+.btn-desasoc:hover { background:rgba(239,68,68,.2); }
+.search-pm { width:100%; padding:.45rem .75rem; border:1.5px solid #e8ddd4; border-radius:8px; font-size:.88rem; outline:none; margin-bottom:.75rem; }
+.search-pm:focus { border-color:var(--color-primario); }
+</style>
+
+<div style="padding:1.5rem; border-bottom:1px solid #f0ebe5; display:flex; align-items:center; justify-content:space-between;">
+    <div>
+        <h2 style="font-size:1.1rem; font-weight:700; color:var(--color-secundario); margin:0;">Productos del Proveedor</h2>
+        <p style="font-size:.82rem; color:#9a8070; margin:.25rem 0 0;">@proveedor.NombreProveedor</p>
+    </div>
+    <button type="button" onclick="cerrarOverlay('overlayProductos')" style="background:none; border:none; cursor:pointer; color:#9a8070; font-size:1.4rem; line-height:1;">×</button>
+</div>
+
+<div style="padding:1.25rem 1.5rem;">
+    <div class="tab-nav-pm">
+        <button class="tab-btn-pm active" onclick="switchTabPm('asoc', this)">Asociados (@asociados.Count())</button>
+        <button class="tab-btn-pm" onclick="switchTabPm('libres', this)">Agregar productos (@libres.Count())</button>
+    </div>
+
+    <!-- Tab: productos asociados -->
+    <div id="tab-asoc">
+        <input type="text" class="search-pm" placeholder="Buscar producto asociado…" oninput="filtrarPm('asoc', this.value)">
+        <ul class="prod-list" id="list-asoc">
+            @foreach (var pp in asociados)
+            {
+                <li class="prod-item" data-nombre="@pp.IdProductoNavigation.NombreProducto.ToLower()">
+                    <div>
+                        <div class="prod-item-name">@pp.IdProductoNavigation.NombreProducto</div>
+                        <div class="prod-item-cat">@pp.IdProductoNavigation.IdTipoProductoNavigation?.NombreTipoProducto — @pp.IdProductoNavigation.IdMarcaNavigation?.NombreMarca</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.4rem;">
+                        <span style="font-size:.75rem;color:#9a8070;">$</span>
+                        <input type="number" min="0" value="@pp.PrecioProveedor"
+                               style="width:80px;padding:.28rem .45rem;border:1.5px solid #e8ddd4;border-radius:6px;font-size:.82rem;outline:none;"
+                               id="precio-asoc-@pp.IdProveedorProducto"
+                               onfocus="this.select()"
+                               placeholder="0">
+                        <button class="btn-asoc" style="padding:.28rem .55rem;font-size:.75rem;"
+                                onclick="guardarPrecio(@pp.IdProveedorProducto, @proveedor.IdProveedor, this)">
+                            Guardar
+                        </button>
+                    </div>
+                    <button class="btn-desasoc" onclick="desasociar(@pp.IdProveedorProducto, @proveedor.IdProveedor)">Quitar</button>
+                </li>
+            }
+            @if (!asociados.Any())
+            {
+                <li style="text-align:center; padding:2rem; color:#a89080; font-size:.88rem;">Sin productos asociados.</li>
+            }
+        </ul>
+    </div>
+
+    <!-- Tab: agregar productos -->
+    <div id="tab-libres" style="display:none;">
+        <input type="text" class="search-pm" placeholder="Buscar producto a agregar…" oninput="filtrarPm('libres', this.value)">
+        <ul class="prod-list" id="list-libres">
+            @foreach (var p in libres)
+            {
+                <li class="prod-item" data-nombre="@p.NombreProducto.ToLower()">
+                    <div>
+                        <div class="prod-item-name">@p.NombreProducto</div>
+                        <div class="prod-item-cat">@p.IdTipoProductoNavigation?.NombreTipoProducto — @p.IdMarcaNavigation?.NombreMarca</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.4rem;">
+                        <span style="font-size:.75rem;color:#9a8070;">$</span>
+                        <input type="number" min="0" value="0"
+                               style="width:80px;padding:.28rem .45rem;border:1.5px solid #e8ddd4;border-radius:6px;font-size:.82rem;outline:none;"
+                               id="precio-libre-@p.IdProducto"
+                               onfocus="this.select()"
+                               placeholder="0">
+                    </div>
+                    <button class="btn-asoc" onclick="asociar(@proveedor.IdProveedor, @p.IdProducto, document.getElementById('precio-libre-@p.IdProducto').value)">Agregar</button>
+                </li>
+            }
+            @if (!libres.Any())
+            {
+                <li style="text-align:center; padding:2rem; color:#a89080; font-size:.88rem;">Todos los productos ya están asociados.</li>
+            }
+        </ul>
+    </div>
+</div>
+
+

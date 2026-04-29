@@ -51,6 +51,11 @@ app.MapAreaControllerRoute(
     pattern: "Ventas/{controller=GenerarVenta}/{action=Index}/{id?}");
 
 app.MapAreaControllerRoute(
+    name: "areas-compras",
+    areaName: "Compras",
+    pattern: "Compras/{controller=Proveedores}/{action=Index}/{id?}");
+
+app.MapAreaControllerRoute(
     name: "areas-productos",
     areaName: "Productos",
     pattern: "Productos/{controller=Productos}/{action=Index}/{id?}");
