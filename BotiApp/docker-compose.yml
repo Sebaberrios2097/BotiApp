@@ -2,7 +2,9 @@ version: '3'
 
 services:
   botiapp:
-    build: .
+    build:
+      context: ./publish
+      dockerfile: ../Dockerfile
     container_name: botiapp
     restart: unless-stopped
     ports:
