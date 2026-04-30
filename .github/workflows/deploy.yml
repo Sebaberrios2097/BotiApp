@@ -35,7 +35,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
           source: "publish/*, Dockerfile, docker-compose.yml"
-          target: "/opt/BotiApp"
+          target: "/opt/botiapp"
           strip_components: 0
 
       - name: Desplegar en servidor
@@ -46,7 +46,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd /opt/BotiApp
+            cd /opt/botiapp
             docker compose down
             docker compose up -d --build
             docker image prune -f

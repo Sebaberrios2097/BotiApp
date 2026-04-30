@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  botiapp:
+    build: .
+    container_name: botiapp
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge
