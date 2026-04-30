@@ -45,7 +45,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapStaticAssets();
+app.UseStaticFiles();
 
 // ── Las rutas de área SIEMPRE antes que la ruta por defecto ───────────────
 app.MapAreaControllerRoute(
@@ -71,6 +71,5 @@ app.MapAreaControllerRoute(
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Login}/{action=Login}/{id?}")
-    .WithStaticAssets();
 
 app.Run();
