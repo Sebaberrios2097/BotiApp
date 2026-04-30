@@ -18,11 +18,11 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
         var vm = new GenerarVentaViewModel
         {
             NombreVendedor = ClaimHelper.GetNombreCompleto(User),
-            Productos      = await ventasRepository.ObtenerProductosDisponiblesAsync(),
-            Tipos          = await ventasRepository.ObtenerTiposAsync(),
-            Marcas         = await ventasRepository.ObtenerMarcasAsync(),
-            Promociones    = await ventasRepository.ObtenerPromocionesActivasAsync(),
-            Ofertas        = await ventasRepository.ObtenerOfertasActivasAsync()
+            Productos = await ventasRepository.ObtenerProductosDisponiblesAsync(),
+            Tipos = await ventasRepository.ObtenerTiposAsync(),
+            Marcas = await ventasRepository.ObtenerMarcasAsync(),
+            Promociones = await ventasRepository.ObtenerPromocionesActivasAsync(),
+            Ofertas = await ventasRepository.ObtenerOfertasActivasAsync()
         };
         return View(vm);
     }
@@ -34,8 +34,8 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
         {
             PuedeCobrar = ClaimHelper.EsCajero(User) || ClaimHelper.EsAdmin(User),
             MetodosPago = await ventasRepository.ObtenerMetodosPagoAsync(),
-            Productos   = await ventasRepository.ObtenerProductosDisponiblesAsync(),
-            Ofertas     = await ventasRepository.ObtenerOfertasActivasAsync()
+            Productos = await ventasRepository.ObtenerProductosDisponiblesAsync(),
+            Ofertas = await ventasRepository.ObtenerOfertasActivasAsync()
         };
         return View(vm);
     }
@@ -43,9 +43,9 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
     // ── GET /Ventas/Ventas/Historial ──────────────────────────────────────────
     public async Task<IActionResult> Historial()
     {
-        var esAdmin       = ClaimHelper.EsAdmin(User);
-        var esCajero      = ClaimHelper.EsCajero(User);
-        var idUsuario     = ClaimHelper.GetIdUsuario(User);
+        var esAdmin = ClaimHelper.EsAdmin(User);
+        var esCajero = ClaimHelper.EsCajero(User);
+        var idUsuario = ClaimHelper.GetIdUsuario(User);
         var nombreUsuario = ClaimHelper.GetNombreCompleto(User);
 
         var boletas = esAdmin
@@ -89,12 +89,12 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
 
         var vm = new HistorialVentasViewModel
         {
-            EsAdmin             = esAdmin,
-            EsCajero            = esCajero,
-            IdUsuarioActual     = idUsuario,
+            EsAdmin = esAdmin,
+            EsCajero = esCajero,
+            IdUsuarioActual = idUsuario,
             NombreUsuarioActual = nombreUsuario,
-            Boletas             = boletasDtos,
-            Vendedores          = vendedores
+            Boletas = boletasDtos,
+            Vendedores = vendedores
         };
 
         return View(vm);
@@ -119,31 +119,31 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
 
         var detalles = request.Items.Select(i => new VenBoletaDetalle
         {
-            IdProducto       = i.IdProducto,
-            Cantidad         = i.Cantidad,
-            PrecioNormal     = i.PrecioNormal,
-            PrecioUnitario   = i.PrecioUnitario,
-            Subtotal         = i.Cantidad * i.PrecioUnitario,
-            IdPromocion      = i.IdPromocion,
+            IdProducto = i.IdProducto,
+            Cantidad = i.Cantidad,
+            PrecioNormal = i.PrecioNormal,
+            PrecioUnitario = i.PrecioUnitario,
+            Subtotal = i.Subtotal ?? i.Cantidad * i.PrecioUnitario,
+            IdPromocion = i.IdPromocion,
             IdOfertaProducto = i.IdOfertaProducto
         }).ToList();
 
         var boleta = new VenBoletas
         {
-            IdVendedor     = idVendedor,
+            IdVendedor = idVendedor,
             IdEstadoBoleta = 1,
-            FechaEmision   = DateTime.Now,
-            MontoTotal     = detalles.Sum(d => d.Subtotal)
+            FechaEmision = DateTime.Now,
+            MontoTotal = detalles.Sum(d => d.Subtotal)
         };
 
-        var creada   = await ventasRepository.CrearBoletaAsync(boleta, detalles);
+        var creada = await ventasRepository.CrearBoletaAsync(boleta, detalles);
         var completa = await ventasRepository.ObtenerPorIdAsync(creada.IdBoleta);
 
         return Json(new
         {
-            ok      = true,
+            ok = true,
             mensaje = $"Boleta N° {creada.IdBoleta} generada por ${creada.MontoTotal:N0}.",
-            boleta  = MapBoletaTicket(completa!)
+            boleta = MapBoletaTicket(completa!)
         });
     }
 
@@ -171,12 +171,12 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
 
         var detalles = request.Items.Select(i => new VenBoletaDetalle
         {
-            IdProducto       = i.IdProducto,
-            Cantidad         = i.Cantidad,
-            PrecioNormal     = i.PrecioNormal,
-            PrecioUnitario   = i.PrecioUnitario,
-            Subtotal         = i.Cantidad * i.PrecioUnitario,
-            IdPromocion      = i.IdPromocion,
+            IdProducto = i.IdProducto,
+            Cantidad = i.Cantidad,
+            PrecioNormal = i.PrecioNormal,
+            PrecioUnitario = i.PrecioUnitario,
+            Subtotal = i.Subtotal ?? i.Cantidad * i.PrecioUnitario,
+            IdPromocion = i.IdPromocion,
             IdOfertaProducto = i.IdOfertaProducto
         });
 
@@ -200,10 +200,10 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
             return Json(new { ok = false, mensaje = "Debe especificar al menos un método de pago." });
 
         var idCajero = ClaimHelper.GetIdUsuario(User);
-        var metodos  = request.MetodosPago.Select(m => new VenMetodosPagoBoleta
+        var metodos = request.MetodosPago.Select(m => new VenMetodosPagoBoleta
         {
             IdMetodoPago = m.IdMetodoPago,
-            Monto        = m.Monto
+            Monto = m.Monto
         });
 
         var cobrada = await ventasRepository.CobrarBoletaAsync(request.IdBoleta, idCajero, metodos);
@@ -212,9 +212,9 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
 
         return Json(new
         {
-            ok      = true,
+            ok = true,
             mensaje = $"Boleta N° {cobrada.IdBoleta} cobrada exitosamente por ${cobrada.MontoTotal:N0}.",
-            boleta  = MapBoletaCaja(cobrada)
+            boleta = MapBoletaCaja(cobrada)
         });
     }
 
@@ -237,9 +237,9 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
     {
         b.IdBoleta,
         fechaEmision = b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
-        estado       = b.IdEstadoBoletaNavigation?.NombreEstadoBoleta ?? "—",
-        idEstado     = b.IdEstadoBoleta,
-        vendedor     = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } e
+        estado = b.IdEstadoBoletaNavigation?.NombreEstadoBoleta ?? "—",
+        idEstado = b.IdEstadoBoleta,
+        vendedor = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } e
                            ? $"{e.NombresEmpleado} {e.Apellido1}" : "—",
         b.MontoTotal,
         detalle = b.VenBoletaDetalle.Select(d => new
@@ -255,33 +255,33 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
     {
         b.IdBoleta,
         fechaEmision = b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
-        estado       = b.IdEstadoBoletaNavigation?.NombreEstadoBoleta ?? "—",
-        idEstado     = b.IdEstadoBoleta,
-        vendedor     = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } ev
+        estado = b.IdEstadoBoletaNavigation?.NombreEstadoBoleta ?? "—",
+        idEstado = b.IdEstadoBoleta,
+        vendedor = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } ev
                            ? $"{ev.NombresEmpleado} {ev.Apellido1}" : "—",
-        cajero       = b.IdCajeroNavigation?.IdEmpleadoNavigation is { } ec
+        cajero = b.IdCajeroNavigation?.IdEmpleadoNavigation is { } ec
                            ? $"{ec.NombresEmpleado} {ec.Apellido1}" : (string?)null,
         b.MontoTotal,
         detalle = b.VenBoletaDetalle.Select(d => new
         {
-            idProducto       = d.IdProducto,
-            nombre           = d.IdProductoNavigation?.NombreProducto ?? "—",
+            idProducto = d.IdProducto,
+            nombre = d.IdProductoNavigation?.NombreProducto ?? "—",
             d.Cantidad,
             d.PrecioNormal,
             d.PrecioUnitario,
             d.Subtotal,
-            idPromocion      = d.IdPromocion,
-            nombrePromocion  = d.IdPromocionNavigation?.Nombre,
-            idOferta         = d.IdOfertaProducto,
-            tieneOferta      = d.IdOfertaProducto != null,
-            esEnvase         = d.PrecioNormal == 0 && d.IdPromocion == null && d.IdOfertaProducto == null
+            idPromocion = d.IdPromocion,
+            nombrePromocion = d.IdPromocionNavigation?.Nombre,
+            idOferta = d.IdOfertaProducto,
+            tieneOferta = d.IdOfertaProducto != null,
+            esEnvase = d.PrecioNormal == 0 && d.IdPromocion == null && d.IdOfertaProducto == null
         })
     };
 }
 
 // ── Records de request ────────────────────────────────────────────────────────
 public record CrearBoletaRequest(List<ItemBoleta> Items);
-public record ItemBoleta(int IdProducto, int Cantidad, int PrecioNormal, int PrecioUnitario, int? IdPromocion, int? IdOfertaProducto);
+public record ItemBoleta(int IdProducto, int Cantidad, int PrecioNormal, int PrecioUnitario, int? IdPromocion, int? IdOfertaProducto, int? Subtotal = null);
 public record BuscarBoletaRequest(int IdBoleta);
 public record ModificarBoletaRequest(int IdBoleta, List<ItemBoleta> Items);
 public record CobrarBoletaRequest(int IdBoleta, List<MetodoPagoItem> MetodosPago);

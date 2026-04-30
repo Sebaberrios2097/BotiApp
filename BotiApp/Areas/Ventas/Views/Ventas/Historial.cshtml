@@ -150,9 +150,11 @@
 .ticket-row { display:flex; justify-content:space-between; margin-bottom:1px; }
 .ticket-row .tk-l { flex:1; min-width:0; overflow:hidden; text-overflow:clip; }
 .ticket-row .tk-r { flex-shrink:0; padding-left:.5rem; text-align:right; }
-.ticket-total  { font-size:14px; font-weight:700; }
-.ticket-bold   { font-weight:700; }
-.ticket-center { text-align:center; }
+.ticket-total     { font-size:14px; font-weight:700; }
+.ticket-bold      { font-weight:700; }
+.ticket-center    { text-align:center; }
+.ticket-desc      { color:#000; }
+.ticket-promo-tag { font-size:10px; font-weight:700; }
 @@page { size:80mm auto; margin:0; }
 @@media print {
     html,body { margin:0 !important; padding:0 !important; background:#fff !important; }
@@ -371,26 +373,109 @@
         const NOMBRE_LOCAL = 'Botillería Cuatro Ases';
         let lineas = '';
 
-        b.detalle.forEach(d => {
-            const esEnvase = d.precioNormal === 0 && !d.nombrePromocion && !d.nombreOferta;
-            if (esEnvase) {
-                lineas += `
-            <div class="ticket-row" style="font-size:10px;">
-                <span class="tk-l">Envase: ${x(d.nombre)}</span>
-                <span class="tk-r">+$${fmt(d.subtotal)}</span>
-            </div>`;
-                return;
+        // ── Clasificar ítems ──────────────────────────────────────────────
+        const envases      = b.detalle.filter(d => d.precioNormal === 0 && !d.nombrePromocion && !d.nombreOferta);
+        const promoItems   = b.detalle.filter(d => d.nombrePromocion);
+        const individuales = b.detalle.filter(d => !d.nombrePromocion && !(d.precioNormal === 0 && !d.nombreOferta));
+
+        // ── Agrupar ítems de promo ────────────────────────────────────────
+        const promoMap = new Map(); // nombrePromocion → { subtotalReal, subtotalNormal, items[] }
+        promoItems.forEach(d => {
+            if (!promoMap.has(d.nombrePromocion)) {
+                promoMap.set(d.nombrePromocion, { subtotalReal: 0, subtotalNormal: 0, items: [] });
             }
-            const badge = d.nombrePromocion ? ' (promo)' : d.nombreOferta ? ' (oferta)' : '';
-            const precioHtml = d.precioNormal > d.precioUnitario
+            const g = promoMap.get(d.nombrePromocion);
+            g.subtotalReal   += d.subtotal;
+            g.subtotalNormal += d.precioNormal * d.cantidad;
+            g.items.push(d);
+        });
+
+        // ── Ítems de promo (igual que Generar) ────────────────────────────
+        promoMap.forEach((g, nombrePromo) => {
+            lineas += `<hr class="ticket-hr">`;
+            lineas += `
+            <div class="ticket-row ticket-promo-tag">
+                <span class="tk-l">${x(nombrePromo)}</span>
+                <span class="tk-r ticket-bold">$${fmt(g.subtotalReal)}</span>
+            </div>`;
+            g.items.forEach(d => {
+                lineas += `
+            <div class="ticket-row" style="padding-left:.8rem;">
+                <span class="tk-l">${x(d.nombre)}</span>
+                <span class="tk-r">${d.cantidad} x $${fmt(d.precioNormal)}</span>
+            </div>`;
+            });
+            const ahorro = g.subtotalNormal - g.subtotalReal;
+            if (ahorro > 0) {
+                lineas += `
+            <div class="ticket-row ticket-desc" style="padding-left:.8rem;font-size:10px;">
+                <span class="tk-l">Ahorro promo</span>
+                <span class="tk-r">-$${fmt(ahorro)}</span>
+            </div>`;
+            }
+        });
+
+        // ── Ítems individuales (igual que Generar) ────────────────────────
+        let hayIndiv = false;
+        individuales.forEach(d => {
+            if (!hayIndiv) { lineas += `<hr class="ticket-hr">`; hayIndiv = true; }
+            const tieneOferta = d.precioNormal > d.precioUnitario;
+            const precioHtml  = tieneOferta
                 ? `<span style="text-decoration:line-through;font-size:9px;">$${fmt(d.precioNormal)}</span> $${fmt(d.precioUnitario)}`
                 : `$${fmt(d.precioUnitario)}`;
+            const badge = d.nombreOferta ? ' <em>(oferta)</em>' : '';
             lineas += `
             <div class="ticket-row">
-                <span class="tk-l">${x(d.nombre)}${x(badge)}</span>
+                <span class="tk-l">${x(d.nombre)}${badge}</span>
                 <span class="tk-r">${d.cantidad} x ${precioHtml}</span>
             </div>`;
         });
+
+        // ── Sección de totales (igual que Generar) ────────────────────────
+        const subtotal = b.detalle
+            .filter(d => !(d.precioNormal === 0 && !d.nombrePromocion && !d.nombreOferta))
+            .reduce((acc, d) => acc + d.precioNormal * d.cantidad, 0);
+
+        const descPromos = [];
+        promoMap.forEach((g, nombre) => {
+            const ahorro = g.subtotalNormal - g.subtotalReal;
+            if (ahorro > 0) descPromos.push({ nombre, ahorro });
+        });
+
+        const descOfertas = [];
+        individuales.filter(d => d.nombreOferta && d.precioNormal > d.precioUnitario).forEach(d => {
+            const ahorro = (d.precioNormal - d.precioUnitario) * d.cantidad;
+            if (ahorro > 0) descOfertas.push({ nombre: d.nombre, ahorro });
+        });
+
+        const descTotal = descPromos.reduce((a, v) => a + v.ahorro, 0)
+                        + descOfertas.reduce((a, v) => a + v.ahorro, 0);
+
+        lineas += `<hr class="ticket-hr-sol">`;
+        lineas += `<div class="ticket-row"><span class="tk-l">Subtotal</span><span class="tk-r">$${fmt(subtotal)}</span></div>`;
+
+        descPromos.forEach(({ nombre, ahorro }) => {
+            lineas += `<div class="ticket-row ticket-desc"><span class="tk-l">Promo: ${x(nombre)}</span><span class="tk-r">-$${fmt(ahorro)}</span></div>`;
+        });
+        descOfertas.forEach(({ nombre, ahorro }) => {
+            lineas += `<div class="ticket-row ticket-desc"><span class="tk-l">Oferta: ${x(nombre)}</span><span class="tk-r">-$${fmt(ahorro)}</span></div>`;
+        });
+        if (descTotal > 0) {
+            lineas += `<div class="ticket-row ticket-desc ticket-bold"><span class="tk-l">Total descuentos</span><span class="tk-r">-$${fmt(descTotal)}</span></div>`;
+        }
+
+        // ── Envases ───────────────────────────────────────────────────────
+        let totalEnvases = 0;
+        if (envases.length > 0) {
+            lineas += `<hr class="ticket-hr">`;
+            envases.forEach(d => {
+                totalEnvases += d.subtotal;
+                lineas += `<div class="ticket-row" style="color:#e76f2e;font-size:10px;"><span class="tk-l">Envase: ${x(d.nombre)}</span><span class="tk-r">+$${fmt(d.subtotal)}</span></div>`;
+            });
+        }
+
+        lineas += `<hr class="ticket-hr-sol">`;
+        lineas += `<div class="ticket-row ticket-total"><span class="tk-l">TOTAL</span><span class="tk-r">$${fmt(b.total)}</span></div>`;
 
         const html = `
         <div class="ticket-overlay" id="ticketOverlay">
@@ -407,10 +492,7 @@
                     <div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">${x(b.fecha)}</span></div>
                     <hr class="ticket-hr-sol">
                     <div class="ticket-row ticket-bold"><span class="tk-l">ARTÍCULO</span><span class="tk-r">VALOR</span></div>
-                    <hr class="ticket-hr">
                     ${lineas}
-                    <hr class="ticket-hr-sol">
-                    <div class="ticket-row ticket-total"><span class="tk-l">TOTAL</span><span class="tk-r">$${fmt(b.total)}</span></div>
                     <hr class="ticket-hr">
                     <div class="ticket-center" style="margin-top:.5rem;font-size:10px;">¡Gracias por su compra!</div>
                 </div>

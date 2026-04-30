@@ -707,6 +707,11 @@
                 }
                 if (!gruposOk) break;
 
+                // ── Guard: si la promo no tiene ningún requerimiento no se puede aplicar ─
+                const totalReqs = promo.productosBase.length
+                    + gruposResueltos.reduce((a, g) => a + g.length, 0);
+                if (totalReqs === 0) break;
+
                 // ── 3. Consumir y registrar ───────────────────────────────
                 const itemsActivos = [];
 
@@ -951,11 +956,21 @@
             const sumaNormal = inst.itemsActivos.reduce(
                 (acc, { precio, cantReq }) => acc + precio * cantReq, 0
             );
-            inst.itemsActivos.forEach(({ id, precio, cantReq }) => {
-                const precioUnitario = sumaNormal > 0
-                    ? Math.round((precio * cantReq / sumaNormal) * inst.promoPrecio / cantReq)
-                    : precio;
-                items.push({ idProducto: id, cantidad: cantReq, precioNormal: precio, precioUnitario, idPromocion: inst.promoId, idOfertaProducto: null });
+            let subtotalRestante = inst.promoPrecio;
+            const lastIdx = inst.itemsActivos.length - 1;
+            inst.itemsActivos.forEach(({ id, precio, cantReq }, idx) => {
+                let subtotal;
+                if (idx === lastIdx) {
+                    // El último ítem absorbe el redondeo para que la suma sea exactamente promoPrecio
+                    subtotal = subtotalRestante;
+                } else {
+                    subtotal = sumaNormal > 0
+                        ? Math.round((precio * cantReq / sumaNormal) * inst.promoPrecio)
+                        : precio * cantReq;
+                    subtotalRestante -= subtotal;
+                }
+                const precioUnitario = Math.round(subtotal / cantReq);
+                items.push({ idProducto: id, cantidad: cantReq, precioNormal: precio, precioUnitario, subtotal, idPromocion: inst.promoId, idOfertaProducto: null });
             });
         });
         carrito.forEach((it, id) => {
