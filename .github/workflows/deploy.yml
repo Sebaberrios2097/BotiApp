@@ -34,9 +34,9 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          source: "publish/*, BotiApp/Dockerfile, BotiApp/docker-compose.yml"
+          source: "publish/*, BotiApp/BotiApp/Dockerfile, BotiApp/BotiApp/docker-compose.yml"
           target: "/opt/botiapp"
-          strip_components: 0
+          strip_components: 2
 
       - name: Desplegar en servidor
         uses: appleboy/ssh-action@v1.0.3
