@@ -19,13 +19,13 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Restaurar dependencias
-        run: dotnet restore
+        run: dotnet restore BotiApp/BotiApp.csproj
 
       - name: Compilar
-        run: dotnet build -c Release --no-restore
+        run: dotnet build BotiApp/BotiApp.csproj -c Release --no-restore
 
       - name: Publicar
-        run: dotnet publish -c Release -o ./publish --no-build
+        run: dotnet publish BotiApp/BotiApp.csproj -c Release -o ./publish --no-build
 
       - name: Copiar archivos al servidor
         uses: appleboy/scp-action@v0.1.7
@@ -34,7 +34,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          source: "publish/*, Dockerfile, docker-compose.yml"
+          source: "publish/*, BotiApp/Dockerfile, BotiApp/docker-compose.yml"
           target: "/opt/botiapp"
           strip_components: 0
 
