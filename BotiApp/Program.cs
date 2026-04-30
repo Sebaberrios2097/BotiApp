@@ -39,7 +39,33 @@ using (var scope = app.Services.CreateScope())
     var db     = scope.ServiceProvider.GetRequiredService<BotiAppContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-    var hayAdmin = await db.EmpUsuario.AnyAsync(u => u.IdTipoUsuario == 1);
+    // ── Seed tipos de usuario ─────────────────────────────────────────────
+    var tiposExistentes = await db.EmpTiposUsuario
+        .Select(t => t.NombreTipoUsuario)
+        .ToListAsync();
+
+    var tiposRequeridos = new[]
+    {
+        "Administrador",
+        "Vendedor",
+        "Cajero"
+    };
+
+    foreach (var nombre in tiposRequeridos)
+    {
+        if (!tiposExistentes.Contains(nombre))
+        {
+            db.EmpTiposUsuario.Add(new EmpTiposUsuario { NombreTipoUsuario = nombre });
+            logger.LogInformation("Tipo de usuario '{Nombre}' creado.", nombre);
+        }
+    }
+    await db.SaveChangesAsync();
+    // ─────────────────────────────────────────────────────────────────────
+
+    var tipoAdmin = await db.EmpTiposUsuario
+        .FirstOrDefaultAsync(t => t.NombreTipoUsuario == "Administrador");
+
+    var hayAdmin = await db.EmpUsuario.AnyAsync(u => u.IdTipoUsuario == tipoAdmin!.IdTipoUsuario);
     if (!hayAdmin)
     {
         var empleadoAdmin = new EmpEmpleado
@@ -59,7 +85,7 @@ using (var scope = app.Services.CreateScope())
         db.EmpUsuario.Add(new EmpUsuario
         {
             IdEmpleado     = empleadoAdmin.IdEmpleado,
-            IdTipoUsuario  = 1,
+            IdTipoUsuario  = tipoAdmin.IdTipoUsuario,
             NombreUsuario  = "admin",
             ClaveUsuario   = claveHash,
             Estado         = true
