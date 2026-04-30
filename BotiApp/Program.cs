@@ -1,5 +1,8 @@
+using Infraestructura.Context;
+using Infraestructura.Entities.BotiApp;
 using Infraestructura.Extensions;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +32,47 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
+// ── Seed: crear usuario administrador por defecto si no existe ninguno ────
+using (var scope = app.Services.CreateScope())
+{
+    var db     = scope.ServiceProvider.GetRequiredService<BotiAppContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    var hayAdmin = await db.EmpUsuario.AnyAsync(u => u.IdTipoUsuario == 1);
+    if (!hayAdmin)
+    {
+        var empleadoAdmin = new EmpEmpleado
+        {
+            NombresEmpleado = "Administrador",
+            Apellido1       = "Sistema",
+            Rut             = 0,
+            FechaIngreso    = DateTime.Now
+        };
+        db.EmpEmpleado.Add(empleadoAdmin);
+        await db.SaveChangesAsync();
+
+        var claveHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.Unicode.GetBytes("admin")));
+
+        db.EmpUsuario.Add(new EmpUsuario
+        {
+            IdEmpleado     = empleadoAdmin.IdEmpleado,
+            IdTipoUsuario  = 1,
+            NombreUsuario  = "admin",
+            ClaveUsuario   = claveHash,
+            Estado         = true
+        });
+        await db.SaveChangesAsync();
+
+        logger.LogWarning(
+            "AVISO DE SEGURIDAD: Se creó el usuario administrador por defecto " +
+            "(usuario: admin / clave: admin). Cree un nuevo administrador y " +
+            "desactive este usuario a la brevedad.");
+    }
+}
+// ─────────────────────────────────────────────────────────────────────────
 
 if (!app.Environment.IsDevelopment())
 {
