@@ -9,4 +9,4 @@ RUN dotnet publish BotiApp/BotiApp.csproj -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "BotiApp.dll"]
+ENTRYPOINT ["dotnet", "publish/BotiApp.dll"]
