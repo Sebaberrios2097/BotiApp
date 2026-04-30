@@ -34,7 +34,26 @@ namespace Infraestructura.Repositories.Sp
             }
             catch (Exception ex)
             {
-                // Muestra toda la cadena de errores
+                Console.WriteLine($"Mensaje: {ex.Message}");
+                Console.WriteLine($"Inner: {ex.InnerException?.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                throw;
+            }
+        }
+
+        public async Task<int> SpEmpCambiaContrasena(string usuario, string claveActual, string claveNueva)
+        {
+            try
+            {
+                var resultado = db.Database
+                    .SqlQueryRaw<int>("EXEC Sp_Emp_Cambia_Contrasena {0}, {1}, {2}", usuario, claveActual, claveNueva)
+                    .AsEnumerable()
+                    .FirstOrDefault();
+
+                return resultado;
+            }
+            catch (Exception ex)
+            {
                 Console.WriteLine($"Mensaje: {ex.Message}");
                 Console.WriteLine($"Inner: {ex.InnerException?.Message}");
                 Console.WriteLine($"StackTrace: {ex.StackTrace}");

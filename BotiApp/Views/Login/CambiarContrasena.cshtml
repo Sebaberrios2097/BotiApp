@@ -1,0 +1,116 @@
+@model BotiApp.Models.CambiarContrasenaViewModel
+@{
+    Layout = "~/Views/Shared/_LayoutLogin.cshtml";
+    ViewData["Title"] = "Cambiar contraseña";
+}
+
+<div class="login-wrapper">
+
+    <!-- Panel de marca -->
+    <div class="login-brand">
+        <div class="brand-icon">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zm-6 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm3.1-9H8.9V6a3.1 3.1 0 0 1 6.2 0v2z" />
+            </svg>
+        </div>
+        <h1>Botillería Cuatro Ases</h1>
+        <p style="color: var(--blanco); font-size: 0.9rem; text-align:center; opacity:0.8;">
+            Actualiza tu contraseña para mayor seguridad
+        </p>
+    </div>
+
+    <!-- Formulario -->
+    <div class="login-card">
+        <div>
+            <h2>Cambiar contraseña</h2>
+            <br />
+            <p class="subtitle">Ingresa tus datos para actualizar tu contraseña</p>
+        </div>
+
+        <form method="post" asp-controller="Login" asp-action="CambiarContrasena">
+            @Html.AntiForgeryToken()
+
+            <div style="display:flex; flex-direction:column; gap:1.1rem;">
+
+                <!-- Usuario -->
+                <div class="form-group">
+                    <label asp-for="Usuario">Usuario</label>
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                        </svg>
+                        <input asp-for="Usuario" placeholder="Tu nombre de usuario" autocomplete="username" />
+                    </div>
+                    <span asp-validation-for="Usuario" class="field-validation-error"></span>
+                </div>
+
+                <!-- Contraseña actual -->
+                <div class="form-group">
+                    <label asp-for="ClaveActual">Contraseña actual</label>
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zm-6 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm3.1-9H8.9V6a3.1 3.1 0 0 1 6.2 0v2z" />
+                        </svg>
+                        <input asp-for="ClaveActual" type="password" placeholder="Contraseña actual" autocomplete="current-password" />
+                    </div>
+                    <span asp-validation-for="ClaveActual" class="field-validation-error"></span>
+                </div>
+
+                <!-- Nueva contraseña -->
+                <div class="form-group">
+                    <label asp-for="ClaveNueva">Nueva contraseña</label>
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" />
+                        </svg>
+                        <input asp-for="ClaveNueva" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+                    </div>
+                    <span asp-validation-for="ClaveNueva" class="field-validation-error"></span>
+                </div>
+
+                <!-- Confirmar contraseña -->
+                <div class="form-group">
+                    <label asp-for="ConfirmarClave">Confirmar contraseña</label>
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" />
+                        </svg>
+                        <input asp-for="ConfirmarClave" type="password" placeholder="Repite la nueva contraseña" autocomplete="new-password" />
+                    </div>
+                    <span asp-validation-for="ConfirmarClave" class="field-validation-error"></span>
+                </div>
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="login-error">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                        </svg>
+                        @Html.ValidationSummary(true, "", new { @class = "login-error-text" })
+                    </div>
+                }
+
+                <button type="submit" class="btn-login">Cambiar contraseña</button>
+
+                <div style="text-align:center; font-size:0.85rem;">
+                    <a asp-controller="Login" asp-action="Login" style="color: var(--color-primario); text-decoration:none; font-weight:600;">
+                        ← Volver al inicio de sesión
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<style>
+    .field-validation-error {
+        color: var(--color-danger);
+        font-size: 0.78rem;
+        margin-top: 2px;
+    }
+</style>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

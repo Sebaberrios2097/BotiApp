@@ -56,8 +56,30 @@
                         <input type="checkbox" name="Recordar" @(Model?.Recordar == true ? "checked" : "") />
                         Recordarme
                     </label>
-                    <a href="#">¿Olvidaste tu contraseña?</a>
+                    <a asp-controller="Login" asp-action="CambiarContrasena">Cambiar contraseña</a>
                 </div>
+
+                @* Mensaje de éxito tras cambio de contraseña *@
+                @if (TempData["CambioExito"] is string msgCambio)
+                {
+                    <div class="login-error" style="background-color:#f0fff4; border-color: var(--color-success);">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="fill: var(--color-success);">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                        </svg>
+                        <span class="login-error-text" style="color: var(--color-success);">@msgCambio</span>
+                    </div>
+                }
+
+                @* Mensaje de éxito tras configuración inicial *@
+                @if (TempData["SetupExito"] is string msgSetup)
+                {
+                    <div class="login-error" style="background-color:#f0fff4; border-color: var(--color-success);">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="fill: var(--color-success);">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                        </svg>
+                        <span class="login-error-text" style="color: var(--color-success);">@msgSetup</span>
+                    </div>
+                }
 
                 @* Mensaje de error de credenciales *@
                 @if (!ViewData.ModelState.IsValid)

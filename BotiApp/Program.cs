@@ -1,3 +1,4 @@
+using BotiApp.Middleware;
 using Infraestructura.Context;
 using Infraestructura.Entities.BotiApp;
 using Infraestructura.Extensions;
@@ -46,8 +47,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseStaticFiles();
+app.UseMiddleware<SetupCheckMiddleware>();
 
 // ── Las rutas de área SIEMPRE antes que la ruta por defecto ───────────────
+app.MapControllerRoute(
+    name: "setup",
+    pattern: "Setup/{action=Index}/{id?}",
+    defaults: new { controller = "Setup" });
+
 app.MapAreaControllerRoute(
     name: "areas-ventas",
     areaName: "Ventas",

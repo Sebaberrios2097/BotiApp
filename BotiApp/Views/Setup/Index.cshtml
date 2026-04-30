@@ -1,0 +1,261 @@
+@model BotiApp.Models.SetupViewModel
+@{
+    Layout = "~/Views/Shared/_LayoutLogin.cshtml";
+    ViewData["Title"] = "Configuración inicial";
+}
+
+<style>
+    .setup-wrapper {
+        display: flex;
+        width: 100%;
+        max-width: 1000px;
+        min-height: 600px;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        margin: 1rem;
+    }
+
+    .setup-brand {
+        flex: 0 0 300px;
+        background-color: var(--color-secundario);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem;
+        gap: 1.25rem;
+    }
+
+        .setup-brand .brand-icon {
+            width: 72px;
+            height: 72px;
+            background-color: var(--color-primario);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .setup-brand .brand-icon svg {
+                width: 38px;
+                height: 38px;
+                fill: var(--blanco);
+            }
+
+        .setup-brand h1 {
+            color: var(--blanco);
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .setup-brand p {
+            color: var(--color-primario);
+            font-size: 0.9rem;
+            text-align: center;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        .setup-brand .badge-setup {
+            background-color: var(--color-primario);
+            color: var(--blanco);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.3rem 0.9rem;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+    .setup-card {
+        flex: 1;
+        background-color: var(--blanco);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 2.5rem 3rem;
+        gap: 1.2rem;
+        overflow-y: auto;
+    }
+
+        .setup-card h2 {
+            color: var(--color-secundario);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .setup-card p.subtitle {
+            color: var(--color-secundario);
+            font-size: 0.9rem;
+            opacity: 0.6;
+            margin-top: -0.8rem;
+        }
+
+    .setup-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .setup-grid .full-width {
+        grid-column: 1 / -1;
+    }
+
+    .validation-summary {
+        background-color: #fff0ee;
+        border: 1px solid var(--color-danger);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 0.85rem;
+        color: var(--color-danger);
+    }
+
+    .field-validation-error {
+        color: var(--color-danger);
+        font-size: 0.78rem;
+        margin-top: 2px;
+    }
+
+    .hint-box {
+        background-color: #fff7f0;
+        border-left: 4px solid var(--color-primario);
+        border-radius: 0 8px 8px 0;
+        padding: 0.75rem 1rem;
+        font-size: 0.82rem;
+        color: var(--color-secundario);
+        opacity: 0.85;
+    }
+</style>
+
+<div class="setup-wrapper">
+
+    <!-- Panel de marca -->
+    <div class="setup-brand">
+        <span class="badge-setup">Primer inicio</span>
+        <div class="brand-icon">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+            </svg>
+        </div>
+        <h1>Botillería Cuatro Ases</h1>
+        <p>
+            Bienvenido. Para comenzar a usar el sistema, configure la cuenta del administrador principal.
+        </p>
+    </div>
+
+    <!-- Formulario -->
+    <div class="setup-card">
+        <div>
+            <h2>Configuración inicial</h2>
+            <br />
+            <p class="subtitle">Cree la cuenta de administrador para comenzar</p>
+        </div>
+
+        <div class="hint-box">
+            <strong>Información:</strong> Los tipos de usuario (Administrador, Vendedor y Cajero) se crearán automáticamente.
+            La contraseña inicial será su RUT sin dígito verificador. Puede cambiarla desde el panel de administración.
+        </div>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="validation-summary">
+                @Html.ValidationSummary(false)
+            </div>
+        }
+
+        <form method="post" asp-controller="Setup" asp-action="Index">
+            @Html.AntiForgeryToken()
+
+            <div class="setup-grid">
+
+                <!-- Nombres -->
+                <div class="form-group">
+                    <label asp-for="NombresEmpleado"></label>
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                        </svg>
+                        <input asp-for="NombresEmpleado" placeholder="Ej: Juan Carlos" autocomplete="given-name" />
+                    </div>
+                    <span asp-validation-for="NombresEmpleado"></span>
+                </div>
+
+                <!-- RUT -->
+                <div class="form-group">
+                    <label asp-for="Rut"></label>
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10zm-2-7H6v-2h12v2zm-4 4H6v-2h8v2z" />
+                        </svg>
+                        <input asp-for="Rut" placeholder="Ej: 12345678" type="number" autocomplete="off" />
+                    </div>
+                    <span asp-validation-for="Rut"></span>
+                </div>
+
+                <!-- Primer apellido -->
+                <div class="form-group">
+                    <label asp-for="Apellido1"></label>
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                        </svg>
+                        <input asp-for="Apellido1" placeholder="Ej: González" autocomplete="family-name" />
+                    </div>
+                    <span asp-validation-for="Apellido1"></span>
+                </div>
+
+                <!-- Segundo apellido -->
+                <div class="form-group">
+                    <label asp-for="Apellido2"></label>
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                        </svg>
+                        <input asp-for="Apellido2" placeholder="Ej: Pérez (opcional)" autocomplete="additional-name" />
+                    </div>
+                    <span asp-validation-for="Apellido2"></span>
+                </div>
+
+                <!-- Teléfono -->
+                <div class="form-group">
+                    <label asp-for="Fono"></label>
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.61 21 3 13.39 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
+                        </svg>
+                        <input asp-for="Fono" placeholder="Ej: +56912345678 (opcional)" type="tel" autocomplete="tel" />
+                    </div>
+                    <span asp-validation-for="Fono"></span>
+                </div>
+
+                <!-- Correo -->
+                <div class="form-group">
+                    <label asp-for="Correo"></label>
+                    <div class="input-wrapper">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 2l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z" />
+                        </svg>
+                        <input asp-for="Correo" placeholder="admin@ejemplo.cl (opcional)" type="email" autocomplete="email" />
+                    </div>
+                    <span asp-validation-for="Correo"></span>
+                </div>
+
+                <!-- Botón -->
+                <div class="full-width" style="margin-top: 0.5rem;">
+                    <button type="submit" class="btn-login" style="width: 100%;">
+                        Crear administrador y comenzar
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

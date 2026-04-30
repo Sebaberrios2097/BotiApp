@@ -74,5 +74,38 @@ namespace BotiApp.Controllers
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Login");
         }
+
+        // GET: /Login/CambiarContrasena
+        public IActionResult CambiarContrasena()
+        {
+            return View(new CambiarContrasenaViewModel());
+        }
+
+        // POST: /Login/CambiarContrasena
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CambiarContrasena(CambiarContrasenaViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            int resultado = await _sp.SpEmpCambiaContrasena(model.Usuario, model.ClaveActual, model.ClaveNueva);
+
+            if (resultado == 1)
+            {
+                TempData["CambioExito"] = "Contraseña actualizada correctamente. Inicia sesión con tu nueva contraseña.";
+                return RedirectToAction("Login");
+            }
+            else if (resultado == -1)
+            {
+                ModelState.AddModelError(string.Empty, "Usuario no encontrado.");
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, "La contraseña actual es incorrecta.");
+            }
+
+            return View(model);
+        }
     }
 }
