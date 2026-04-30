@@ -40,11 +40,12 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseStaticFiles();
 
 // ── Las rutas de área SIEMPRE antes que la ruta por defecto ───────────────
 app.MapAreaControllerRoute(
