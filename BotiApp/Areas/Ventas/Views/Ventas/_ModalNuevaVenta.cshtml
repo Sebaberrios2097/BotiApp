@@ -40,7 +40,7 @@
         padding:.45rem .8rem;
     }
     .nv-search svg   { width:17px; height:17px; fill:var(--color-primario); opacity:.7; flex-shrink:0; }
-    .nv-search input { border:none; outline:none; font-size:.88rem; width:100%; background:transparent; color:var(--color-secundario); }
+    .nv-search input { border:none; outline:none; font-size:.88rem; flex:1; min-width:0; background:transparent; color:var(--color-secundario); }
 
     .nv-results {
         flex:1; overflow-y:auto; padding:.6rem .75rem; display:flex; flex-direction:column; gap:.4rem;
@@ -165,6 +165,64 @@
         .nv-right { max-height:55vh; }
         .nv-footer { border-radius:0 0 16px 16px; }
     }
+
+    /* ── Botón escanear ── */
+    .nv-scan-btn {
+        width:28px; height:28px; border:none; background:transparent; cursor:pointer;
+        display:flex; align-items:center; justify-content:center;
+        border-radius:6px; color:var(--color-primario); flex-shrink:0;
+        transition:background .15s;
+    }
+    .nv-scan-btn:hover  { background:rgba(231,111,46,.12); }
+    .nv-scan-btn.activo { background:rgba(231,111,46,.2); }
+    .nv-scan-btn svg { width:19px; height:19px; fill:currentColor; }
+
+    /* ── Panel del escáner ── */
+    .nv-scanner-wrap {
+        display:none; padding:.65rem 1rem; border-bottom:1px solid #f0ebe5;
+        background:#111;
+    }
+    .nv-scanner-inner {
+        position:relative; border-radius:10px; overflow:hidden;
+        background:#000; max-height:210px;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .nv-scanner-video {
+        width:100%; max-height:210px; object-fit:cover; display:block;
+        border-radius:10px;
+    }
+    .nv-scanner-overlay {
+        position:absolute; inset:0; pointer-events:none;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .nv-scanner-target {
+        width:62%; max-width:260px; height:72px; border-radius:7px;
+        border:2.5px solid rgba(231,111,46,.95);
+        box-shadow:0 0 0 9999px rgba(0,0,0,.45);
+    }
+    .nv-scanner-line {
+        position:absolute; width:62%; max-width:260px; height:2px;
+        background:var(--color-primario); opacity:.85;
+        animation:nvScanLine 1.6s ease-in-out infinite;
+    }
+    @@keyframes nvScanLine {
+        0%   { top:calc(50% - 36px); }
+        50%  { top:calc(50% + 34px); }
+        100% { top:calc(50% - 36px); }
+    }
+    .nv-scanner-close {
+        position:absolute; top:.45rem; right:.45rem;
+        width:28px; height:28px; border-radius:50%; border:none; cursor:pointer;
+        background:rgba(255,255,255,.15); color:#fff;
+        display:flex; align-items:center; justify-content:center;
+        transition:background .15s; z-index:2;
+    }
+    .nv-scanner-close:hover { background:rgba(255,255,255,.3); }
+    .nv-scanner-close svg { width:15px; height:15px; fill:currentColor; }
+    .nv-scanner-hint {
+        color:rgba(255,255,255,.6); font-size:.72rem; text-align:center;
+        margin:.45rem 0 0; padding:0;
+    }
 </style>
 
 <!-- Header -->
@@ -173,7 +231,7 @@
         <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         <h2>Nueva Venta</h2>
     </div>
-    <button class="nv-close" onclick="cerrarModal()" aria-label="Cerrar">
+    <button class="nv-close" onclick="nvDetenerScanner(); cerrarModal()" aria-label="Cerrar">
         <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
     </button>
 </div>
@@ -185,8 +243,25 @@
         <div class="nv-search-wrap">
             <div class="nv-search">
                 <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                <input type="text" id="nvBuscador" placeholder="Buscar producto por nombre o marca…" oninput="nvBuscar()" autocomplete="off" />
+                <input type="text" id="nvBuscador" placeholder="Buscar por nombre, marca o código…" oninput="nvBuscar()" autocomplete="off" />
+                <button class="nv-scan-btn" id="nvBtnScan" onclick="nvToggleScanner()" title="Escanear código de barras" aria-label="Escanear código">
+                    <svg viewBox="0 0 24 24"><path d="M9 2H4C2.9 2 2 2.9 2 4v5h2V4h5V2zm-5 18v-5H2v5c0 1.1.9 2 2 2h5v-2H4zm16 0h-5v2h5c1.1 0 2-.9 2-2v-5h-2v5zm0-16h-5V2h5c1.1 0 2 .9 2 2v5h-2V4zM7 7h10v10H7z"/></svg>
+                </button>
             </div>
+        </div>
+        <!-- Panel del escáner de cámara -->
+        <div class="nv-scanner-wrap" id="nvScannerWrap">
+            <div class="nv-scanner-inner">
+                <video id="nvScannerVideo" playsinline muted></video>
+                <div class="nv-scanner-overlay">
+                    <div class="nv-scanner-target"></div>
+                    <div class="nv-scanner-line"></div>
+                </div>
+                <button class="nv-scanner-close" onclick="nvDetenerScanner()" aria-label="Cerrar escáner">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <p class="nv-scanner-hint">Apunta la cámara al código de barras del producto</p>
         </div>
         <div class="nv-results" id="nvResultados">
             <div class="res-empty">
@@ -227,7 +302,7 @@
                 <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
                 Generar boleta
             </button>
-            <button class="btn-cancelar-nv" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn-cancelar-nv" onclick="nvDetenerScanner(); cerrarModal()">Cancelar</button>
         </div>
     </div>
 
@@ -423,6 +498,81 @@
     function escNv(s) {
         return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
+
+    // ── Escáner de código de barras ────────────────────────────────────────────
+    let nvScannerReader = null;
+
+    function nvCargarZxing(cb) {
+        if (window.ZXing) { cb(); return; }
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@@zxing/library@@0.21.3/umd/index.min.js';
+        s.onload  = cb;
+        s.onerror = () => mostrarToast('No se pudo cargar el escáner. Verifica tu conexión.', 'error');
+        document.head.appendChild(s);
+    }
+
+    window.nvToggleScanner = function () {
+        const wrap = document.getElementById('nvScannerWrap');
+        if (wrap.style.display === 'block') {
+            nvDetenerScanner();
+        } else {
+            nvIniciarScanner();
+        }
+    };
+
+    window.nvIniciarScanner = function () {
+        nvCargarZxing(async () => {
+            const wrap  = document.getElementById('nvScannerWrap');
+            const btn   = document.getElementById('nvBtnScan');
+            const video = document.getElementById('nvScannerVideo');
+            wrap.style.display = 'block';
+            btn.classList.add('activo');
+            try {
+                const codeReader = new ZXing.BrowserMultiFormatReader();
+                nvScannerReader  = codeReader;
+                const result = await codeReader.decodeOnceFromConstraints(
+                    { video: { facingMode: { ideal: 'environment' } } },
+                    video
+                );
+                const codigo = result.text;
+                nvDetenerScanner();
+                // Poner el código en el buscador y disparar búsqueda inmediata
+                const buscador = document.getElementById('nvBuscador');
+                buscador.value = codigo;
+                clearTimeout(buscarTimeout);
+                const cont = document.getElementById('nvResultados');
+                cont.innerHTML = `<div class="res-empty">Buscando…</div>`;
+                try {
+                    const resp = await fetch(`/Ventas/BuscarProductos?q=${encodeURIComponent(codigo)}`);
+                    const data = await resp.json();
+                    renderResultados(data);
+                    // Si hay exactamente 1 resultado, agregar automáticamente
+                    if (data.length === 1) {
+                        nvAgregarProducto(data[0].idProducto, data[0].nombreProducto, data[0].precio, data[0].stock);
+                        mostrarToast(`"${data[0].nombreProducto}" agregado a la boleta`, 'exito');
+                    }
+                } catch {
+                    cont.innerHTML = `<div class="res-empty">Error al buscar.</div>`;
+                }
+            } catch (e) {
+                nvDetenerScanner();
+                if (e?.name !== 'NotFoundException' && e?.name !== 'AbortException') {
+                    mostrarToast('No se pudo acceder a la cámara.', 'error');
+                }
+            }
+        });
+    };
+
+    window.nvDetenerScanner = function () {
+        if (nvScannerReader) {
+            try { nvScannerReader.reset(); } catch { /* silenciar */ }
+            nvScannerReader = null;
+        }
+        const wrap = document.getElementById('nvScannerWrap');
+        const btn  = document.getElementById('nvBtnScan');
+        if (wrap) wrap.style.display = 'none';
+        if (btn)  btn.classList.remove('activo');
+    };
 
     // Actualizar las métricas de la página sin recargar
     function actualizarMetricas(monto) {

@@ -410,11 +410,69 @@ async function abrirModal(url) {
     } catch { cerrarModal(); mostrarToast('Error al cargar el contenido.', 'error'); }
 }
 function cerrarModal() {
+    prdDetenerScanner('crear');
+    prdDetenerScanner('editar');
     overlay.classList.remove('open');
     setTimeout(() => { document.getElementById('modalBody').innerHTML = ''; }, 250);
 }
 overlay.addEventListener('click', e => { if (e.target === overlay) cerrarModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+
+// ── Escáner de código de barras (productos) ───────────────────────────────
+const _prdScanReaders = {};
+
+function _prdCargarZxing(cb) {
+    if (window.ZXing) { cb(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@@zxing/library@@0.21.3/umd/index.min.js';
+    s.onload  = cb;
+    s.onerror = () => mostrarToast('No se pudo cargar el escáner. Verifica tu conexión.', 'error');
+    document.head.appendChild(s);
+}
+
+function prdToggleScanner(ctx) {
+    const wrap = document.getElementById(ctx + 'ScannerWrap');
+    if (wrap && wrap.style.display === 'block') { prdDetenerScanner(ctx); }
+    else { prdIniciarScanner(ctx); }
+}
+
+function prdIniciarScanner(ctx) {
+    _prdCargarZxing(async () => {
+        const wrap  = document.getElementById(ctx + 'ScannerWrap');
+        const video = document.getElementById(ctx + 'ScannerVideo');
+        const btn   = document.getElementById(ctx + 'BtnScan');
+        if (!wrap || !video) return;
+        wrap.style.display = 'block';
+        if (btn) btn.style.background = 'rgba(231,111,46,.18)';
+        try {
+            const reader = new ZXing.BrowserMultiFormatReader();
+            _prdScanReaders[ctx] = reader;
+            const result = await reader.decodeOnceFromConstraints(
+                { video: { facingMode: { ideal: 'environment' } } },
+                video
+            );
+            prdDetenerScanner(ctx);
+            const campo = document.getElementById(ctx + 'Codigo');
+            if (campo) campo.value = result.text;
+        } catch (e) {
+            prdDetenerScanner(ctx);
+            if (e?.name !== 'NotFoundException' && e?.name !== 'AbortException') {
+                mostrarToast('No se pudo acceder a la cámara.', 'error');
+            }
+        }
+    });
+}
+
+function prdDetenerScanner(ctx) {
+    if (_prdScanReaders[ctx]) {
+        try { _prdScanReaders[ctx].reset(); } catch { /* silenciar */ }
+        delete _prdScanReaders[ctx];
+    }
+    const wrap = document.getElementById(ctx + 'ScannerWrap');
+    const btn  = document.getElementById(ctx + 'BtnScan');
+    if (wrap) wrap.style.display = 'none';
+    if (btn)  btn.style.background = '#faf7f5';
+}
 
 // ── Formulario AJAX ───────────────────────────────────────────────────────
 async function submitFormAjax(formId, esNuevo) {

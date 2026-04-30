@@ -164,7 +164,24 @@
 
                 <div class="form-group">
                     <label class="form-label" asp-for="Codigo">Código / SKU</label>
-                    <input asp-for="Codigo" class="form-control" placeholder="Ej. CRV-0012" />
+                    <div style="display:flex;gap:.45rem;align-items:center;">
+                        <input asp-for="Codigo" class="form-control" placeholder="Ej. CRV-0012" id="crearCodigo" style="flex:1;min-width:0;" />
+                        <button type="button" id="crearBtnScan" onclick="prdToggleScanner('crear')" title="Escanear código de barras"
+                            style="flex-shrink:0;width:36px;height:36px;border:1.5px solid #e0d5cc;border-radius:7px;background:#faf7f5;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-primario);transition:background .15s;">
+                            <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:currentColor;"><path d="M9 2H4C2.9 2 2 2.9 2 4v5h2V4h5V2zm-5 18v-5H2v5c0 1.1.9 2 2 2h5v-2H4zm16 0h-5v2h5c1.1 0 2-.9 2-2v-5h-2v5zm0-16h-5V2h5c1.1 0 2 .9 2 2v5h-2V4zM7 7h10v10H7z"/></svg>
+                        </button>
+                    </div>
+                    <div id="crearScannerWrap" style="display:none;margin-top:.5rem;border-radius:10px;overflow:hidden;background:#000;position:relative;max-height:200px;">
+                        <video id="crearScannerVideo" playsinline muted style="width:100%;max-height:200px;object-fit:cover;display:block;"></video>
+                        <div style="position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;">
+                            <div style="width:65%;height:68px;border-radius:7px;border:2.5px solid rgba(231,111,46,.95);box-shadow:0 0 0 9999px rgba(0,0,0,.45);"></div>
+                        </div>
+                        <button type="button" onclick="prdDetenerScanner('crear')" aria-label="Cerrar escáner"
+                            style="position:absolute;top:.4rem;right:.4rem;width:26px;height:26px;border-radius:50%;border:none;cursor:pointer;background:rgba(255,255,255,.15);color:#fff;display:flex;align-items:center;justify-content:center;">
+                            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                        </button>
+                        <p style="color:rgba(255,255,255,.6);font-size:.7rem;text-align:center;margin:.35rem 0;padding:0;">Apunta al código de barras</p>
+                    </div>
                 </div>
 
                 <div class="form-group">

@@ -127,8 +127,8 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         if (boleta == null) return null;
 
         boleta.IdEstadoBoleta = 3; // Pagada
-        boleta.IdCajero       = idCajero;
-        boleta.FechaPago      = DateTime.Now;
+        boleta.IdCajero = idCajero;
+        boleta.FechaPago = DateTime.Now;
 
         foreach (var m in metodos)
         {
@@ -160,7 +160,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         }
 
         boleta.IdEstadoBoleta = 2; // Anulada
-        boleta.IdCajero       = idUsuario;
+        boleta.IdCajero = idUsuario;
         await context.SaveChangesAsync();
         await tx.CommitAsync();
 
@@ -240,7 +240,8 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             query = query.Where(p =>
                 p.NombreProducto.Contains(q) ||
                 (p.Descripción != null && p.Descripción.Contains(q)) ||
-                (p.IdMarcaNavigation != null && p.IdMarcaNavigation.NombreMarca.Contains(q)));
+                (p.IdMarcaNavigation != null && p.IdMarcaNavigation.NombreMarca.Contains(q)) ||
+                (p.Codigo != null && p.Codigo.Contains(q)));
 
         return await query.OrderBy(p => p.NombreProducto).Take(30).ToListAsync();
     }
@@ -251,7 +252,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         => await BoletasConIncludes()
             .AsNoTracking()
             .Where(b => b.FechaEmision.HasValue
-                     && b.FechaEmision.Value.Year  == anio
+                     && b.FechaEmision.Value.Year == anio
                      && b.FechaEmision.Value.Month == mes)
             .OrderByDescending(b => b.FechaEmision)
             .ToListAsync();
@@ -261,7 +262,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             .AsNoTracking()
             .Where(b => b.IdVendedor == idVendedor
                      && b.FechaEmision.HasValue
-                     && b.FechaEmision.Value.Year  == anio
+                     && b.FechaEmision.Value.Year == anio
                      && b.FechaEmision.Value.Month == mes)
             .OrderByDescending(b => b.FechaEmision)
             .ToListAsync();
@@ -271,7 +272,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             .AsNoTracking()
             .Where(b => b.IdCajero == idCajero
                      && b.FechaEmision.HasValue
-                     && b.FechaEmision.Value.Year  == anio
+                     && b.FechaEmision.Value.Year == anio
                      && b.FechaEmision.Value.Month == mes)
             .OrderByDescending(b => b.FechaEmision)
             .ToListAsync();
