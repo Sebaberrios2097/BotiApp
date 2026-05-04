@@ -144,12 +144,37 @@
 .prod-card-body { padding:.55rem .65rem; flex:1; display:flex; flex-direction:column; gap:.12rem; }
 .prod-card-nombre { font-size:.78rem; font-weight:700; color:var(--color-secundario); line-height:1.25; }
 .prod-card-meta { font-size:.68rem; color:#a89080; }
-.prod-card-footer { display:flex; align-items:center; justify-content:space-between; padding:.4rem .65rem; border-top:1px solid #f0ebe5; flex-shrink:0; flex-wrap:wrap; gap:.2rem; }
+.prod-card-footer { display:flex; align-items:center; justify-content:space-between; padding:.4rem .65rem; border-top:1px solid #f0ebe5; flex-shrink:0; flex-wrap:wrap; gap:.3rem; }
 .prod-card-precio { font-size:.8rem; font-weight:700; color:var(--color-primario); }
 .prod-card-precio.tachado { text-decoration:line-through; color:#a89080; font-size:.7rem; }
 .prod-card-oferta { font-size:.8rem; font-weight:700; color:#7c3aed; }
 .prod-card-stock { font-size:.67rem; color:#a89080; }
 .prod-card-en { font-size:.67rem; font-weight:700; color:#16a34a; }
+.prod-card-stock-qty { display:flex; align-items:center; gap:.3rem; }
+.prod-card-stock-lbl { font-size:.67rem; color:#a89080; }
+.prod-card-stock-num { font-size:.67rem; color:#dc2626; font-weight:700; }
+.prod-card-stock-num.ok { color:#a89080; }
+.prod-card-qty-btn { display:flex; align-items:center; gap:.1rem; }
+.prod-card-qty-btn button { width:22px; height:20px; border-radius:4px; border:1px solid #e0d5cc; background:#f5f0eb; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; font-weight:700; color:var(--color-secundario); transition:background .1s; }
+.prod-card-qty-btn button:hover { background:#e8ddd4; }
+.prod-card-qty-btn button:disabled { opacity:.4; cursor:not-allowed; }
+.prod-card-qty-btn span { font-size:.72rem; font-weight:700; min-width:18px; text-align:center; color:var(--color-secundario); }
+
+/* Promo cards */
+.promo-grid { padding:.85rem 1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:.75rem; overflow-y:auto; max-height:180px; min-height:80px; }
+.promo-card { border:1.5px solid #d97706; border-radius:11px; background:#fffbeb; cursor:pointer; transition:border-color .15s,box-shadow .15s,transform .12s; overflow:hidden; display:flex; flex-direction:column; user-select:none; }
+.promo-card:hover { border-color:#b45309; box-shadow:0 3px 12px rgba(217,119,6,.2); transform:translateY(-2px); }
+.promo-card.en-carrito { border-color:#16a34a; background:#f0fdf4; }
+.promo-card-body { padding:.55rem .65rem; flex:1; display:flex; flex-direction:column; gap:.12rem; }
+.promo-card-nombre { font-size:.78rem; font-weight:700; color:#92400e; line-height:1.25; }
+.promo-card-precio { font-size:.85rem; font-weight:700; color:#d97706; }
+.promo-card-footer { display:flex; align-items:center; justify-content:space-between; padding:.35rem .65rem; border-top:1px solid #fde68a; flex-shrink:0; }
+.promo-card-cant { font-size:.67rem; color:#16a34a; font-weight:700; }
+.promo-card-stock { font-size:.67rem; color:#a89080; }
+.promo-card-qty-btn { display:flex; align-items:center; gap:.1rem; }
+.promo-card-qty-btn button { width:22px; height:20px; border-radius:4px; border:1px solid #e0d5cc; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; font-weight:700; color:#92400e; transition:background .1s; }
+.promo-card-qty-btn button:hover { background:#f5f0eb; }
+.promo-card-qty-btn span { font-size:.72rem; font-weight:700; min-width:18px; text-align:center; color:#92400e; }
 .grid-empty { grid-column:1/-1; text-align:center; padding:3rem 1rem; color:#b8a898; font-size:.85rem; }
 .grid-empty svg { width:48px; height:48px; fill:#ddd0c4; display:block; margin:0 auto .6rem; }
 
@@ -273,6 +298,11 @@
 .ticket-desc   { color:#000; }
 .ticket-promo-tag { font-size:10px; font-weight:700; }
 .ticket-center { text-align:center; }
+.ticket-cut {
+    text-align:center; font-size:9px; letter-spacing:1px; color:#777;
+    border-top:1px dashed #555; border-bottom:1px dashed #555;
+    padding:3px 0; margin:.6rem 0;
+}
 
 /* Impresión POS (80 mm — cambiar a 58mm si tu impresora es de ese ancho) */
 @@page {
@@ -300,6 +330,9 @@
         line-height:1.35 !important;
     }
     .ticket-total { font-size:11pt !important; }
+    /* Fuerza corte de papel entre boleta cliente y lista vendedor */
+    .ticket-cliente { break-after: page !important; }
+    .ticket-cut     { display:none !important; }
 }
 </style>
 
@@ -362,6 +395,16 @@
             </div>
         </div>
 
+        @if (Model.Promociones.Any())
+        {
+            <div class="filtros-wrap" style="background:#fffbeb;border-bottom:1px solid #fde68a;">
+                <div style="display:flex;align-items:center;gap:.4rem;">
+                    <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#d97706;"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .59 1.42l9 9A2 2 0 0 0 13 22a2 2 0 0 0 1.41-.59l7-7A2 2 0 0 0 22 13a2 2 0 0 0-.59-1.42z"/></svg>
+                    <span style="font-size:.8rem;font-weight:700;color:#92400e;">Promociones</span>
+                </div>
+            </div>
+            <div class="promo-grid" id="promoGrid"></div>
+        }
         <div class="productos-grid" id="productosGrid"></div>
     </div>
 
@@ -444,11 +487,12 @@
     CATALOGO.forEach(p => { if (p.retornable) RETORNABLES_MAP[p.id] = p.retornable; });
 
     /* ── Estado ──────────────────────────────────────────────────────────── */
-    const carrito    = new Map();               // id → {id, nombre, precio, cantidad, stock}
-    const envasesMap = new Map();               // idProducto → {valorEnvase, soloEfectivo}
-    let pendingEnvase = null;                   // producto pendiente de confirmación envase
-    let tipoActivo  = 0;
-    let marcaActiva = 0;
+    const carrito       = new Map();            // id → {id, nombre, precio, cantidad, stock}
+    const promoCarrito  = new Map();            // idPromo → {idPromo, nombre, precio, cantidad}
+    const envasesMap    = new Map();            // idProducto → {valorEnvase, soloEfectivo}
+    let pendingEnvase   = null;                 // producto pendiente de confirmación envase
+    let tipoActivo      = 0;
+    let marcaActiva     = 0;
 
     /* ══════════════════════════════════════════════════════════════════════
        FILTROS
@@ -523,8 +567,16 @@
                 ? `<span class="prod-card-precio tachado">$${fmt(p.precio)}</span>
                    <span class="prod-card-oferta">$${fmt(oferta)}</span>`
                 : `<span class="prod-card-precio">$${fmt(p.precio)}</span>`;
+            const stockClass = cant > p.stock ? 'prod-card-stock-num' : 'prod-card-stock-num ok';
             const badgeHtml = enCart
-                ? `<span class="prod-card-en">✓ ${cant} u.</span>`
+                ? `<div class="prod-card-stock-qty">
+                       <div class="prod-card-qty-btn">
+                           <button onclick="event.stopPropagation();cambiarCantidad(${p.id},-1)">−</button>
+                           <span>${cant}</span>
+                           <button onclick="event.stopPropagation();cambiarCantidad(${p.id},+1)">+</button>
+                       </div>
+                       <span class="prod-card-stock-lbl">/ Stock: <span class="${stockClass}">${p.stock}</span></span>
+                   </div>`
                 : `<span class="prod-card-stock">Stock: ${p.stock}</span>`;
             const extraClass = enCart ? ' en-carrito' : (oferta != null ? ' tiene-oferta' : '');
             return `
@@ -544,17 +596,169 @@
     }
 
     /* ══════════════════════════════════════════════════════════════════════
+       GRID DE PROMOCIONES
+    ══════════════════════════════════════════════════════════════════════ */
+    function renderPromoGrid() {
+        const grid = document.getElementById('promoGrid');
+        if (!grid) return;
+        grid.innerHTML = PROMOS.map(p => {
+            const enCart = promoCarrito.has(p.id);
+            const cant   = enCart ? promoCarrito.get(p.id).cantidad : 0;
+            const nomSafe = p.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+            const badgeHtml = enCart
+                ? `<div class="promo-card-cant">
+                       <div class="promo-card-qty-btn">
+                           <button onclick="event.stopPropagation();cambiarCantidadPromo(${p.id},-1)">−</button>
+                           <span>${cant}</span>
+                           <button onclick="event.stopPropagation();cambiarCantidadPromo(${p.id},+1)">+</button>
+                       </div>
+                   </div>`
+                : `<span class="promo-card-stock">Seleccionar</span>`;
+            const extraClass = enCart ? ' en-carrito' : '';
+            return `
+            <div class="promo-card${extraClass}" id="pmc-${p.id}"
+                 onclick="togglePromo(${p.id})">
+                <div class="promo-card-body">
+                    <div class="promo-card-nombre">${x(p.nombre)}</div>
+                    <div class="prod-card-meta">${p.productosBase.length + p.grupos.reduce((a,g) => a + g.productos.length, 0)} productos</div>
+                </div>
+                <div class="promo-card-footer">
+                    <span class="promo-card-precio">$${fmt(p.precio)}</span>
+                    ${badgeHtml}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    window.togglePromo = function (idPromo) {
+        const promo = PROMOS.find(p => p.id === idPromo);
+        if (!promo) return;
+        
+        if (promoCarrito.has(idPromo)) {
+            const it = promoCarrito.get(idPromo);
+            it.cantidad++;
+        } else {
+            promoCarrito.set(idPromo, { idPromo: promo.id, nombre: promo.nombre, precio: promo.precio, cantidad: 1 });
+        }
+        
+        agregarProductosDePromo(idPromo, 1);
+        renderPromoGrid();
+        renderCarrito();
+        actualizarTarjetasProductos();
+    };
+
+    function agregarProductosDePromo(idPromo, cantidad) {
+        const promo = PROMOS.find(p => p.id === idPromo);
+        if (!promo) return;
+        
+        promo.productosBase.forEach(req => {
+            const prod = CATALOGO.find(c => c.id === req.idProducto);
+            if (!prod) return;
+            if (carrito.has(req.idProducto)) {
+                const it = carrito.get(req.idProducto);
+                it.cantidad += req.cantidad * cantidad;
+            } else if (RETORNABLES_MAP[req.idProducto]) {
+                const p = RETORNABLES_MAP[req.idProducto];
+                agregarConEnvase(req.idProducto, prod.nombre, prod.precio, prod.stock, p.valorEnvase, p.soloEfectivo, req.cantidad * cantidad);
+            } else {
+                carrito.set(req.idProducto, { id: req.idProducto, nombre: prod.nombre, precio: prod.precio, cantidad: req.cantidad * cantidad, stock: prod.stock });
+            }
+        });
+        
+        promo.grupos.forEach(g => {
+            const productosDelGrupo = [...g.productos];
+            for (let i = 0; i < cantidad; i++) {
+                const primerProducto = productosDelGrupo[0];
+                const prod = CATALOGO.find(c => c.id === primerProducto.idProducto);
+                if (!prod) continue;
+                if (carrito.has(primerProducto.idProducto)) {
+                    const it = carrito.get(primerProducto.idProducto);
+                    it.cantidad += primerProducto.cantidad;
+                } else if (RETORNABLES_MAP[primerProducto.idProducto]) {
+                    const p = RETORNABLES_MAP[primerProducto.idProducto];
+                    agregarConEnvase(primerProducto.idProducto, prod.nombre, prod.precio, prod.stock, p.valorEnvase, p.soloEfectivo, primerProducto.cantidad);
+                } else {
+                    carrito.set(primerProducto.idProducto, { id: primerProducto.idProducto, nombre: prod.nombre, precio: prod.precio, cantidad: primerProducto.cantidad, stock: prod.stock });
+                }
+            }
+        });
+    }
+
+    function agregarConEnvase(id, nombre, precio, stock, valorEnvase, soloEfectivo, cantidad) {
+        envasesMap.set(id, { valorEnvase, soloEfectivo });
+        carrito.set(id, { id, nombre, precio, cantidad, stock });
+    }
+
+    window.cambiarCantidadPromo = function (idPromo, delta) {
+        if (!promoCarrito.has(idPromo)) return;
+        const promo = PROMOS.find(p => p.id === idPromo);
+        if (!promo) return;
+        const it = promoCarrito.get(idPromo);
+        const nueva = it.cantidad + delta;
+        
+        if (nueva <= 0) {
+            eliminarPromoCompleta(idPromo);
+        } else {
+            const diff = delta;
+            it.cantidad = nueva;
+            agregarProductosDePromo(idPromo, diff);
+        }
+        
+        renderPromoGrid();
+        renderCarrito();
+        actualizarTarjetasProductos();
+    };
+
+    function eliminarPromoCompleta(idPromo) {
+        const promo = PROMOS.find(p => p.id === idPromo);
+        if (!promo) return;
+        
+        const cantidad = promoCarrito.get(idPromo)?.cantidad ?? 0;
+        if (cantidad === 0) { promoCarrito.delete(idPromo); return; }
+        
+        promo.productosBase.forEach(req => {
+            if (carrito.has(req.idProducto)) {
+                const it = carrito.get(req.idProducto);
+                const nuevaCant = it.cantidad - (req.cantidad * cantidad);
+                if (nuevaCant <= 0) { carrito.delete(req.idProducto); envasesMap.delete(req.idProducto); }
+                else it.cantidad = nuevaCant;
+            }
+        });
+        
+        promo.grupos.forEach(g => {
+            const primerProducto = g.productos[0];
+            if (carrito.has(primerProducto.idProducto)) {
+                const it = carrito.get(primerProducto.idProducto);
+                const nuevaCant = it.cantidad - (primerProducto.cantidad * cantidad);
+                if (nuevaCant <= 0) { carrito.delete(primerProducto.idProducto); envasesMap.delete(primerProducto.idProducto); }
+                else it.cantidad = nuevaCant;
+            }
+        });
+        
+        promoCarrito.delete(idPromo);
+    }
+
+    function actualizarTarjetasProductos() {
+        CATALOGO.forEach(p => actualizarTarjeta(p.id));
+    }
+
+    window.quitarPromoCompleta = function (idPromo) {
+        eliminarPromoCompleta(idPromo);
+        renderPromoGrid();
+        renderCarrito();
+        actualizarTarjetasProductos();
+    };
+
+    /* ══════════════════════════════════════════════════════════════════════
        CARRITO
     ══════════════════════════════════════════════════════════════════════ */
     window.toggleProducto = function (id, nombre, precio, stock) {
         if (carrito.has(id)) {
-            // Ya en carrito: solo incrementar cantidad
             const it = carrito.get(id);
-            if (it.cantidad < stock) it.cantidad++;
+            it.cantidad++;
             renderCarrito();
             actualizarTarjeta(id);
         } else if (RETORNABLES_MAP[id]) {
-            // Producto retornable: preguntar si trajo envase
             pendingEnvase = { id, nombre, precio, stock };
             mostrarDialogoEnvase(nombre, RETORNABLES_MAP[id].valorEnvase, RETORNABLES_MAP[id].soloEfectivo);
         } else {
@@ -610,9 +814,8 @@
         if (!carrito.has(id)) return;
         const it    = carrito.get(id);
         const nueva = it.cantidad + delta;
-        if (nueva <= 0)            { carrito.delete(id); envasesMap.delete(id); }
-        else if (nueva > it.stock) { return; }
-        else                       { it.cantidad = nueva; }
+        if (nueva <= 0) { carrito.delete(id); envasesMap.delete(id); }
+        else            { it.cantidad = nueva; }
         renderCarrito();
         actualizarTarjeta(id);
     };
@@ -646,12 +849,20 @@
         if (enCart) card.classList.add('en-carrito');
         else if (oferta != null) card.classList.add('tiene-oferta');
         const footer   = card.querySelector('.prod-card-footer');
-        const oldBadge = footer.querySelector('.prod-card-stock, .prod-card-en');
+        const oldBadge = footer.querySelector('.prod-card-stock, .prod-card-stock-qty');
         if (oldBadge) oldBadge.remove();
-        const badge       = document.createElement('span');
-        badge.className   = enCart ? 'prod-card-en' : 'prod-card-stock';
-        badge.textContent = enCart ? `✓ ${cant} u.` : `Stock: ${p.stock}`;
-        footer.appendChild(badge);
+        const stockClass = cant > p.stock ? 'prod-card-stock-num' : 'prod-card-stock-num ok';
+        const badgeHtml = enCart
+            ? `<div class="prod-card-stock-qty">
+                   <div class="prod-card-qty-btn">
+                       <button onclick="event.stopPropagation();cambiarCantidad(${p.id},-1)">−</button>
+                       <span>${cant}</span>
+                       <button onclick="event.stopPropagation();cambiarCantidad(${p.id},+1)">+</button>
+                   </div>
+                   <span class="prod-card-stock-lbl">/ Stock: <span class="${stockClass}">${p.stock}</span></span>
+               </div>`
+            : `<span class="prod-card-stock">Stock: ${p.stock}</span>`;
+        footer.insertAdjacentHTML('beforeend', badgeHtml);
     }
 
     /* ══════════════════════════════════════════════════════════════════════
@@ -784,7 +995,7 @@
         const cnt    = document.getElementById('cartCnt');
         const btnGen = document.getElementById('btnGenerar');
 
-        if (carrito.size === 0) {
+        if (carrito.size === 0 && promoCarrito.size === 0) {
             cont.innerHTML = `<div class="cart-empty">
                 <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h14v-2H7.42a.25.25 0 0 1-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.46 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/></svg>
                 Selecciona productos del catálogo</div>`;
@@ -797,8 +1008,67 @@
         const { instancias, remaining } = calcularDescuentos();
         let html = '';
 
-        // ── 1. Bloques de cada instancia de promo ─────────────────────────
+        // Contador de promos directamente seleccionadas (para evitar duplicado visual)
+        const promosDirectas = new Map();
+        promoCarrito.forEach(p => {
+            promosDirectas.set(p.idPromo, (promosDirectas.get(p.idPromo) ?? 0) + p.cantidad);
+        });
+
+        // ── 0. Promociones directas (seleccionadas desde el grid de promos) ────
+        if (promoCarrito.size > 0) {
+            promoCarrito.forEach((p) => {
+                const promoInfo = PROMOS.find(pr => pr.id === p.idPromo);
+                if (!promoInfo) return;
+                const totalPromo = p.precio * p.cantidad;
+                html += `
+                <div class="ci-promo-group">
+                    <div class="ci-promo-header">
+                        <span class="ci-promo-tag">🎁 Promo</span>
+                        <span class="ci-promo-nombre" title="${x(p.nombre)}">${x(p.nombre)}</span>
+                        <span class="ci-promo-precio">$${fmt(p.precio)} x${p.cantidad}</span>
+                    </div>
+                    <div class="ci-promo-ahorro" style="display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:.68rem;">Total: $${fmt(totalPromo)}</span>
+                        <button class="ci-promo-item-del" onclick="quitarPromoCompleta(${p.idPromo})" title="Quitar promo">
+                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>`;
+                
+                promoInfo.productosBase.forEach(req => {
+                    const prod = CATALOGO.find(c => c.id === req.idProducto);
+                    if (!prod) return;
+                    html += `
+                    <div class="ci-promo-item">
+                        <span class="ci-nombre" style="flex:1;">${x(prod.nombre)}</span>
+                        <span class="ci-promo-item-qty">${req.cantidad * p.cantidad} u.</span>
+                    </div>`;
+                });
+                
+                promoInfo.grupos.forEach(g => {
+                    const primerProducto = g.productos[0];
+                    const prod = CATALOGO.find(c => c.id === primerProducto.idProducto);
+                    if (!prod) return;
+                    html += `
+                    <div class="ci-promo-item">
+                        <span class="ci-nombre" style="flex:1;">${x(prod.nombre)}</span>
+                        <span class="ci-promo-item-qty">${primerProducto.cantidad * p.cantidad} u.</span>
+                    </div>`;
+                });
+                
+                html += `</div>`;
+            });
+        }
+
+        // ── 1. Bloques de cada instancia de promo (ocultar las que ya están en promoCarrito) ─
+        const instanciasOcultas = new Map(); // promoId -> cantidad ya ocultada
         instancias.forEach((inst, idx) => {
+            const cantidadOcultar = promosDirectas.get(inst.promoId) ?? 0;
+            const yaOculta = instanciasOcultas.get(inst.promoId) ?? 0;
+            if (yaOculta < cantidadOcultar) {
+                instanciasOcultas.set(inst.promoId, yaOculta + 1);
+                return; // Skip this instance, it's already shown in promoCarrito
+            }
+
             html += `
             <div class="ci-promo-group">
                 <div class="ci-promo-header">
@@ -863,7 +1133,7 @@
         });
 
         cont.innerHTML  = html;
-        cnt.textContent = carrito.size;
+        cnt.textContent = carrito.size + promoCarrito.size;
         btnGen.disabled = false;
         actualizarTotales();
         actualizarInfoFecha();
@@ -930,7 +1200,7 @@
        GENERAR BOLETA
     ══════════════════════════════════════════════════════════════════════ */
     window.generarBoleta = async function () {
-        if (carrito.size === 0) return;
+        if (carrito.size === 0 && promoCarrito.size === 0) return;
 
         const btn     = document.getElementById('btnGenerar');
         btn.disabled  = true;
@@ -1136,6 +1406,30 @@
         lineas += `<hr class="ticket-hr-sol">`;
         lineas += `<div class="ticket-row ticket-total"><span class="tk-l">TOTAL</span><span class="tk-r">$${fmt(total + totalEnvasesTicket)}</span></div>`;
 
+        // ── Ticket vendedor: picking list (todos los productos con cantidad) ──
+        const pickingMap = new Map(); // idProducto → { nombre, cantTotal }
+        instancias.forEach(inst => {
+            inst.itemsActivos.forEach(({ id, nombre, cantReq }) => {
+                if (!pickingMap.has(id)) pickingMap.set(id, { nombre, cantTotal: 0 });
+                pickingMap.get(id).cantTotal += cantReq;
+            });
+        });
+        carritoSnap.forEach((it, id) => {
+            const cantRest = remaining.get(id) ?? 0;
+            if (cantRest <= 0) return;
+            if (!pickingMap.has(id)) pickingMap.set(id, { nombre: it.nombre, cantTotal: 0 });
+            pickingMap.get(id).cantTotal += cantRest;
+        });
+
+        let lineasVendedor = '';
+        pickingMap.forEach(({ nombre, cantTotal }) => {
+            lineasVendedor += `
+            <div class="ticket-row">
+                <span class="tk-l">${x(nombre)}</span>
+                <span class="tk-r ticket-bold">${cantTotal}</span>
+            </div>`;
+        });
+
         const html = `
         <div class="ticket-overlay" id="ticketOverlay">
             <div class="ticket-wrap">
@@ -1143,7 +1437,7 @@
                     <button class="btn-print" onclick="window.print()">Imprimir</button>
                     <button class="btn-cerrar" onclick="document.getElementById('ticketOverlay').remove()">✕ Cerrar</button>
                 </div>
-                <div class="ticket">
+                <div class="ticket ticket-cliente">
                     <div class="ticket-center ticket-bold" style="font-size:14px;">${x(NOMBRE_LOCAL)}</div>
                     <div class="ticket-center" style="font-size:10px;">TICKET INTERNO</div>
                     <hr class="ticket-hr-sol">
@@ -1155,6 +1449,18 @@
                     ${lineas}
                     <hr class="ticket-hr">
                     <div class="ticket-center" style="margin-top:.5rem;font-size:10px;">¡Gracias por su compra!</div>
+                </div>
+                <div class="ticket-cut">✂ &nbsp; CORTAR &nbsp; ✂</div>
+                <div class="ticket ticket-vendedor">
+                    <div class="ticket-center ticket-bold" style="font-size:13px;">LISTA DE DESPACHO</div>
+                    <div class="ticket-center" style="font-size:10px;">COPIA VENDEDOR</div>
+                    <hr class="ticket-hr-sol">
+                    <div class="ticket-row"><span class="tk-l">N° Boleta</span><span class="tk-r ticket-bold">${idBoleta}</span></div>
+                    <div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">${fechaEmision}</span></div>
+                    <hr class="ticket-hr-sol">
+                    <div class="ticket-row ticket-bold"><span class="tk-l">PRODUCTO</span><span class="tk-r">CANT.</span></div>
+                    ${lineasVendedor}
+                    <hr class="ticket-hr">
                 </div>
             </div>
         </div>`;
@@ -1188,6 +1494,7 @@
     }
 
     renderGrid(CATALOGO);
+    renderPromoGrid();
     actualizarTotales(); // Mostrar $0 desde el inicio
 
 })();
