@@ -8,4 +8,5 @@ public class CajaViewModel
     public IEnumerable<VenMetodosPago> MetodosPago { get; set; } = [];
     public IEnumerable<ProProductos> Productos { get; set; } = [];
     public IEnumerable<ProOfertaProducto> Ofertas { get; set; } = [];
+    public IEnumerable<ProPromocion> Promociones { get; set; } = [];
 }

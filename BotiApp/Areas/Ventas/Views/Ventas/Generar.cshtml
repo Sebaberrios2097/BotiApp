@@ -32,15 +32,6 @@
                        : (object?)null
     }));
 
-    var tipoMarcasJson = JsonSerializer.Serialize(
-        Model.Tipos.ToDictionary(
-            t => t.IdTipoProducto,
-            t => Model.Productos
-                      .Where(p => p.IdTipoProducto == t.IdTipoProducto)
-                      .Select(p => p.IdMarca).Distinct().ToList()
-        )
-    );
-
     var promosJson = JsonSerializer.Serialize(Model.Promociones.Select(p => new
     {
         id     = p.IdPromocion,
@@ -124,16 +115,19 @@
 .search-bar input { border:none; outline:none; font-size:.88rem; width:100%; background:transparent; color:var(--color-secundario); }
 .search-bar .clr { background:none; border:none; cursor:pointer; color:#c9b8a8; font-size:1rem; display:none; flex-shrink:0; line-height:1; }
 .search-bar .clr.on { display:block; }
-.pills-row { display:flex; flex-wrap:wrap; gap:.35rem; }
-.pill { padding:.3rem .75rem; border-radius:20px; font-size:.75rem; font-weight:600; border:1.5px solid #e0d5cc; background:#fff; color:#7a6050; cursor:pointer; transition:border-color .15s,background .15s,color .15s; white-space:nowrap; }
-.pill:hover { border-color:var(--color-primario); color:var(--color-primario); }
-.pill.active { background:var(--color-primario); border-color:var(--color-primario); color:#fff; }
-.marcas-row { display:flex; flex-wrap:wrap; gap:.3rem; max-height:0; overflow:hidden; transition:max-height .3s ease; }
-.marcas-row.open { max-height:200px; }
-.pill-m { padding:.22rem .6rem; border-radius:20px; font-size:.71rem; font-weight:600; border:1.5px solid #e8e0d8; background:#fff; color:#a89080; cursor:pointer; transition:border-color .15s,background .15s,color .15s; }
-.pill-m:hover { border-color:var(--color-primario); color:var(--color-primario); }
-.pill-m.active { background:var(--color-primario); border-color:var(--color-primario); color:#fff; }
-.productos-grid { padding:.85rem 1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); gap:.75rem; overflow-y:auto; max-height:calc(100vh - 330px); min-height:200px; }
+/* ── Tabs ────────────────────────────────────────────── */
+.tab-nav { display:flex; border-bottom:1px solid #f0ebe5; background:#faf7f5; flex-shrink:0; }
+.tab-btn { flex:1; padding:.65rem 1rem; border:none; border-bottom:2.5px solid transparent; background:transparent; font-size:.82rem; font-weight:600; color:#a89080; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.4rem; transition:color .15s,border-color .15s,background .15s; }
+.tab-btn svg { width:15px; height:15px; fill:currentColor; }
+.tab-btn:hover:not(.active) { color:var(--color-secundario); background:rgba(0,0,0,.02); }
+.tab-btn.active { color:var(--color-primario); border-bottom-color:var(--color-primario); background:#fff; }
+.tab-cnt { font-size:.7rem; font-weight:700; background:rgba(0,0,0,.07); border-radius:20px; padding:.1rem .45rem; }
+.tab-btn.active .tab-cnt { background:rgba(231,111,46,.15); color:var(--color-primario); }
+.tab-pane { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+.tab-pane.hidden { display:none; }
+
+.productos-grid { padding:.85rem 1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); gap:.75rem; overflow-y:auto; max-height:calc(100vh - 265px); min-height:200px; }
+#tabPromociones .promo-grid { max-height:calc(100vh - 230px); min-height:200px; }
 .prod-card { border:1.5px solid #ede5df; border-radius:11px; background:#fff; cursor:pointer; transition:border-color .15s,box-shadow .15s,transform .12s; overflow:hidden; display:flex; flex-direction:column; user-select:none; min-height:230px; }
 .prod-card:hover { border-color:var(--color-primario); box-shadow:0 3px 12px rgba(231,111,46,.12); transform:translateY(-2px); }
 .prod-card.en-carrito { border-color:#16a34a; background:#f0fdf4; }
@@ -165,16 +159,60 @@
 .promo-card { border:1.5px solid #d97706; border-radius:11px; background:#fffbeb; cursor:pointer; transition:border-color .15s,box-shadow .15s,transform .12s; overflow:hidden; display:flex; flex-direction:column; user-select:none; }
 .promo-card:hover { border-color:#b45309; box-shadow:0 3px 12px rgba(217,119,6,.2); transform:translateY(-2px); }
 .promo-card.en-carrito { border-color:#16a34a; background:#f0fdf4; }
-.promo-card-body { padding:.55rem .65rem; flex:1; display:flex; flex-direction:column; gap:.12rem; }
+.promo-card.sin-stock-promo { border-color:#dc2626; background:#fff5f5; opacity:.85; }
+.promo-card-body { padding:.55rem .65rem .35rem; display:flex; flex-direction:column; gap:.1rem; }
 .promo-card-nombre { font-size:.78rem; font-weight:700; color:#92400e; line-height:1.25; }
 .promo-card-precio { font-size:.85rem; font-weight:700; color:#d97706; }
 .promo-card-footer { display:flex; align-items:center; justify-content:space-between; padding:.35rem .65rem; border-top:1px solid #fde68a; flex-shrink:0; }
+.promo-card.en-carrito .promo-card-footer { border-top-color:#bbf7d0; }
+.promo-card.sin-stock-promo .promo-card-footer { border-top-color:#fecaca; }
 .promo-card-cant { font-size:.67rem; color:#16a34a; font-weight:700; }
 .promo-card-stock { font-size:.67rem; color:#a89080; }
 .promo-card-qty-btn { display:flex; align-items:center; gap:.1rem; }
 .promo-card-qty-btn button { width:22px; height:20px; border-radius:4px; border:1px solid #e0d5cc; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; font-weight:700; color:#92400e; transition:background .1s; }
 .promo-card-qty-btn button:hover { background:#f5f0eb; }
 .promo-card-qty-btn span { font-size:.72rem; font-weight:700; min-width:18px; text-align:center; color:#92400e; }
+
+/* Desglose de productos dentro de la promo card */
+.promo-prod-list { padding:.3rem .65rem .4rem; border-top:1px dashed #fde68a; display:flex; flex-direction:column; gap:.18rem; background:rgba(254,243,199,.4); }
+.promo-card.en-carrito .promo-prod-list { border-top-color:#bbf7d0; background:rgba(240,253,244,.5); }
+.promo-card.sin-stock-promo .promo-prod-list { border-top-color:#fecaca; background:rgba(255,245,245,.5); }
+.promo-prod-item { display:flex; align-items:center; gap:.25rem; }
+.promo-prod-nombre { flex:1; font-size:.67rem; color:#78716c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.promo-prod-req { font-size:.65rem; color:#a89080; flex-shrink:0; }
+.promo-prod-stock { font-size:.65rem; font-weight:700; flex-shrink:0; color:#a89080; }
+.promo-prod-stock.poco { color:#d97706; }
+.promo-prod-stock.sin  { color:#dc2626; }
+.promo-prod-grupo-lbl  { font-size:.62rem; color:#a89080; font-style:italic; padding:.05rem 0 .05rem .3rem; }
+.promo-prod-grupo-sep  { font-size:.6rem; color:#92400e; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:.25rem 0 .1rem; margin-top:.15rem; border-top:1px dashed #fde68a; }
+.promo-prod-grupo-sep:first-child { border-top:none; margin-top:0; }
+.promo-prod-item.selected-opt { background:rgba(167,243,208,.35); border-radius:4px; padding-left:.25rem; }
+.promo-prod-item.sin-opt .promo-prod-nombre, .promo-prod-item.sin-opt .promo-prod-req { opacity:.4; text-decoration:line-through; }
+/* ── Diálogo grupos excluyentes ─────────────────────── */
+.grupos-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10002; display:none; align-items:center; justify-content:center; animation:fadeIn .2s ease; }
+.grupos-card { background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,.2); padding:1.5rem 1.5rem 1.25rem; max-width:420px; width:93%; max-height:88vh; overflow-y:auto; }
+.grupos-titulo { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#a89080; margin-bottom:.2rem; }
+.grupos-promo-nombre { font-size:1rem; font-weight:700; color:var(--color-secundario); margin-bottom:1rem; }
+.grupos-section { margin-bottom:.9rem; }
+.grupos-section-lbl { font-size:.74rem; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.4rem; }
+.grupos-opts { display:flex; flex-direction:column; gap:.3rem; }
+.goc { background:#faf7f5; border:1.5px solid #ede5df; border-radius:9px; padding:.55rem .75rem; cursor:pointer; display:flex; align-items:center; gap:.5rem; transition:border-color .12s,background .12s; }
+.goc:hover:not(.goc-sin) { border-color:var(--color-primario); background:rgba(231,111,46,.05); }
+.goc.goc-sel { border-color:#22c55e; background:rgba(34,197,94,.08); }
+.goc.goc-sin { opacity:.45; cursor:not-allowed; }
+.goc-check { width:18px; height:18px; border-radius:50%; border:2px solid #c9b8a8; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.75rem; color:transparent; }
+.goc.goc-sel .goc-check { border-color:#22c55e; background:#22c55e; color:#fff; }
+.goc-nombre { flex:1; font-size:.86rem; font-weight:600; color:var(--color-secundario); min-width:0; }
+.goc-stock { font-size:.72rem; font-weight:700; color:#a89080; flex-shrink:0; }
+.goc-stock.poco { color:#d97706; }
+.goc-stock.sin  { color:#dc2626; }
+.grupos-btns { display:flex; gap:.6rem; margin-top:1rem; }
+.grupos-btn { flex:1; padding:.65rem 1rem; border-radius:9px; border:none; font-size:.88rem; font-weight:700; cursor:pointer; transition:opacity .15s,transform .12s; }
+.grupos-btn:hover { opacity:.88; transform:translateY(-1px); }
+.grupos-btn.confirmar { background:var(--color-primario); color:#fff; }
+.grupos-btn.confirmar:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+.grupos-btn.cancelar { background:#f0ebe5; color:#7a6050; }
+
 .grid-empty { grid-column:1/-1; text-align:center; padding:3rem 1rem; color:#b8a898; font-size:.85rem; }
 .grid-empty svg { width:48px; height:48px; fill:#ddd0c4; display:block; margin:0 auto .6rem; }
 
@@ -338,6 +376,7 @@
 
 <div class="toast-wrap" id="toastWrap"></div>
 <div class="envase-overlay" id="envaseOverlay" onclick="cerrarDialogoEnvase()"></div>
+<div class="grupos-overlay" id="gruposOverlay" onclick="cerrarDialogoGrupos()"></div>
 @Html.AntiForgeryToken()
 
 <div class="page-header-card">
@@ -373,39 +412,49 @@
             <span class="cnt-badge" id="cntProductos">@Model.Productos.Count()</span>
         </div>
 
-        <div class="filtros-wrap">
-            <div class="search-bar">
-                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                <input type="text" id="txtBuscar" placeholder="Buscar por nombre, marca…"
-                       oninput="aplicarFiltros()" autocomplete="off" />
-                <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">✕</button>
-            </div>
-            <div class="pills-row" id="pillsTipos">
-                <button class="pill active" data-tipo="0" onclick="selTipo(0)">Todos</button>
-                @foreach (var t in Model.Tipos)
-                {
-                    <button class="pill" data-tipo="@t.IdTipoProducto" onclick="selTipo(@t.IdTipoProducto)">@t.NombreTipoProducto</button>
-                }
-            </div>
-            <div class="marcas-row" id="marcasRow">
-                @foreach (var m in Model.Marcas)
-                {
-                    <button class="pill-m" data-marca="@m.IdMarca" onclick="selMarca(@m.IdMarca)">@m.NombreMarca</button>
-                }
-            </div>
-        </div>
-
         @if (Model.Promociones.Any())
         {
-            <div class="filtros-wrap" style="background:#fffbeb;border-bottom:1px solid #fde68a;">
-                <div style="display:flex;align-items:center;gap:.4rem;">
-                    <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#d97706;"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .59 1.42l9 9A2 2 0 0 0 13 22a2 2 0 0 0 1.41-.59l7-7A2 2 0 0 0 22 13a2 2 0 0 0-.59-1.42z"/></svg>
-                    <span style="font-size:.8rem;font-weight:700;color:#92400e;">Promociones</span>
+            <!-- Tab nav -->
+            <div class="tab-nav">
+                <button class="tab-btn active" id="tabBtnProductos" onclick="selTab('productos')">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+                    Productos
+                </button>
+                <button class="tab-btn" id="tabBtnPromociones" onclick="selTab('promociones')">
+                    <svg viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .59 1.42l9 9A2 2 0 0 0 13 22a2 2 0 0 0 1.41-.59l7-7A2 2 0 0 0 22 13a2 2 0 0 0-.59-1.42z"/></svg>
+                    Promociones
+                    <span class="tab-cnt">@Model.Promociones.Count()</span>
+                </button>
+            </div>
+            <!-- Tab: Productos -->
+            <div class="tab-pane" id="tabProductos">
+                <div class="filtros-wrap">
+                    <div class="search-bar">
+                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        <input type="text" id="txtBuscar" placeholder="Buscar por nombre, marca…"
+                               oninput="aplicarFiltros()" autocomplete="off" />
+                        <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">✕</button>
+                    </div>
+                </div>
+                <div class="productos-grid" id="productosGrid"></div>
+            </div>
+            <!-- Tab: Promociones -->
+            <div class="tab-pane hidden" id="tabPromociones">
+                <div class="promo-grid" id="promoGrid"></div>
+            </div>
+        }
+        else
+        {
+            <div class="filtros-wrap">
+                <div class="search-bar">
+                    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="txtBuscar" placeholder="Buscar por nombre, marca…"
+                           oninput="aplicarFiltros()" autocomplete="off" />
+                    <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">✕</button>
                 </div>
             </div>
-            <div class="promo-grid" id="promoGrid"></div>
+            <div class="productos-grid" id="productosGrid"></div>
         }
-        <div class="productos-grid" id="productosGrid"></div>
     </div>
 
     <!-- ══ BOLETA ══ -->
@@ -465,7 +514,6 @@
 
     /* ── Datos del servidor ──────────────────────────────────────────────── */
     const CATALOGO    = @Html.Raw(catalogoJson);
-    const TIPO_MARCAS = @Html.Raw(tipoMarcasJson);
     const PROMOS      = @Html.Raw(promosJson);
     const URL_CREAR   = '@urlCrear';
     const URL_IMG     = '@urlImagen';
@@ -491,50 +539,29 @@
     const promoCarrito  = new Map();            // idPromo → {idPromo, nombre, precio, cantidad}
     const envasesMap    = new Map();            // idProducto → {valorEnvase, soloEfectivo}
     let pendingEnvase   = null;                 // producto pendiente de confirmación envase
-    let tipoActivo      = 0;
-    let marcaActiva     = 0;
+
+    /* ══════════════════════════════════════════════════════════════════════
+       TABS
+    ══════════════════════════════════════════════════════════════════════ */
+    window.selTab = function (tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+        const key = tab.charAt(0).toUpperCase() + tab.slice(1);
+        document.getElementById('tabBtn' + key)?.classList.add('active');
+        document.getElementById('tab'    + key)?.classList.remove('hidden');
+    };
 
     /* ══════════════════════════════════════════════════════════════════════
        FILTROS
     ══════════════════════════════════════════════════════════════════════ */
-    window.selTipo = function (id) {
-        tipoActivo  = id;
-        marcaActiva = 0;
-        document.querySelectorAll('#pillsTipos .pill')
-            .forEach(p => p.classList.toggle('active', +p.dataset.tipo === id));
-        const row   = document.getElementById('marcasRow');
-        const pills = row.querySelectorAll('.pill-m');
-        let vis = 0;
-        pills.forEach(p => {
-            p.classList.remove('active');
-            if (id === 0) { p.hidden = false; vis++; return; }
-            const ok = (TIPO_MARCAS[id] ?? []).includes(+p.dataset.marca);
-            p.hidden = !ok;
-            if (ok) vis++;
-        });
-        row.classList.toggle('open', vis > 0);
-        aplicarFiltros();
-    };
-
-    window.selMarca = function (id) {
-        marcaActiva = marcaActiva === id ? 0 : id;
-        document.querySelectorAll('.pill-m')
-            .forEach(p => p.classList.toggle('active', +p.dataset.marca === marcaActiva));
-        aplicarFiltros();
-    };
-
     window.aplicarFiltros = function () {
         const q = document.getElementById('txtBuscar').value.trim().toLowerCase();
         document.getElementById('btnClr').classList.toggle('on', q.length > 0);
-        const f = CATALOGO.filter(p => {
-            const okTipo  = tipoActivo  === 0 || p.idTipo  === tipoActivo;
-            const okMarca = marcaActiva === 0 || p.idMarca === marcaActiva;
-            const okQ     = q === ''
-                || p.nombre.toLowerCase().includes(q)
-                || p.marca.toLowerCase().includes(q)
-                || p.descripcion.toLowerCase().includes(q);
-            return okTipo && okMarca && okQ;
-        });
+        const f = q === '' ? CATALOGO : CATALOGO.filter(p =>
+            p.nombre.toLowerCase().includes(q)
+            || p.marca.toLowerCase().includes(q)
+            || p.descripcion.toLowerCase().includes(q)
+        );
         renderGrid(f);
     };
 
@@ -602,9 +629,80 @@
         const grid = document.getElementById('promoGrid');
         if (!grid) return;
         grid.innerHTML = PROMOS.map(p => {
-            const enCart = promoCarrito.has(p.id);
-            const cant   = enCart ? promoCarrito.get(p.id).cantidad : 0;
+            const enCart  = promoCarrito.has(p.id);
+            const cant    = enCart ? promoCarrito.get(p.id).cantidad : 0;
             const nomSafe = p.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+
+            // ── Desglose de productos con stock en tiempo real ──────────────
+            let tieneSinStock = false;
+            const prodRows = [];
+
+            // Productos base (siempre requeridos)
+            p.productosBase.forEach(req => {
+                const prod = CATALOGO.find(c => c.id === req.idProducto);
+                if (!prod) return;
+                const usado    = carrito.get(req.idProducto)?.cantidad ?? 0;
+                const stockDisp = prod.stock - usado;
+                if (stockDisp < req.cantidad) tieneSinStock = true;
+                const cls = stockDisp <= 0 ? 'sin' : stockDisp <= 3 ? 'poco' : '';
+                prodRows.push(`<div class="promo-prod-item">
+                    <span class="promo-prod-nombre" title="${x(prod.nombre)}">${x(prod.nombre)}</span>
+                    <span class="promo-prod-req">×${req.cantidad}</span>
+                    <span class="promo-prod-stock ${cls}">Stock: ${stockDisp}</span>
+                </div>`);
+            });
+
+            // Grupos
+            const selGrupos = (() => {
+                const entry = promoCarrito.get(p.id);
+                if (!entry) return {};
+                const u = entry.unidades;
+                return (u && u.length > 0) ? u[u.length - 1] : (entry.seleccionGrupos ?? {});
+            })();
+            p.grupos.forEach(g => {
+                if (g.esExcluyente) {
+                    // Mostrar TODOS los productos del grupo con "Elige uno:"
+                    const hayAlguno = g.productos.some(r => {
+                        const pr = CATALOGO.find(c => c.id === r.idProducto);
+                        const us = carrito.get(r.idProducto)?.cantidad ?? 0;
+                        return pr && (pr.stock - us) >= r.cantidad;
+                    });
+                    if (!hayAlguno) tieneSinStock = true;
+                    prodRows.push(`<div class="promo-prod-grupo-sep">Elige uno:</div>`);
+                    g.productos.forEach(r => {
+                        const prod = CATALOGO.find(c => c.id === r.idProducto);
+                        if (!prod) return;
+                        const usado     = carrito.get(r.idProducto)?.cantidad ?? 0;
+                        const stockDisp = prod.stock - usado;
+                        const sinStock  = stockDisp < r.cantidad;
+                        const cls       = sinStock ? 'sin' : stockDisp <= 3 ? 'poco' : '';
+                        const esSel     = selGrupos[g.idGrupo] === r.idProducto;
+                        const itemCls   = esSel ? ' selected-opt' : (sinStock ? ' sin-opt' : '');
+                        prodRows.push(`<div class="promo-prod-item${itemCls}">
+                            <span class="promo-prod-nombre" title="${x(prod.nombre)}">${esSel ? '✓ ' : ''}${x(prod.nombre)}</span>
+                            <span class="promo-prod-req">×${r.cantidad}</span>
+                            <span class="promo-prod-stock ${cls}">${sinStock ? 'Sin stock' : `Stock: ${stockDisp}`}</span>
+                        </div>`);
+                    });
+                } else {
+                    g.productos.forEach(req => {
+                        const prod = CATALOGO.find(c => c.id === req.idProducto);
+                        if (!prod) return;
+                        const usado    = carrito.get(req.idProducto)?.cantidad ?? 0;
+                        const stockDisp = prod.stock - usado;
+                        if (stockDisp < req.cantidad) tieneSinStock = true;
+                        const cls = stockDisp <= 0 ? 'sin' : stockDisp <= 3 ? 'poco' : '';
+                        prodRows.push(`<div class="promo-prod-item">
+                            <span class="promo-prod-nombre" title="${x(prod.nombre)}">${x(prod.nombre)}</span>
+                            <span class="promo-prod-req">×${req.cantidad}</span>
+                            <span class="promo-prod-stock ${cls}">Stock: ${stockDisp}</span>
+                        </div>`);
+                    });
+                }
+            });
+
+            const desgloseHtml = `<div class="promo-prod-list">${prodRows.join('')}</div>`;
+
             const badgeHtml = enCart
                 ? `<div class="promo-card-cant">
                        <div class="promo-card-qty-btn">
@@ -613,17 +711,20 @@
                            <button onclick="event.stopPropagation();cambiarCantidadPromo(${p.id},+1)">+</button>
                        </div>
                    </div>`
-                : `<span class="promo-card-stock">Seleccionar</span>`;
-            const extraClass = enCart ? ' en-carrito' : '';
+                : `<span class="promo-card-stock">${tieneSinStock ? '⚠ Sin stock' : 'Seleccionar'}</span>`;
+
+            let extraClass = enCart ? ' en-carrito' : '';
+            if (tieneSinStock && !enCart) extraClass += ' sin-stock-promo';
+
             return `
             <div class="promo-card${extraClass}" id="pmc-${p.id}"
                  onclick="togglePromo(${p.id})">
                 <div class="promo-card-body">
                     <div class="promo-card-nombre">${x(p.nombre)}</div>
-                    <div class="prod-card-meta">${p.productosBase.length + p.grupos.reduce((a,g) => a + g.productos.length, 0)} productos</div>
+                    <div class="promo-card-precio">$${fmt(p.precio)}</div>
                 </div>
+                ${desgloseHtml}
                 <div class="promo-card-footer">
-                    <span class="promo-card-precio">$${fmt(p.precio)}</span>
                     ${badgeHtml}
                 </div>
             </div>`;
@@ -633,21 +734,205 @@
     window.togglePromo = function (idPromo) {
         const promo = PROMOS.find(p => p.id === idPromo);
         if (!promo) return;
-        
+
+        // Validar stock (general; para grupos excluyentes el diálogo filtra con stock real)
+        const check = validarStockPromo(idPromo, 1);
+        if (!check.ok) {
+            toast(`Sin stock suficiente para la promo: "${check.nombre}" (disponible: ${check.disponible})`, 'error');
+            return;
+        }
+
+        // Si tiene grupos excluyentes → siempre mostrar diálogo (primera vez y sucesivas)
+        const gruposExcl = promo.grupos.filter(g => g.esExcluyente && g.productos.length > 1);
+        if (gruposExcl.length > 0) {
+            mostrarDialogoGrupos(idPromo, gruposExcl);
+            return;
+        }
+
+        // Sin grupos excluyentes: agregar directo
         if (promoCarrito.has(idPromo)) {
             const it = promoCarrito.get(idPromo);
             it.cantidad++;
+            it.unidades = it.unidades ?? [];
+            it.unidades.push({});
         } else {
-            promoCarrito.set(idPromo, { idPromo: promo.id, nombre: promo.nombre, precio: promo.precio, cantidad: 1 });
+            promoCarrito.set(idPromo, { idPromo: promo.id, nombre: promo.nombre, precio: promo.precio, cantidad: 1, seleccionGrupos: {}, unidades: [{}] });
         }
-        
-        agregarProductosDePromo(idPromo, 1);
+        agregarProductosDePromo(idPromo, 1, {});
         renderPromoGrid();
         renderCarrito();
         actualizarTarjetasProductos();
     };
 
-    function agregarProductosDePromo(idPromo, cantidad) {
+    /* ── Diálogo grupos excluyentes ─────────────────────────────────────── */
+    let _dialogoIdPromo = null;
+
+    function mostrarDialogoGrupos(idPromo, gruposExcl) {
+        _dialogoIdPromo = idPromo;
+        const promo = PROMOS.find(p => p.id === idPromo);
+
+        const seccionesHtml = gruposExcl.map(g => {
+            const optsHtml = g.productos.map(r => {
+                const prod = CATALOGO.find(c => c.id === r.idProducto);
+                if (!prod) return '';
+                const usado     = carrito.get(r.idProducto)?.cantidad ?? 0;
+                const stockDisp = prod.stock - usado;
+                const sinStock  = stockDisp < r.cantidad;
+                const cls       = sinStock ? 'sin' : stockDisp <= 3 ? 'poco' : '';
+                const sinCls    = sinStock ? ' goc-sin' : '';
+                const clickFn   = sinStock ? '' : `onclick="seleccionarOpcionGrupo(this,'${g.idGrupo}')"`;
+                return `<div class="goc${sinCls}" data-grupo="${g.idGrupo}" data-producto="${r.idProducto}" ${clickFn}>
+                    <div class="goc-check">✓</div>
+                    <span class="goc-nombre">${x(prod.nombre)} <small style="font-weight:400;color:#a89080">×${r.cantidad}</small></span>
+                    <span class="goc-stock ${cls}">${sinStock ? 'Sin stock' : `Stock: ${stockDisp}`}</span>
+                </div>`;
+            }).join('');
+            return `<div class="grupos-section">
+                <div class="grupos-section-lbl">Elige una opción:</div>
+                <div class="grupos-opts" data-grupo="${g.idGrupo}">${optsHtml}</div>
+            </div>`;
+        }).join('');
+
+        const overlay = document.getElementById('gruposOverlay');
+        overlay.innerHTML = `
+        <div class="grupos-card" onclick="event.stopPropagation()">
+            <div class="grupos-titulo">Personaliza tu promo</div>
+            <div class="grupos-promo-nombre">${x(promo.nombre)}</div>
+            ${seccionesHtml}
+            <div class="grupos-btns">
+                <button class="grupos-btn cancelar" onclick="cerrarDialogoGrupos()">Cancelar</button>
+                <button class="grupos-btn confirmar" id="btnConfirmarGrupos" onclick="confirmarDialogoGrupos()" disabled>Agregar al carrito</button>
+            </div>
+        </div>`;
+        overlay.style.display = 'flex';
+    }
+
+    window.seleccionarOpcionGrupo = function (el, idGrupo) {
+        // Deseleccionar todas las opciones del mismo grupo
+        el.closest('.grupos-opts').querySelectorAll('.goc').forEach(c => c.classList.remove('goc-sel'));
+        el.classList.add('goc-sel');
+        actualizarBtnConfirmarGrupos();
+    };
+
+    function actualizarBtnConfirmarGrupos() {
+        const overlay = document.getElementById('gruposOverlay');
+        const grupos  = overlay.querySelectorAll('.grupos-opts[data-grupo]');
+        const todosSeleccionados = Array.from(grupos).every(g => g.querySelector('.goc.goc-sel'));
+        document.getElementById('btnConfirmarGrupos').disabled = !todosSeleccionados;
+    }
+
+    window.confirmarDialogoGrupos = function () {
+        const idPromo = _dialogoIdPromo;
+        const promo   = PROMOS.find(p => p.id === idPromo);
+        if (!promo) { cerrarDialogoGrupos(); return; }
+
+        const overlay         = document.getElementById('gruposOverlay');
+        const seleccionGrupos = {};
+        overlay.querySelectorAll('.goc.goc-sel').forEach(el => {
+            seleccionGrupos[el.dataset.grupo] = parseInt(el.dataset.producto);
+        });
+
+        const check = validarStockPromo(idPromo, 1, seleccionGrupos);
+        if (!check.ok) {
+            toast(`Sin stock suficiente: "${check.nombre}" (disponible: ${check.disponible})`, 'error');
+            cerrarDialogoGrupos();
+            return;
+        }
+
+        if (promoCarrito.has(idPromo)) {
+            const entry = promoCarrito.get(idPromo);
+            entry.cantidad++;
+            entry.seleccionGrupos = seleccionGrupos;   // last selection (for promoGrid display)
+            entry.unidades        = entry.unidades ?? [];
+            entry.unidades.push(seleccionGrupos);
+        } else {
+            promoCarrito.set(idPromo, {
+                idPromo: promo.id, nombre: promo.nombre, precio: promo.precio,
+                cantidad: 1, seleccionGrupos, unidades: [seleccionGrupos]
+            });
+        }
+
+        agregarProductosDePromo(idPromo, 1, seleccionGrupos);
+        cerrarDialogoGrupos();
+        renderPromoGrid();
+        renderCarrito();
+        actualizarTarjetasProductos();
+    };
+
+    window.cerrarDialogoGrupos = function () {
+        document.getElementById('gruposOverlay').style.display = 'none';
+        _dialogoIdPromo = null;
+    };
+
+    /* Verifica si todos los productos de la promo tienen stock suficiente
+       considerando lo que ya hay en el carrito.
+       Retorna { ok: true } o { ok: false, nombre, disponible } */
+    function validarStockPromo(idPromo, cantidadAgregar, seleccionGrupos = {}) {
+        const promo = PROMOS.find(p => p.id === idPromo);
+        if (!promo) return { ok: true };
+
+        // Acumular cuántas unidades extra necesitamos por producto
+        const needed = new Map();
+
+        promo.productosBase.forEach(req => {
+            needed.set(req.idProducto, (needed.get(req.idProducto) ?? 0) + req.cantidad * cantidadAgregar);
+        });
+
+        promo.grupos.forEach(g => {
+            if (g.esExcluyente) {
+                // Se valida por separado abajo
+                return;
+            }
+            g.productos.forEach(req => {
+                needed.set(req.idProducto, (needed.get(req.idProducto) ?? 0) + req.cantidad * cantidadAgregar);
+            });
+        });
+
+        // Validar productos base y grupos no excluyentes
+        for (const [idProducto, cantNeeded] of needed) {
+            const prod = CATALOGO.find(c => c.id === idProducto);
+            if (!prod) continue;
+            const enCarrito  = carrito.get(idProducto)?.cantidad ?? 0;
+            const disponible = prod.stock - enCarrito;
+            if (cantNeeded > disponible) {
+                return { ok: false, nombre: prod.nombre, disponible: Math.max(0, disponible) };
+            }
+        }
+
+        // Validar grupos excluyentes
+        for (const g of promo.grupos) {
+            if (!g.esExcluyente) continue;
+            const selIdProducto = seleccionGrupos[g.idGrupo];
+            if (selIdProducto) {
+                // Validar el producto específico seleccionado
+                const req = g.productos.find(r => r.idProducto === selIdProducto);
+                if (!req) continue;
+                const prod = CATALOGO.find(c => c.id === selIdProducto);
+                if (!prod) continue;
+                const enCarrito  = carrito.get(selIdProducto)?.cantidad ?? 0;
+                const disponible = prod.stock - enCarrito;
+                if (req.cantidad * cantidadAgregar > disponible) {
+                    return { ok: false, nombre: prod.nombre, disponible: Math.max(0, disponible) };
+                }
+            } else {
+                // Sin selección guardada: al menos uno debe tener stock
+                const hayAlguno = g.productos.some(req => {
+                    const prod = CATALOGO.find(c => c.id === req.idProducto);
+                    if (!prod) return false;
+                    const enCarrito  = carrito.get(req.idProducto)?.cantidad ?? 0;
+                    return (prod.stock - enCarrito) >= req.cantidad * cantidadAgregar;
+                });
+                if (!hayAlguno) {
+                    const primero = CATALOGO.find(c => c.id === g.productos[0].idProducto);
+                    return { ok: false, nombre: primero?.nombre ?? 'producto del grupo', disponible: 0 };
+                }
+            }
+        }
+
+        return { ok: true };
+    }
+
+    function agregarProductosDePromo(idPromo, cantidad, seleccionGrupos = {}) {
         const promo = PROMOS.find(p => p.id === idPromo);
         if (!promo) return;
         
@@ -666,19 +951,34 @@
         });
         
         promo.grupos.forEach(g => {
-            const productosDelGrupo = [...g.productos];
+            // Elegir el producto: selección guardada para grupos excluyentes, fallback al primero con stock
+            let elegido;
+            if (g.esExcluyente) {
+                const selId = seleccionGrupos[g.idGrupo];
+                if (selId) {
+                    elegido = g.productos.find(r => r.idProducto === selId);
+                }
+                if (!elegido) {
+                    elegido = g.productos.find(r => {
+                        const pr = CATALOGO.find(c => c.id === r.idProducto);
+                        const us = carrito.get(r.idProducto)?.cantidad ?? 0;
+                        return pr && (pr.stock - us) >= r.cantidad;
+                    }) ?? g.productos[0];
+                }
+            } else {
+                elegido = g.productos[0];
+            }
+            if (!elegido) return;
+            const prod = CATALOGO.find(c => c.id === elegido.idProducto);
+            if (!prod) return;
             for (let i = 0; i < cantidad; i++) {
-                const primerProducto = productosDelGrupo[0];
-                const prod = CATALOGO.find(c => c.id === primerProducto.idProducto);
-                if (!prod) continue;
-                if (carrito.has(primerProducto.idProducto)) {
-                    const it = carrito.get(primerProducto.idProducto);
-                    it.cantidad += primerProducto.cantidad;
-                } else if (RETORNABLES_MAP[primerProducto.idProducto]) {
-                    const p = RETORNABLES_MAP[primerProducto.idProducto];
-                    agregarConEnvase(primerProducto.idProducto, prod.nombre, prod.precio, prod.stock, p.valorEnvase, p.soloEfectivo, primerProducto.cantidad);
+                if (carrito.has(elegido.idProducto)) {
+                    carrito.get(elegido.idProducto).cantidad += elegido.cantidad;
+                } else if (RETORNABLES_MAP[elegido.idProducto]) {
+                    const p = RETORNABLES_MAP[elegido.idProducto];
+                    agregarConEnvase(elegido.idProducto, prod.nombre, prod.precio, prod.stock, p.valorEnvase, p.soloEfectivo, elegido.cantidad);
                 } else {
-                    carrito.set(primerProducto.idProducto, { id: primerProducto.idProducto, nombre: prod.nombre, precio: prod.precio, cantidad: primerProducto.cantidad, stock: prod.stock });
+                    carrito.set(elegido.idProducto, { id: elegido.idProducto, nombre: prod.nombre, precio: prod.precio, cantidad: elegido.cantidad, stock: prod.stock });
                 }
             }
         });
@@ -689,52 +989,77 @@
         carrito.set(id, { id, nombre, precio, cantidad, stock });
     }
 
-    window.cambiarCantidadPromo = function (idPromo, delta) {
-        if (!promoCarrito.has(idPromo)) return;
+    /* Quita del carrito los productos de exactamente 1 unidad de la promo,
+       usando la selección guardada para grupos excluyentes. */
+    function removerUnaUnidadDePromo(idPromo, seleccionGrupos = {}) {
         const promo = PROMOS.find(p => p.id === idPromo);
         if (!promo) return;
-        const it = promoCarrito.get(idPromo);
-        const nueva = it.cantidad + delta;
-        
+
+        promo.productosBase.forEach(req => {
+            if (carrito.has(req.idProducto)) {
+                const it    = carrito.get(req.idProducto);
+                const nueva = it.cantidad - req.cantidad;
+                if (nueva <= 0) { carrito.delete(req.idProducto); envasesMap.delete(req.idProducto); }
+                else it.cantidad = nueva;
+            }
+        });
+
+        promo.grupos.forEach(g => {
+            const idElegido = g.esExcluyente
+                ? (seleccionGrupos[g.idGrupo] ?? g.productos[0].idProducto)
+                : g.productos[0].idProducto;
+            const req = g.productos.find(r => r.idProducto === idElegido) ?? g.productos[0];
+            if (carrito.has(req.idProducto)) {
+                const it    = carrito.get(req.idProducto);
+                const nueva = it.cantidad - req.cantidad;
+                if (nueva <= 0) { carrito.delete(req.idProducto); envasesMap.delete(req.idProducto); }
+                else it.cantidad = nueva;
+            }
+        });
+    }
+
+    window.cambiarCantidadPromo = function (idPromo, delta) {
+        if (delta > 0) {
+            // Reusar togglePromo: valida stock y muestra diálogo si hay grupos excluyentes
+            window.togglePromo(idPromo);
+            return;
+        }
+        // delta < 0 (siempre -1 desde los botones)
+        if (!promoCarrito.has(idPromo)) return;
+        const it    = promoCarrito.get(idPromo);
+        const nueva = it.cantidad + delta;  // delta es negativo
+
         if (nueva <= 0) {
             eliminarPromoCompleta(idPromo);
         } else {
-            const diff = delta;
-            it.cantidad = nueva;
-            agregarProductosDePromo(idPromo, diff);
+            // Pop la última unidad y revertir sus productos
+            const unidades  = it.unidades ?? [];
+            const lastSel   = unidades.length > 0 ? unidades.pop() : (it.seleccionGrupos ?? {});
+            it.cantidad     = nueva;
+            it.seleccionGrupos = unidades.length > 0 ? unidades[unidades.length - 1] : (it.seleccionGrupos ?? {});
+            removerUnaUnidadDePromo(idPromo, lastSel);
         }
-        
+
         renderPromoGrid();
         renderCarrito();
         actualizarTarjetasProductos();
     };
 
     function eliminarPromoCompleta(idPromo) {
-        const promo = PROMOS.find(p => p.id === idPromo);
-        if (!promo) return;
-        
-        const cantidad = promoCarrito.get(idPromo)?.cantidad ?? 0;
-        if (cantidad === 0) { promoCarrito.delete(idPromo); return; }
-        
-        promo.productosBase.forEach(req => {
-            if (carrito.has(req.idProducto)) {
-                const it = carrito.get(req.idProducto);
-                const nuevaCant = it.cantidad - (req.cantidad * cantidad);
-                if (nuevaCant <= 0) { carrito.delete(req.idProducto); envasesMap.delete(req.idProducto); }
-                else it.cantidad = nuevaCant;
+        const entry = promoCarrito.get(idPromo);
+        if (!entry || entry.cantidad === 0) { promoCarrito.delete(idPromo); return; }
+
+        if (entry.unidades && entry.unidades.length > 0) {
+            // Revertir cada unidad usando su selección individual
+            entry.unidades.forEach(sel => removerUnaUnidadDePromo(idPromo, sel));
+        } else {
+            // Fallback: sin array de unidades (entradas antiguas sin dialogo)
+            const selAct = entry.seleccionGrupos ?? {};
+            for (let i = 0; i < entry.cantidad; i++) {
+                removerUnaUnidadDePromo(idPromo, selAct);
             }
-        });
-        
-        promo.grupos.forEach(g => {
-            const primerProducto = g.productos[0];
-            if (carrito.has(primerProducto.idProducto)) {
-                const it = carrito.get(primerProducto.idProducto);
-                const nuevaCant = it.cantidad - (primerProducto.cantidad * cantidad);
-                if (nuevaCant <= 0) { carrito.delete(primerProducto.idProducto); envasesMap.delete(primerProducto.idProducto); }
-                else it.cantidad = nuevaCant;
-            }
-        });
-        
+        }
+
         promoCarrito.delete(idPromo);
     }
 
@@ -755,16 +1080,30 @@
     window.toggleProducto = function (id, nombre, precio, stock) {
         if (carrito.has(id)) {
             const it = carrito.get(id);
+            if (it.cantidad >= stock) {
+                toast(`Stock agotado para "${nombre}" (stock: ${stock})`, 'error');
+                return;
+            }
             it.cantidad++;
             renderCarrito();
             actualizarTarjeta(id);
+            renderPromoGrid();
         } else if (RETORNABLES_MAP[id]) {
+            if (stock <= 0) {
+                toast(`Sin stock disponible para "${nombre}"`, 'error');
+                return;
+            }
             pendingEnvase = { id, nombre, precio, stock };
             mostrarDialogoEnvase(nombre, RETORNABLES_MAP[id].valorEnvase, RETORNABLES_MAP[id].soloEfectivo);
         } else {
+            if (stock <= 0) {
+                toast(`Sin stock disponible para "${nombre}"`, 'error');
+                return;
+            }
             carrito.set(id, { id, nombre, precio, cantidad: 1, stock });
             renderCarrito();
             actualizarTarjeta(id);
+            renderPromoGrid();
         }
     };
 
@@ -777,6 +1116,7 @@
         carrito.set(id, { id, nombre, precio, cantidad: 1, stock });
         renderCarrito();
         actualizarTarjeta(id);
+        renderPromoGrid();
     };
 
     function mostrarDialogoEnvase(nombre, valorEnvase, soloEfectivo) {
@@ -814,10 +1154,18 @@
         if (!carrito.has(id)) return;
         const it    = carrito.get(id);
         const nueva = it.cantidad + delta;
-        if (nueva <= 0) { carrito.delete(id); envasesMap.delete(id); }
-        else            { it.cantidad = nueva; }
+        if (nueva <= 0) {
+            carrito.delete(id);
+            envasesMap.delete(id);
+        } else if (delta > 0 && nueva > it.stock) {
+            toast(`Stock agotado para "${it.nombre}" (stock: ${it.stock})`, 'error');
+            return;
+        } else {
+            it.cantidad = nueva;
+        }
         renderCarrito();
         actualizarTarjeta(id);
+        renderPromoGrid();
     };
 
     window.quitarItem = function (id) {
@@ -825,6 +1173,7 @@
         envasesMap.delete(id);
         renderCarrito();
         actualizarTarjeta(id);
+        renderPromoGrid();
     };
 
     window.quitarDePromo = function (id, cantReq) {
@@ -1043,17 +1392,30 @@
                         <span class="ci-promo-item-qty">${req.cantidad * p.cantidad} u.</span>
                     </div>`;
                 });
-                
-                promoInfo.grupos.forEach(g => {
-                    const primerProducto = g.productos[0];
-                    const prod = CATALOGO.find(c => c.id === primerProducto.idProducto);
-                    if (!prod) return;
-                    html += `
-                    <div class="ci-promo-item">
-                        <span class="ci-nombre" style="flex:1;">${x(prod.nombre)}</span>
-                        <span class="ci-promo-item-qty">${primerProducto.cantidad * p.cantidad} u.</span>
-                    </div>`;
-                });
+
+                // Consolidar productos de grupos a partir de las unidades individuales
+                {
+                    const unidades  = (p.unidades && p.unidades.length > 0) ? p.unidades : Array(p.cantidad).fill(p.seleccionGrupos ?? {});
+                    const resumen   = new Map();  // idProducto → cantidadTotal
+                    unidades.forEach(sel => {
+                        promoInfo.grupos.forEach(g => {
+                            const idEl = g.esExcluyente
+                                ? (sel[g.idGrupo] ?? g.productos[0].idProducto)
+                                : g.productos[0].idProducto;
+                            const req = g.productos.find(r => r.idProducto === idEl) ?? g.productos[0];
+                            resumen.set(req.idProducto, (resumen.get(req.idProducto) ?? 0) + req.cantidad);
+                        });
+                    });
+                    resumen.forEach((cantTotal, idProd) => {
+                        const prod = CATALOGO.find(c => c.id === idProd);
+                        if (!prod) return;
+                        html += `
+                        <div class="ci-promo-item">
+                            <span class="ci-nombre" style="flex:1;">${x(prod.nombre)}</span>
+                            <span class="ci-promo-item-qty">${cantTotal} u.</span>
+                        </div>`;
+                    });
+                }
                 
                 html += `</div>`;
             });

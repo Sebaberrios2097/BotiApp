@@ -23,6 +23,24 @@
                        : (object?)null
     }));
 
+    var promosJson = JsonSerializer.Serialize(Model.Promociones.Select(p => new
+    {
+        id     = p.IdPromocion,
+        nombre = p.Nombre,
+        precio = p.PrecioPromocion,
+        productosBase = p.ProPromocionDetalle
+            .Where(d => d.IdGrupo == null)
+            .Select(d => new { idProducto = d.IdProducto, cantidad = d.Cantidad }),
+        grupos = p.ProPromocionGrupo.Select(g => new
+        {
+            idGrupo      = g.IdGrupo,
+            esExcluyente = g.EsExcluyente,
+            productos    = p.ProPromocionDetalle
+                .Where(d => d.IdGrupo == g.IdGrupo)
+                .Select(d => new { idProducto = d.IdProducto, cantidad = d.Cantidad })
+        })
+    }));
+
     var urlBuscar   = Url.Action("BuscarBoletaAjax",   "Ventas", new { area = "Ventas" });
     var urlModifica = Url.Action("ModificarBoletaAjax", "Ventas", new { area = "Ventas" });
     var urlCobrar   = Url.Action("CobrarBoletaAjax",   "Ventas", new { area = "Ventas" });
@@ -218,9 +236,104 @@
 .td-envase-lbl svg { width:12px; height:12px; fill:var(--color-primario); }
 .td-envase-ef { background:#fef2f2; color:#dc2626; border-radius:4px; padding:.05rem .28rem; font-size:.65rem; font-weight:700; margin-left:.3rem; }
 
+/* ══════════════════════════════════════════════════════ PROMO GROUP ROWS */
+.tr-promo-header td { background:rgba(133,93,59,.06); border-top:2px solid rgba(133,93,59,.18) !important; border-bottom:none !important; padding-top:.5rem; padding-bottom:.35rem; }
+.tr-promo-row td    { background:rgba(133,93,59,.025); font-size:.82rem; border-bottom:1px dashed rgba(133,93,59,.12) !important; }
+.tr-promo-row:last-child td { border-bottom:2px solid rgba(133,93,59,.18) !important; }
+.td-badge-promo-count { display:inline-block; background:var(--color-primario); color:#fff; border-radius:99px; font-size:.7rem; font-weight:800; padding:.05rem .45rem; margin-left:.4rem; vertical-align:middle; }
+
 /* ── Alerta envase en cobro ───────────────────────────────── */
 .cobro-envase-alerta { display:flex; align-items:flex-start; gap:.45rem; background:rgba(239,68,68,.06); border:1px solid rgba(239,68,68,.22); border-radius:9px; padding:.6rem .75rem; font-size:.78rem; color:#dc2626; font-weight:600; line-height:1.4; }
 .cobro-envase-alerta svg { width:14px; height:14px; fill:#dc2626; flex-shrink:0; margin-top:.1rem; }
+
+/* ══════════════════════════════════════════════════════ MODAL TABS */
+.modal-tabs { display:flex; border-bottom:1px solid #f0ebe5; background:#faf7f5; flex-shrink:0; }
+.modal-tab-btn { flex:1; padding:.6rem 1rem; border:none; border-bottom:2.5px solid transparent; background:transparent; font-size:.82rem; font-weight:600; color:#a89080; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.35rem; transition:color .15s,border-color .15s,background .15s; }
+.modal-tab-btn svg { width:14px; height:14px; fill:currentColor; }
+.modal-tab-btn:hover:not(.active) { color:var(--color-secundario); background:rgba(0,0,0,.02); }
+.modal-tab-btn.active { color:var(--color-primario); border-bottom-color:var(--color-primario); background:#fff; }
+.modal-tab-pane { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+.modal-tab-pane.hidden { display:none !important; }
+
+/* ══════════════════════════════════════════════════════ PROMO LIST EN MODAL */
+.modal-promo-list { display:flex; flex-direction:column; gap:.4rem; padding:.9rem 1.15rem; overflow-y:auto; flex:1; }
+.modal-promo-item { border:1.5px solid #d97706; border-radius:10px; background:#fffbeb; cursor:pointer; transition:border-color .15s,box-shadow .15s; overflow:hidden; }
+.modal-promo-item:hover { border-color:#b45309; box-shadow:0 2px 8px rgba(217,119,6,.18); }
+.modal-promo-header { display:flex; align-items:center; gap:.5rem; padding:.55rem .75rem; }
+.modal-promo-nombre { flex:1; font-size:.86rem; font-weight:700; color:#92400e; }
+.modal-promo-precio { font-size:.88rem; font-weight:700; color:#d97706; flex-shrink:0; }
+.modal-promo-sub { font-size:.72rem; color:#a89080; padding:.1rem .75rem .5rem; }
+.modal-promo-sin-stock { opacity:.55; cursor:not-allowed; border-color:#dc2626; background:#fff5f5; }
+.modal-promo-sin-stock .modal-promo-nombre { color:#b91c1c; }
+
+/* ══════════════════════════════════════════════════════ PROMO ROWS EN DETALLE */
+.tr-promo-header td { background:#fffbeb; border-bottom:1px solid #fde68a !important; padding:.4rem .55rem; }
+.td-promo-tag { display:inline-flex; align-items:center; gap:.3rem; }
+.td-promo-badge { font-size:.63rem; font-weight:700; background:#fef3c7; color:#d97706; border-radius:4px; padding:.1rem .35rem; }
+.td-promo-nombre { font-size:.8rem; font-weight:700; color:#92400e; }
+.td-promo-total { font-size:.82rem; font-weight:700; color:#d97706; }
+.tr-promo-item td { background:rgba(255,251,235,.4); font-size:.78rem; border-bottom:1px dashed rgba(217,119,6,.12) !important; padding:.35rem .55rem .35rem 1.2rem; }
+.tr-promo-item td .td-nombre { color:#78716c; font-weight:500; }
+.btn-del-promo-grupo { display:flex; align-items:center; justify-content:center; width:26px; height:26px; border:none; border-radius:5px; background:rgba(239,68,68,.1); color:#dc2626; cursor:pointer; transition:background .12s; }
+.btn-del-promo-grupo:hover { background:rgba(239,68,68,.22); }
+.btn-del-promo-grupo svg { width:13px; height:13px; fill:currentColor; }
+
+/* ══════════════════════════════════════════════════════ ENVASE DIALOG */
+.envase-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10001; display:none; align-items:center; justify-content:center; animation:fadeIn .2s ease; }
+.envase-card { background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,.2); padding:2rem 2rem 1.75rem; max-width:380px; width:92%; text-align:center; }
+.envase-icon { width:52px; height:52px; background:rgba(231,111,46,.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto .9rem; }
+.envase-icon svg { width:26px; height:26px; fill:var(--color-primario); }
+.envase-titulo { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#a89080; margin-bottom:.3rem; }
+.envase-nombre { font-size:1rem; font-weight:700; color:var(--color-secundario); margin-bottom:.5rem; }
+.envase-pregunta { font-size:.9rem; color:#7a6050; margin-bottom:1rem; }
+.envase-nota-ef { display:flex; align-items:center; gap:.4rem; justify-content:center; background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.18); border-radius:8px; padding:.45rem .75rem; font-size:.78rem; color:#dc2626; font-weight:600; margin-bottom:1rem; }
+.envase-nota-ef svg { width:15px; height:15px; fill:#dc2626; flex-shrink:0; }
+.envase-btns { display:flex; flex-direction:column; gap:.6rem; }
+.envase-btn { display:flex; align-items:center; justify-content:center; gap:.45rem; padding:.65rem 1rem; border-radius:9px; border:none; font-size:.88rem; font-weight:700; cursor:pointer; transition:opacity .15s,transform .12s; }
+.envase-btn:hover { opacity:.88; transform:translateY(-1px); }
+.envase-btn.si { background:rgba(34,197,94,.12); color:#16a34a; border:1.5px solid rgba(34,197,94,.25); }
+.envase-btn.no { background:rgba(231,111,46,.1); color:var(--color-primario); border:1.5px solid rgba(231,111,46,.25); }
+.envase-btn svg { width:16px; height:16px; fill:currentColor; }
+
+/* ══════════════════════════════════════════════════════ GRUPOS DIALOG */
+.grupos-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10002; display:none; align-items:center; justify-content:center; animation:fadeIn .2s ease; }
+.grupos-card { background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,.2); padding:1.5rem 1.5rem 1.25rem; max-width:420px; width:93%; max-height:88vh; overflow-y:auto; }
+.grupos-titulo { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#a89080; margin-bottom:.2rem; }
+.grupos-promo-nombre { font-size:1rem; font-weight:700; color:var(--color-secundario); margin-bottom:1rem; }
+.grupos-section { margin-bottom:.9rem; }
+.grupos-section-lbl { font-size:.74rem; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.4rem; }
+.grupos-opts { display:flex; flex-direction:column; gap:.3rem; }
+.goc { background:#faf7f5; border:1.5px solid #ede5df; border-radius:9px; padding:.55rem .75rem; cursor:pointer; display:flex; align-items:center; gap:.5rem; transition:border-color .12s,background .12s; }
+.goc:hover:not(.goc-sin) { border-color:var(--color-primario); background:rgba(231,111,46,.05); }
+.goc.goc-sel { border-color:#22c55e; background:rgba(34,197,94,.08); }
+.goc.goc-sin { opacity:.45; cursor:not-allowed; }
+.goc-check { width:18px; height:18px; border-radius:50%; border:2px solid #c9b8a8; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.75rem; color:transparent; }
+.goc.goc-sel .goc-check { border-color:#22c55e; background:#22c55e; color:#fff; }
+.goc-nombre { flex:1; font-size:.86rem; font-weight:600; color:var(--color-secundario); min-width:0; }
+.goc-stock { font-size:.72rem; font-weight:700; color:#a89080; flex-shrink:0; }
+.goc-stock.poco { color:#d97706; }
+.goc-stock.sin  { color:#dc2626; }
+.grupos-btns { display:flex; gap:.6rem; margin-top:1rem; }
+.grupos-btn { flex:1; padding:.65rem 1rem; border-radius:9px; border:none; font-size:.88rem; font-weight:700; cursor:pointer; transition:opacity .15s,transform .12s; }
+.grupos-btn:hover { opacity:.88; transform:translateY(-1px); }
+.grupos-btn.confirmar { background:var(--color-primario); color:#fff; }
+.grupos-btn.confirmar:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+.grupos-btn.cancelar { background:#f0ebe5; color:#7a6050; }
+
+/* ══════════════════════════════════════════════════════ SELECCIONAR INSTANCIA PROMO */
+.selinst-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10003; display:none; align-items:center; justify-content:center; animation:fadeIn .2s ease; }
+.selinst-card { background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,.2); padding:1.5rem 1.5rem 1.25rem; max-width:440px; width:93%; max-height:88vh; overflow-y:auto; }
+.selinst-titulo { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:#a89080; margin-bottom:.2rem; }
+.selinst-promo-nombre { font-size:1rem; font-weight:700; color:var(--color-secundario); margin-bottom:.3rem; }
+.selinst-sub { font-size:.8rem; color:#a89080; margin-bottom:1rem; }
+.selinst-lista { display:flex; flex-direction:column; gap:.45rem; }
+.selinst-item { border:1.5px solid #ede5df; border-radius:10px; padding:.65rem .85rem; cursor:pointer; transition:border-color .13s,background .13s; }
+.selinst-item:hover { border-color:var(--color-primario); background:rgba(231,111,46,.05); }
+.selinst-item-num { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#a89080; margin-bottom:.18rem; }
+.selinst-item-prods { font-size:.84rem; font-weight:600; color:var(--color-secundario); }
+.selinst-item-prods span { color:#a89080; font-weight:400; }
+.selinst-cancelar { width:100%; margin-top:.9rem; padding:.6rem; border-radius:9px; border:none; background:#f0ebe5; color:#7a6050; font-size:.88rem; font-weight:700; cursor:pointer; transition:opacity .15s; }
+.selinst-cancelar:hover { opacity:.8; }
 
 /* ══════════════════════════════════════════════════════ TOAST */
 .toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
@@ -237,34 +350,55 @@
 <div class="modal-overlay" id="modalAgregar" style="display:none;" onclick="if(event.target===this) cerrarModal()">
     <div class="modal-box">
         <div class="modal-header">
-            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
-            <span>Agregar producto</span>
+            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+            <span id="modalHeaderTxt">Agregar producto</span>
             <button class="btn-modal-cerrar" onclick="cerrarModal()" title="Cerrar">
                 <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
             </button>
         </div>
-        <div class="modal-body">
-            <div class="modal-search">
-                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                <input type="text" id="modalBuscarProd" placeholder="Buscar producto…" oninput="filtrarModalProductos()" autocomplete="off" />
-            </div>
-            <div class="modal-prod-list" id="modalProdList"></div>
-        </div>
-        <div class="modal-footer">
-            <span class="qty-label">Cantidad:</span>
-            <div class="qty-ctrl">
-                <button onclick="modalQtyChange(-1)">−</button>
-                <span id="modalQty">1</span>
-                <button onclick="modalQtyChange(+1)">+</button>
-            </div>
-            <button class="btn-modal-agregar" id="btnModalAgregar" onclick="confirmarAgregarModal()" disabled>
-                Agregar a boleta
+        @if (Model.Promociones.Any())
+        {
+        <div class="modal-tabs">
+            <button class="modal-tab-btn active" id="modalTabBtnProductos" onclick="selModalTab('productos')">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                Productos
             </button>
+            <button class="modal-tab-btn" id="modalTabBtnPromos" onclick="selModalTab('promos')">
+                <svg viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .59 1.42l9 9A2 2 0 0 0 13 22a2 2 0 0 0 1.41-.59l7-7A2 2 0 0 0 22 13a2 2 0 0 0-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
+                Promociones
+            </button>
+        </div>
+        }
+        <div class="modal-tab-pane" id="modalTabProductos">
+            <div class="modal-body">
+                <div class="modal-search">
+                    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="modalBuscarProd" placeholder="Buscar producto…" oninput="filtrarModalProductos()" autocomplete="off" />
+                </div>
+                <div class="modal-prod-list" id="modalProdList"></div>
+            </div>
+            <div class="modal-footer">
+                <span class="qty-label">Cantidad:</span>
+                <div class="qty-ctrl">
+                    <button onclick="modalQtyChange(-1)">−</button>
+                    <span id="modalQty">1</span>
+                    <button onclick="modalQtyChange(+1)">+</button>
+                </div>
+                <button class="btn-modal-agregar" id="btnModalAgregar" onclick="confirmarAgregarModal()" disabled>
+                    Agregar a boleta
+                </button>
+            </div>
+        </div>
+        <div class="modal-tab-pane hidden" id="modalTabPromos">
+            <div class="modal-promo-list" id="modalPromoList"></div>
         </div>
     </div>
 </div>
 
 <div class="toast-wrap" id="toastWrap"></div>
+<div class="envase-overlay" id="envaseOverlay" onclick="cerrarDialogoEnvase()"></div>
+<div class="grupos-overlay" id="gruposOverlay" onclick="cerrarDialogoGrupos()"></div>
+<div class="selinst-overlay" id="selInstOverlay" onclick="cerrarSelInst()"></div>
 @Html.AntiForgeryToken()
 
 <div class="page-header-card">
@@ -495,6 +629,7 @@
     const PUEDE_COBRAR = @Html.Raw(Model.PuedeCobrar.ToString().ToLower());
     const METODOS_PAGO = @Html.Raw(metodosPagoJson);
     const CATALOGO     = @Html.Raw(catalogoJson);
+    const PROMOS       = @Html.Raw(promosJson);
     const TOKEN        = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
     const URL_BUSCAR   = '@Html.Raw(urlBuscar)';
@@ -513,6 +648,8 @@
     let modalProdSel  = null; // producto seleccionado en el modal
     let modalQty      = 1;
     let adicionalVisible = false;
+    let pendingEnvase    = null;  // producto retornable pendiente de confirmación
+    let _promoInstCounter = 0;   // Unique ID per promo instance added to detalleActual
 
     /* ── Utilitarios ─────────────────────────────────────────────────────── */
     function fmt(n)  { return '$' + Number(n).toLocaleString('es-CL'); }
@@ -559,6 +696,76 @@
     ════════════════════════════════════════════════════ */
     const CATALOGO_ACTIVO = CATALOGO.filter(p => p.stock > 0)
         .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+    /* ── Tab switcher ────────────────────────────────────────────────── */
+    window.selModalTab = function (tab) {
+        ['productos','promos'].forEach(t => {
+            document.getElementById('modalTabBtn' + t.charAt(0).toUpperCase() + t.slice(1))?.classList.remove('active');
+            document.getElementById('modalTab'    + t.charAt(0).toUpperCase() + t.slice(1))?.classList.add('hidden');
+        });
+        const key = tab.charAt(0).toUpperCase() + tab.slice(1);
+        document.getElementById('modalTabBtn' + key)?.classList.add('active');
+        document.getElementById('modalTab'    + key)?.classList.remove('hidden');
+        document.getElementById('modalHeaderTxt').textContent = tab === 'promos' ? 'Agregar promoción' : 'Agregar producto';
+        if (tab === 'promos') renderModalPromos();
+    };
+
+    function renderModalPromos() {
+        const list = document.getElementById('modalPromoList');
+        if (!list) return;
+        if (!PROMOS || PROMOS.length === 0) {
+            list.innerHTML = `<div style="text-align:center;padding:2rem;color:#b8a898;font-size:.84rem;">Sin promociones activas</div>`;
+            return;
+        }
+        list.innerHTML = '';
+        PROMOS.forEach(p => {
+            // Check if at least one product combination has stock
+            const sinStock = !puedeAgregarPromo(p.id);
+            const div = document.createElement('div');
+            div.className = 'modal-promo-item' + (sinStock ? ' modal-promo-sin-stock' : '');
+            // Build product description
+            const allProds = [
+                ...p.productosBase.map(r => { const c = CATALOGO.find(cc => cc.id === r.idProducto); return c ? `${c.nombre} ×${r.cantidad}` : null; }).filter(Boolean),
+                ...p.grupos.flatMap(g => g.esExcluyente
+                    ? [g.productos.map(r => { const c = CATALOGO.find(cc => cc.id === r.idProducto); return c ? c.nombre : null; }).filter(Boolean).join(' / ')]
+                    : g.productos.map(r => { const c = CATALOGO.find(cc => cc.id === r.idProducto); return c ? `${c.nombre} ×${r.cantidad}` : null; }).filter(Boolean))
+            ];
+            div.innerHTML =
+                `<div class="modal-promo-header">` +
+                    `<span class="modal-promo-nombre">${x(p.nombre)}</span>` +
+                    `<span class="modal-promo-precio">${fmt(p.precio)}</span>` +
+                `</div>` +
+                `<div class="modal-promo-sub">${allProds.join(' · ')}</div>`;
+            if (!sinStock) {
+                div.onclick = () => { cerrarModal(); seleccionarPromo(p.id); };
+            }
+            list.appendChild(div);
+        });
+    }
+
+    function puedeAgregarPromo(idPromo) {
+        const promo = PROMOS.find(p => p.id === idPromo);
+        if (!promo) return false;
+        for (const req of promo.productosBase) {
+            const prod = CATALOGO.find(c => c.id === req.idProducto);
+            if (!prod || prod.stock < req.cantidad) return false;
+        }
+        for (const g of promo.grupos) {
+            if (g.esExcluyente) {
+                const hayAlguno = g.productos.some(r => {
+                    const prod = CATALOGO.find(c => c.id === r.idProducto);
+                    return prod && prod.stock >= r.cantidad;
+                });
+                if (!hayAlguno) return false;
+            } else {
+                for (const req of g.productos) {
+                    const prod = CATALOGO.find(c => c.id === req.idProducto);
+                    if (!prod || prod.stock < req.cantidad) return false;
+                }
+            }
+        }
+        return true;
+    }
 
     function renderModalProductos(filtro) {
         const list    = document.getElementById('modalProdList');
@@ -616,6 +823,8 @@
         document.getElementById('modalBuscarProd').value = '';
         document.getElementById('btnModalAgregar').disabled = true;
         renderModalProductos('');
+        // Reset to productos tab
+        selModalTab('productos');
         document.getElementById('modalAgregar').style.display = 'flex';
         document.getElementById('modalBuscarProd').focus();
     };
@@ -628,9 +837,24 @@
         if (!modalProdSel) return;
         const p         = modalProdSel;
         const qty       = modalQty;
+
+        /* Retornable: mostrar diálogo de envase primero */
+        if (p.retornable) {
+            pendingEnvase = { p, qty };
+            cerrarModal();
+            mostrarDialogoEnvase(p.nombre, p.retornable.valorEnvase, p.retornable.soloEfectivo);
+            return;
+        }
+        _agregarProductoADetalle(p, qty, false);
+        renderDetalle();
+        cerrarModal();
+    };
+
+    /* ── Helper: agregar un producto (o su envase) a detalleActual ───────── */
+    function _agregarProductoADetalle(p, qty, cobrarEnvase) {
         const tieneOfer = !!p.ofertaId;
         const precio    = tieneOfer ? p.ofertaPrecio : p.precio;
-        const existente = detalleActual.find(d => d.idProducto === p.id);
+        const existente = detalleActual.find(d => !d.esEnvase && !d.idPromocion && d.idProducto === p.id);
         if (existente) {
             existente.cantidad += qty;
             existente.subtotal  = existente.cantidad * existente.precioUnitario;
@@ -645,12 +869,257 @@
                 idPromocion:    null,
                 nombrePromocion:null,
                 idOferta:       tieneOfer ? p.ofertaId : null,
-                tieneOferta:    tieneOfer
+                tieneOferta:    tieneOfer,
+                esEnvase:       false
             });
         }
+        if (cobrarEnvase && p.retornable) {
+            const ve = p.retornable.valorEnvase;
+            const envExist = detalleActual.find(d => d.esEnvase && d.idProducto === p.id);
+            if (envExist) {
+                envExist.cantidad += qty;
+                envExist.subtotal  = envExist.cantidad * envExist.precioUnitario;
+            } else {
+                detalleActual.push({
+                    idProducto:     p.id,
+                    nombre:         `Envase ${p.nombre}`,
+                    cantidad:       qty,
+                    precioNormal:   0,
+                    precioUnitario: ve,
+                    subtotal:       qty * ve,
+                    idPromocion:    null,
+                    nombrePromocion:null,
+                    idOferta:       null,
+                    tieneOferta:    false,
+                    esEnvase:       true
+                });
+            }
+        }
+    }
+
+    /* ════════════════════════════════════════════════════
+       DIÁLOGO ENVASE RETORNABLE
+    ════════════════════════════════════════════════════ */
+    function mostrarDialogoEnvase(nombre, valorEnvase, soloEfectivo) {
+        const nota = soloEfectivo
+            ? `<div class="envase-nota-ef"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>Este cargo debe abonarse en <strong>efectivo</strong></div>`
+            : '';
+        document.getElementById('envaseOverlay').innerHTML = `
+        <div class="envase-card" onclick="event.stopPropagation()">
+            <div class="envase-icon">
+                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <div class="envase-titulo">Producto Retornable</div>
+            <div class="envase-nombre">${x(nombre)}</div>
+            <div class="envase-pregunta">¿El cliente trajo su envase?</div>
+            ${nota}
+            <div class="envase-btns">
+                <button class="envase-btn si" onclick="confirmarEnvase(true)">
+                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                    Sí, trajo envase
+                </button>
+                <button class="envase-btn no" onclick="confirmarEnvase(false)">
+                    <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    No — cobrar envase (${fmt(valorEnvase)})
+                </button>
+            </div>
+        </div>`;
+        document.getElementById('envaseOverlay').style.display = 'flex';
+    }
+
+    function cerrarDialogoEnvase() {
+        document.getElementById('envaseOverlay').style.display = 'none';
+    }
+
+    window.confirmarEnvase = function (trajoEnvase) {
+        cerrarDialogoEnvase();
+        if (!pendingEnvase) return;
+        const { p, qty } = pendingEnvase;
+        pendingEnvase = null;
+        _agregarProductoADetalle(p, qty, !trajoEnvase);
         renderDetalle();
-        cerrarModal();
     };
+
+    /* ════════════════════════════════════════════════════
+       SELECCIÓN DE PROMOCIÓN
+    ════════════════════════════════════════════════════ */
+    let _dialogoIdPromo = null;
+
+    window.seleccionarPromo = function (idPromo) {
+        if (!boletaActual || boletaActual.idEstado !== 1) return;
+        if (!puedeAgregarPromo(idPromo)) { toast('Sin stock suficiente para esta promoción.', 'error'); return; }
+        const promo = PROMOS.find(p => p.id === idPromo);
+        if (!promo) return;
+        const gruposExcl = promo.grupos.filter(g => g.esExcluyente && g.productos.length > 1);
+        if (gruposExcl.length > 0) {
+            mostrarDialogoGruposCaja(idPromo, gruposExcl);
+        } else {
+            agregarPromoDeCaja(idPromo, {});
+        }
+    };
+
+    /* ════════════════════════════════════════════════════
+       DIÁLOGO GRUPOS EXCLUYENTES
+    ════════════════════════════════════════════════════ */
+    function mostrarDialogoGruposCaja(idPromo, gruposExcl) {
+        _dialogoIdPromo = idPromo;
+        const promo = PROMOS.find(p => p.id === idPromo);
+
+        const seccionesHtml = gruposExcl.map(g => {
+            const optsHtml = g.productos.map(r => {
+                const prod = CATALOGO.find(c => c.id === r.idProducto);
+                if (!prod) return '';
+                const stockDisp = prod.stock;
+                const sinStock  = stockDisp < r.cantidad;
+                const cls       = sinStock ? 'sin' : stockDisp <= 3 ? 'poco' : '';
+                const sinCls    = sinStock ? ' goc-sin' : '';
+                const clickFn   = sinStock ? '' : `onclick="seleccionarOpcionGrupo(this,'${g.idGrupo}')"`;
+                return `<div class="goc${sinCls}" data-grupo="${g.idGrupo}" data-producto="${r.idProducto}" ${clickFn}>
+                    <div class="goc-check">✓</div>
+                    <span class="goc-nombre">${x(prod.nombre)} <small style="font-weight:400;color:#a89080">×${r.cantidad}</small></span>
+                    <span class="goc-stock ${cls}">${sinStock ? 'Sin stock' : `Stock: ${stockDisp}`}</span>
+                </div>`;
+            }).join('');
+            return `<div class="grupos-section">
+                <div class="grupos-section-lbl">Elige una opción:</div>
+                <div class="grupos-opts" data-grupo="${g.idGrupo}">${optsHtml}</div>
+            </div>`;
+        }).join('');
+
+        const overlay = document.getElementById('gruposOverlay');
+        overlay.innerHTML = `
+        <div class="grupos-card" onclick="event.stopPropagation()">
+            <div class="grupos-titulo">Personaliza tu promo</div>
+            <div class="grupos-promo-nombre">${x(promo.nombre)}</div>
+            ${seccionesHtml}
+            <div class="grupos-btns">
+                <button class="grupos-btn cancelar" onclick="cerrarDialogoGrupos()">Cancelar</button>
+                <button class="grupos-btn confirmar" id="btnConfirmarGrupos" onclick="confirmarDialogoGruposCaja()" disabled>Agregar a boleta</button>
+            </div>
+        </div>`;
+        overlay.style.display = 'flex';
+    }
+
+    window.seleccionarOpcionGrupo = function (el, idGrupo) {
+        el.closest('.grupos-opts').querySelectorAll('.goc').forEach(c => c.classList.remove('goc-sel'));
+        el.classList.add('goc-sel');
+        const overlay = document.getElementById('gruposOverlay');
+        const grupos  = overlay.querySelectorAll('.grupos-opts[data-grupo]');
+        const todos   = Array.from(grupos).every(g => g.querySelector('.goc.goc-sel'));
+        document.getElementById('btnConfirmarGrupos').disabled = !todos;
+    };
+
+    window.confirmarDialogoGruposCaja = function () {
+        const idPromo = _dialogoIdPromo;
+        if (!idPromo) { cerrarDialogoGrupos(); return; }
+        const overlay         = document.getElementById('gruposOverlay');
+        const seleccionGrupos = {};
+        overlay.querySelectorAll('.goc.goc-sel').forEach(el => {
+            seleccionGrupos[el.dataset.grupo] = parseInt(el.dataset.producto);
+        });
+        cerrarDialogoGrupos();
+        agregarPromoDeCaja(idPromo, seleccionGrupos);
+    };
+
+    window.cerrarDialogoGrupos = function () {
+        document.getElementById('gruposOverlay').style.display = 'none';
+        _dialogoIdPromo = null;
+    };
+
+    /* ════════════════════════════════════════════════════
+       AGREGAR PROMO A DETALLEACTUAL
+    ════════════════════════════════════════════════════ */
+    function agregarPromoDeCaja(idPromo, seleccionGrupos) {
+        const promo = PROMOS.find(p => p.id === idPromo);
+        if (!promo) return;
+
+        // Collect all products of this promo instance
+        const promoItems = [];  // [{idProducto, nombre, precioNormal, cantidad}]
+
+        promo.productosBase.forEach(req => {
+            const prod = CATALOGO.find(c => c.id === req.idProducto);
+            if (!prod) return;
+            promoItems.push({ idProducto: prod.id, nombre: prod.nombre, precioNormal: prod.precio, cantidad: req.cantidad, retornable: prod.retornable });
+        });
+
+        promo.grupos.forEach(g => {
+            let elegido;
+            if (g.esExcluyente) {
+                const selId = seleccionGrupos[g.idGrupo];
+                elegido = selId ? g.productos.find(r => r.idProducto === selId) : null;
+                if (!elegido) {
+                    elegido = g.productos.find(r => {
+                        const pr = CATALOGO.find(c => c.id === r.idProducto);
+                        return pr && pr.stock >= r.cantidad;
+                    }) ?? g.productos[0];
+                }
+            } else {
+                elegido = g.productos[0];
+            }
+            if (!elegido) return;
+            const prod = CATALOGO.find(c => c.id === elegido.idProducto);
+            if (!prod) return;
+            promoItems.push({ idProducto: prod.id, nombre: prod.nombre, precioNormal: prod.precio, cantidad: elegido.cantidad, retornable: prod.retornable });
+        });
+
+        if (!promoItems.length) return;
+
+        const instId = ++_promoInstCounter;
+
+        // Distribute promo.precio proportionally across items
+        const sumaNormal = promoItems.reduce((s, it) => s + it.precioNormal * it.cantidad, 0);
+        let restante = promo.precio;
+        promoItems.forEach((it, idx) => {
+            let subtotal;
+            if (idx === promoItems.length - 1) {
+                subtotal = restante;
+            } else {
+                subtotal = sumaNormal > 0
+                    ? Math.round((it.precioNormal * it.cantidad / sumaNormal) * promo.precio)
+                    : it.precioNormal * it.cantidad;
+                restante -= subtotal;
+            }
+            const precioUnitario = it.cantidad > 0 ? Math.round(subtotal / it.cantidad) : 0;
+
+            // Push to detalleActual (always as new row for promo instance)
+            detalleActual.push({
+                idProducto:     it.idProducto,
+                nombre:         it.nombre,
+                cantidad:       it.cantidad,
+                precioNormal:   it.precioNormal,
+                precioUnitario: precioUnitario,
+                subtotal:       subtotal,
+                idPromocion:    idPromo,
+                nombrePromocion:promo.nombre,
+                idOferta:       null,
+                tieneOferta:    false,
+                esEnvase:       false,
+                promoInstId:    instId
+            });
+
+            // Envase handling for promo products
+            if (it.retornable) {
+                const ve = it.retornable.valorEnvase;
+                detalleActual.push({
+                    idProducto:     it.idProducto,
+                    nombre:         `Envase ${it.nombre}`,
+                    cantidad:       it.cantidad,
+                    precioNormal:   0,
+                    precioUnitario: ve,
+                    subtotal:       it.cantidad * ve,
+                    idPromocion:    null,
+                    nombrePromocion:null,
+                    idOferta:       null,
+                    tieneOferta:    false,
+                    esEnvase:       true,
+                    promoInstId:    instId
+                });
+            }
+        });
+
+        renderDetalle();
+        toast(`Promoción "${promo.nombre}" agregada.`, 'exito');
+    }
 
     /* ════════════════════════════════════════════════════
        BUSCAR BOLETA
@@ -673,6 +1142,81 @@
         boletaActual  = b;
         detalleActual = b.detalle.map(d => ({ ...d }));
         metodosCobro  = [];
+
+        /* Reconstruct promoInstId for rows loaded from the server.
+           The backend stores each promo instance as separate rows (no merging).
+           Strategy: for each idPromocion, use the first base product as an
+           anchor — each anchor row = one instance. Exclusive-group products
+           are assigned to instances in the same order they appear in the array. */
+        detalleActual.forEach(d => {
+            d.promoInstId = null;
+            if (d.esEnvase == null) d.esEnvase = false;
+        });
+
+        // Group non-envase rows by idPromocion
+        const byPromo = {};
+        detalleActual.forEach(d => {
+            if (d.idPromocion && !d.esEnvase) {
+                (byPromo[d.idPromocion] ??= []).push(d);
+            }
+        });
+
+        Object.entries(byPromo).forEach(([idPromoStr, rows]) => {
+            const idPromo = Number(idPromoStr);
+            const promoDef = PROMOS.find(p => p.id === idPromo);
+
+            if (!promoDef || !promoDef.productosBase?.length) {
+                // No definition found — treat all rows as one instance
+                const instId = ++_promoInstCounter;
+                rows.forEach(r => r.promoInstId = instId);
+                return;
+            }
+
+            // Anchor: first base product. Each row of it = one instance.
+            const anchorId = promoDef.productosBase[0].idProducto;
+            const anchorRows = rows.filter(r => r.idProducto === anchorId);
+            const nInst = anchorRows.length || 1;
+
+            // Allocate one instId per instance
+            const instIds = Array.from({ length: nInst }, () => ++_promoInstCounter);
+
+            // Assign anchor rows first (one per instance, in order)
+            anchorRows.forEach((r, i) => { r.promoInstId = instIds[i]; });
+
+            // Assign remaining base products (non-anchor) in order
+            promoDef.productosBase.slice(1).forEach(bp => {
+                rows.filter(r => r.idProducto === bp.idProducto && !r.promoInstId)
+                    .forEach((r, i) => { r.promoInstId = instIds[i] ?? instIds[0]; });
+            });
+
+            // Assign non-exclusive group products in order
+            promoDef.grupos.filter(g => !g.esExcluyente).forEach(g => {
+                g.productos.forEach(gp => {
+                    rows.filter(r => r.idProducto === gp.idProducto && !r.promoInstId)
+                        .forEach((r, i) => { r.promoInstId = instIds[i] ?? instIds[0]; });
+                });
+            });
+
+            // Assign exclusive group products in order (one per instance)
+            promoDef.grupos.filter(g => g.esExcluyente).forEach(g => {
+                const exclIds = g.productos.map(p => p.idProducto);
+                rows.filter(r => exclIds.includes(r.idProducto) && !r.promoInstId)
+                    .forEach((r, i) => { r.promoInstId = instIds[i] ?? instIds[0]; });
+            });
+
+            // Fallback: any still-unassigned rows get the first instId
+            rows.filter(r => !r.promoInstId)
+                .forEach(r => { r.promoInstId = instIds[0]; });
+        });
+
+        // Assign envase rows (esEnvase && no idPromocion) to their promo inst
+        // by matching idProducto to a promo row already tagged
+        detalleActual.forEach(d => {
+            if (d.esEnvase && !d.promoInstId) {
+                const promoRow = detalleActual.find(r => !r.esEnvase && r.promoInstId && r.idProducto === d.idProducto);
+                if (promoRow) d.promoInstId = promoRow.promoInstId;
+            }
+        });
 
         const esPagada   = b.idEstado === 3;
         const esAnulada  = b.idEstado === 2;
@@ -914,22 +1458,126 @@
         const esEdit = boletaActual?.idEstado === 1;
         tbody.innerHTML = '';
         let total = 0;
-
-        // Verificar si hay envases soloEfectivo para la alerta
         let haySoloEfectivo = false;
 
-        detalleActual.forEach((d, i) => {
-            total += d.subtotal;
+        /* ── 1. Separar filas de promo y filas standalone ─────────────────── */
+        const promoMap     = new Map(); // idPromocion → { nombre, items:[], envases:[] }
+        const standalone   = [];        // { d, i }  (sin idPromocion)
+        const seenPromoOrder = [];      // orden de aparición de idPromocion
 
-            if (d.esEnvase) {
-                // ── Fila de envase (solo lectura) ──────────────────────────
-                const retornable = RETORNABLES_MAP[d.idProducto];
-                const soloEf = retornable?.soloEfectivo ?? false;
-                if (soloEf) haySoloEfectivo = true;
-                const efBadge = soloEf
-                    ? `<span class="td-envase-ef">solo efectivo</span>`
-                    : '';
+        detalleActual.forEach((d, i) => {
+            if (d.idPromocion) {
+                if (!promoMap.has(d.idPromocion)) {
+                    promoMap.set(d.idPromocion, { nombre: d.nombrePromocion ?? 'Promoción', items: [], envases: [] });
+                    seenPromoOrder.push(d.idPromocion);
+                }
+                const g = promoMap.get(d.idPromocion);
+                if (d.esEnvase) g.envases.push(d);
+                else            g.items.push(d);
+            } else if (d.esEnvase) {
+                // Envase standalone: se pega debajo de su producto normal
+                standalone.push({ d, i, esEnvase: true });
+            } else {
+                standalone.push({ d, i, esEnvase: false });
+            }
+        });
+
+        /* ── 2. Renderizar grupos de promo ────────────────────────────────── */
+        seenPromoOrder.forEach(idPromo => {
+            const g = promoMap.get(idPromo);
+
+            // Contar instancias únicas de esta promo
+            const instIds = [...new Set(
+                detalleActual
+                    .filter(d => d.idPromocion === idPromo && d.promoInstId != null)
+                    .map(d => d.promoInstId)
+            )];
+            const nInst = instIds.length || 1;
+
+            // Consolidar productos duplicados (mismo idProducto) dentro del grupo
+            const itemConsolidado = new Map(); // idProducto → { d acumulado }
+            g.items.forEach(d => {
+                if (!itemConsolidado.has(d.idProducto)) {
+                    itemConsolidado.set(d.idProducto, { ...d });
+                } else {
+                    const acc = itemConsolidado.get(d.idProducto);
+                    acc.cantidad += d.cantidad;
+                    acc.subtotal += d.subtotal;
+                }
+            });
+            // Consolidar envases
+            const envConsolidado = new Map();
+            g.envases.forEach(d => {
+                if (!envConsolidado.has(d.idProducto)) {
+                    envConsolidado.set(d.idProducto, { ...d });
+                } else {
+                    const acc = envConsolidado.get(d.idProducto);
+                    acc.cantidad += d.cantidad;
+                    acc.subtotal += d.subtotal;
+                }
+            });
+
+            const promoTotal = [...itemConsolidado.values(), ...envConsolidado.values()]
+                .reduce((s, d) => s + d.subtotal, 0);
+            total += promoTotal;
+
+            envConsolidado.forEach(d => {
+                const ret = RETORNABLES_MAP[d.idProducto];
+                if (ret?.soloEfectivo) haySoloEfectivo = true;
+            });
+
+            // Header row
+            const htr = document.createElement('tr');
+            htr.className = 'tr-promo-header';
+            const countBadge = `<span class="td-badge-promo-count">×${nInst}</span>`;
+            htr.innerHTML =
+                `<td colspan="3"><span class="td-badge td-badge-promo">${x(g.nombre)}</span>${countBadge}</td>` +
+                `<td style="font-weight:700;">${fmt(promoTotal)}</td>` +
+                `<td>${esEdit
+                    ? `<button class="btn-row-del" onclick="eliminarPromoGrupo(${idPromo})" title="Quitar una promo"><svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>`
+                    : ''}</td>`;
+            tbody.appendChild(htr);
+
+            // Producto rows (consolidados, read-only)
+            itemConsolidado.forEach(d => {
                 const tr = document.createElement('tr');
+                tr.className = 'tr-promo-row';
+                tr.innerHTML =
+                    `<td class="td-nombre" style="padding-left:1.4rem;">${x(d.nombre)}</td>` +
+                    `<td>${fmt(d.precioUnitario)}</td>` +
+                    `<td>${d.cantidad}</td>` +
+                    `<td>${fmt(d.subtotal)}</td>` +
+                    `<td></td>`;
+                tbody.appendChild(tr);
+            });
+
+            // Envase rows (consolidados, read-only)
+            envConsolidado.forEach(d => {
+                const ret    = RETORNABLES_MAP[d.idProducto];
+                const soloEf = ret?.soloEfectivo ?? false;
+                const efBadge = soloEf ? `<span class="td-envase-ef">solo efectivo</span>` : '';
+                const tr = document.createElement('tr');
+                tr.className = 'tr-envase tr-promo-row';
+                tr.innerHTML =
+                    `<td style="padding-left:1.4rem;"><span class="td-envase-lbl"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>Envase: ${x(d.nombre)}</span>${efBadge}</td>` +
+                    `<td style="color:var(--color-primario);font-weight:700;">${fmt(d.precioUnitario)}</td>` +
+                    `<td>${d.cantidad}</td>` +
+                    `<td style="color:var(--color-primario);font-weight:700;">${fmt(d.subtotal)}</td>` +
+                    `<td></td>`;
+                tbody.appendChild(tr);
+            });
+        });
+
+        /* ── 3. Renderizar ítems standalone ───────────────────────────────── */
+        standalone.forEach(({ d, i, esEnvase }) => {
+            total += d.subtotal;
+            const tr = document.createElement('tr');
+
+            if (esEnvase) {
+                const ret    = RETORNABLES_MAP[d.idProducto];
+                const soloEf = ret?.soloEfectivo ?? false;
+                if (soloEf) haySoloEfectivo = true;
+                const efBadge = soloEf ? `<span class="td-envase-ef">solo efectivo</span>` : '';
                 tr.className = 'tr-envase';
                 tr.innerHTML =
                     `<td><span class="td-envase-lbl"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>Envase: ${x(d.nombre)}</span>${efBadge}</td>` +
@@ -937,43 +1585,32 @@
                     `<td>${d.cantidad}</td>` +
                     `<td style="color:var(--color-primario);font-weight:700;">${fmt(d.subtotal)}</td>` +
                     `<td></td>`;
-                tbody.appendChild(tr);
-                return;
+            } else {
+                const tieneDesc  = d.precioNormal && d.precioNormal !== d.precioUnitario;
+                const precioHtml = tieneDesc
+                    ? `<span class="td-precio-normal">${fmt(d.precioNormal)}</span><br><span class="td-precio-descuento">${fmt(d.precioUnitario)}</span>`
+                    : fmt(d.precioUnitario);
+                tr.innerHTML =
+                    `<td class="td-nombre">${x(d.nombre)}${d.tieneOferta ? `<span class="td-badge td-badge-oferta">Oferta</span>` : ''}</td>` +
+                    `<td>${precioHtml}</td>` +
+                    `<td>${esEdit
+                        ? `<input type="number" class="qty-input" value="${d.cantidad}" min="1" onchange="cambiarCantidad(${i}, this.value)">`
+                        : d.cantidad}</td>` +
+                    `<td>${fmt(d.subtotal)}</td>` +
+                    `<td>${esEdit
+                        ? `<button class="btn-row-del" onclick="eliminarFila(${i})" title="Eliminar"><svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>`
+                        : ''}</td>`;
             }
-
-            // ── Fila normal ─────────────────────────────────────────────────
-            const tieneDesc  = d.precioNormal && d.precioNormal !== d.precioUnitario;
-            const precioHtml = tieneDesc
-                ? `<span class="td-precio-normal">${fmt(d.precioNormal)}</span><br><span class="td-precio-descuento">${fmt(d.precioUnitario)}</span>`
-                : fmt(d.precioUnitario);
-            const badgeHtml =
-                (d.nombrePromocion ? `<span class="td-badge td-badge-promo">${x(d.nombrePromocion)}</span>` : '') +
-                (d.tieneOferta     ? `<span class="td-badge td-badge-oferta">Oferta</span>` : '');
-
-            const tr = document.createElement('tr');
-            tr.innerHTML =
-                `<td class="td-nombre">${x(d.nombre)}${badgeHtml}</td>` +
-                `<td>${precioHtml}</td>` +
-                `<td>${esEdit
-                    ? `<input type="number" class="qty-input" value="${d.cantidad}" min="1" onchange="cambiarCantidad(${i}, this.value)">`
-                    : d.cantidad}</td>` +
-                `<td>${fmt(d.subtotal)}</td>` +
-                `<td>${esEdit
-                    ? `<button class="btn-row-del" onclick="eliminarFila(${i})" title="Eliminar"><svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>`
-                    : ''}</td>`;
             tbody.appendChild(tr);
         });
 
         document.getElementById('totalDisplay').textContent = fmt(total);
 
-        // Mostrar/ocultar alerta de envase solo efectivo
         const alertaEl = document.getElementById('cobroEnvaseAlerta');
         if (alertaEl) alertaEl.style.display = haySoloEfectivo ? 'flex' : 'none';
 
-        /* Actualizar el total en el panel cobro si está visible */
         if (PUEDE_COBRAR && boletaActual && boletaActual.idEstado === 1) {
             document.getElementById('resTotalBoleta').textContent = fmt(total);
-            /* Actualizar el método principal con el nuevo total */
             const princ = metodosCobro.find(m => m.esPrincipal);
             if (princ) {
                 const extras = metodosCobro.filter(m => !m.esPrincipal).reduce((s, m) => s + m.monto, 0);
@@ -982,6 +1619,97 @@
             }
         }
     }
+
+    /* Quita UNA instancia de la promo. Si hay varias con distintos productos → diálogo */
+    window.eliminarPromoGrupo = function (idPromo) {
+        const instIds = [...new Set(
+            detalleActual
+                .filter(d => d.idPromocion === idPromo && d.promoInstId != null)
+                .map(d => d.promoInstId)
+        )];
+
+        // Sin instIds conocidos (cargado desde servidor sin reconstrucción) → quitar todo
+        if (instIds.length === 0) {
+            detalleActual = detalleActual.filter(d => d.idPromocion !== idPromo);
+            renderDetalle();
+            return;
+        }
+
+        // Una sola instancia → quitar directamente
+        if (instIds.length === 1) {
+            _quitarInstancia(instIds[0]);
+            return;
+        }
+
+        // Varias instancias → ¿son idénticas en productos?
+        const firma = instId => detalleActual
+            .filter(d => d.promoInstId === instId && !d.esEnvase)
+            .map(d => `${d.idProducto}:${d.cantidad}`)
+            .sort().join('|');
+
+        const firmas = instIds.map(firma);
+        const todasIguales = firmas.every(f => f === firmas[0]);
+
+        if (todasIguales) {
+            // Idénticas: quitar la última agregada sin preguntar cuál
+            _quitarInstancia(instIds[instIds.length - 1]);
+            return;
+        }
+
+        // Distintas: mostrar diálogo de selección
+        _mostrarSeleccionInst(idPromo, instIds);
+    };
+
+    function _quitarInstancia(instId) {
+        detalleActual = detalleActual.filter(d => d.promoInstId !== instId);
+        renderDetalle();
+    }
+
+    function _mostrarSeleccionInst(idPromo, instIds) {
+        const promo = PROMOS.find(p => p.id === idPromo);
+        const promoNombre = promo?.nombre
+            ?? detalleActual.find(d => d.idPromocion === idPromo)?.nombrePromocion
+            ?? 'Promoción';
+
+        const gruposExclIds = new Set(
+            (promo?.grupos ?? []).filter(g => g.esExcluyente).flatMap(g => g.productos.map(r => r.idProducto))
+        );
+
+        const itemsHtml = instIds.map((instId, idx) => {
+            const filas = detalleActual.filter(d => d.promoInstId === instId && !d.esEnvase);
+            const distinguidores = filas.filter(d =>  gruposExclIds.has(d.idProducto));
+            const base           = filas.filter(d => !gruposExclIds.has(d.idProducto));
+            const partes = [
+                ...distinguidores.map(d => `<strong>${x(d.nombre)}</strong> <span>×${d.cantidad}</span>`),
+                ...base.map(d => `${x(d.nombre)} <span>×${d.cantidad}</span>`)
+            ].join(' · ');
+            return `<div class="selinst-item" onclick="event.stopPropagation(); confirmarEliminarInst(${instId})">
+                <div class="selinst-item-num">Opción ${idx + 1}</div>
+                <div class="selinst-item-prods">${partes}</div>
+            </div>`;
+        }).join('');
+
+        const overlay = document.getElementById('selInstOverlay');
+        overlay.innerHTML = `
+        <div class="selinst-card" onclick="event.stopPropagation()">
+            <div class="selinst-titulo">Eliminar una promoción</div>
+            <div class="selinst-promo-nombre">${x(promoNombre)}</div>
+            <div class="selinst-sub">Tenés ${instIds.length} instancias distintas. ¿Cuál querés quitar?</div>
+            <div class="selinst-lista">${itemsHtml}</div>
+            <button class="selinst-cancelar" onclick="cerrarSelInst()">Cancelar</button>
+        </div>`;
+        overlay.style.display = 'flex';
+    }
+
+    window.confirmarEliminarInst = function (instId) {
+        cerrarSelInst();
+        detalleActual = detalleActual.filter(d => d.promoInstId !== instId);
+        renderDetalle();
+    };
+
+    window.cerrarSelInst = function () {
+        document.getElementById('selInstOverlay').style.display = 'none';
+    };
 
     window.cambiarCantidad = function (i, val) {
         const qty = Math.max(1, parseInt(val) || 1);

@@ -392,13 +392,21 @@
 
         // ── Ítems de promo (igual que Generar) ────────────────────────────
         promoMap.forEach((g, nombrePromo) => {
+            // Consolidar filas duplicadas del mismo producto dentro de la promo
+            const itemMap = new Map();
+            g.items.forEach(d => {
+                const key = `${d.nombre}|${d.precioNormal}`;
+                if (!itemMap.has(key)) itemMap.set(key, { ...d, cantidad: 0 });
+                itemMap.get(key).cantidad += d.cantidad;
+            });
+
             lineas += `<hr class="ticket-hr">`;
             lineas += `
             <div class="ticket-row ticket-promo-tag">
                 <span class="tk-l">${x(nombrePromo)}</span>
                 <span class="tk-r ticket-bold">$${fmt(g.subtotalReal)}</span>
             </div>`;
-            g.items.forEach(d => {
+            itemMap.forEach(d => {
                 lineas += `
             <div class="ticket-row" style="padding-left:.8rem;">
                 <span class="tk-l">${x(d.nombre)}</span>
@@ -416,8 +424,18 @@
         });
 
         // ── Ítems individuales (igual que Generar) ────────────────────────
-        let hayIndiv = false;
+        // Agrupar filas duplicadas del mismo producto sumando cantidades
+        const indivMap = new Map();
         individuales.forEach(d => {
+            const key = `${d.nombre}|${d.precioUnitario}|${d.nombreOferta ?? ''}`;
+            if (!indivMap.has(key)) indivMap.set(key, { ...d, cantidad: 0, subtotal: 0 });
+            const g = indivMap.get(key);
+            g.cantidad += d.cantidad;
+            g.subtotal += d.subtotal;
+        });
+
+        let hayIndiv = false;
+        indivMap.forEach(d => {
             if (!hayIndiv) { lineas += `<hr class="ticket-hr">`; hayIndiv = true; }
             const tieneOferta = d.precioNormal > d.precioUnitario;
             const precioHtml  = tieneOferta

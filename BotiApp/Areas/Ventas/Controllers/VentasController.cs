@@ -35,7 +35,8 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
             PuedeCobrar = ClaimHelper.EsCajero(User) || ClaimHelper.EsAdmin(User),
             MetodosPago = await ventasRepository.ObtenerMetodosPagoAsync(),
             Productos = await ventasRepository.ObtenerProductosDisponiblesAsync(),
-            Ofertas = await ventasRepository.ObtenerOfertasActivasAsync()
+            Ofertas = await ventasRepository.ObtenerOfertasActivasAsync(),
+            Promociones = await ventasRepository.ObtenerPromocionesActivasAsync()
         };
         return View(vm);
     }
