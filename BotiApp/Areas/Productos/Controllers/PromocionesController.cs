@@ -89,9 +89,9 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> QuitarProductoAjax(int idPromocionDetalle)
+    public async Task<IActionResult> QuitarProductoAjax(int id)
     {
-        var ok = await promoRepo.QuitarProductoAsync(idPromocionDetalle);
+        var ok = await promoRepo.QuitarProductoAsync(id);
         return Json(new
         {
             ok,
