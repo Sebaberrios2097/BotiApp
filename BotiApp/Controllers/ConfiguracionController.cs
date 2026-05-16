@@ -1,7 +1,4 @@
-using BotiApp.Helpers;
-using BotiApp.Models;
 using Infraestructura.Repositories.BotiApp.Interfaces;
-using Infraestructura.Repositories.Sp.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

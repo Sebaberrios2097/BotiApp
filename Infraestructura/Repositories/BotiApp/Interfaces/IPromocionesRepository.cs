@@ -7,8 +7,6 @@ public interface IPromocionesRepository
     Task<IEnumerable<ProPromocion>> ObtenerTodasAsync();
     Task<ProPromocion?> ObtenerPorIdAsync(int id);
     Task<ProPromocion> CrearAsync(ProPromocion promocion);
-    Task<ProPromocion> ActualizarAsync(ProPromocion promocion);
-    Task<bool> EliminarAsync(int id);
     Task<bool?> ToggleEstadoAsync(int id);
 
     // Grupos

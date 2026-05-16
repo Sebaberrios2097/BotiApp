@@ -1,7 +1,6 @@
 using BotiApp.Helpers;
 using BotiApp.Models;
 using Infraestructura.Repositories.BotiApp.Interfaces;
-using Infraestructura.Repositories.Sp.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -11,20 +10,17 @@ namespace BotiApp.Controllers
     [Authorize]
     public class HomeController : Controller
     {
-        private readonly IBotiAppStoredProcedures _sp;
-        private readonly IVentasRepository        _ventas;
-        private readonly IProductosRepository     _productos;
+        private readonly IVentasRepository   _ventas;
+        private readonly IProductosRepository _productos;
 
-        public HomeController(
-            IBotiAppStoredProcedures sp,
-            IVentasRepository ventas,
-            IProductosRepository productos)
+        public HomeController(IVentasRepository ventas, IProductosRepository productos)
         {
-            _sp        = sp;
             _ventas    = ventas;
             _productos = productos;
         }
 
+        // ── Dashboard ─────────────────────────────────────────────────────────
+        // Carga KPIs diferenciados según el rol del usuario autenticado.
         public async Task<IActionResult> Index()
         {
             var hoy  = DateTime.Today;
@@ -65,29 +61,21 @@ namespace BotiApp.Controllers
                 var idUsuario = ClaimHelper.GetIdUsuario(User);
                 var boletas   = (await _ventas.ObtenerBoletasCajeroDelMesAsync(idUsuario, anio, mes)).ToList();
 
-                vm.CajeroBoletasCobradas  = boletas.Count(b => b.IdEstadoBoleta == 3);
-                vm.CajeroBoletasAnuladas  = boletas.Count(b => b.IdEstadoBoleta == 2);
-                vm.CajeroMontoGestionado  = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
-                vm.CajeroUltimasBoletas   = boletas.Take(10);
+                vm.CajeroBoletasCobradas = boletas.Count(b => b.IdEstadoBoleta == 3);
+                vm.CajeroBoletasAnuladas = boletas.Count(b => b.IdEstadoBoleta == 2);
+                vm.CajeroMontoGestionado = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
+                vm.CajeroUltimasBoletas  = boletas.Take(10);
             }
 
             return View(vm);
         }
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
-        public IActionResult AccesoDenegado()
-        {
-            return View();
-        }
+        // ── Vistas estáticas ──────────────────────────────────────────────────
+        public IActionResult Privacy()        => View();
+        public IActionResult AccesoDenegado() => View();
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
+            => View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }

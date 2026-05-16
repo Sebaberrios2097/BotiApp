@@ -40,13 +40,6 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             .Take(top)
             .ToListAsync();
 
-    public async Task<IEnumerable<VenBoletas>> ObtenerUltimasBoletasSistemaAsync(int top = 15)
-        => await BoletasConIncludes()
-            .AsNoTracking()
-            .OrderByDescending(b => b.FechaEmision)
-            .Take(top)
-            .ToListAsync();
-
     public async Task<VenBoletas?> ObtenerPorIdAsync(int id)
         => await BoletasConIncludes()
             .AsNoTracking()

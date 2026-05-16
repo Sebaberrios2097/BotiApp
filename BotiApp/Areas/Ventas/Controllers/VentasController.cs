@@ -101,10 +101,6 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
         return View(vm);
     }
 
-    // ── GET /Ventas/Ventas/Consultar ──────────────────────────────────────────
-    public async Task<IActionResult> Consultar()
-        => View(await ventasRepository.ObtenerBoletasAsync());
-
     // ── POST: crear boleta (vendedor) ─────────────────────────────────────────
     [HttpPost]
     [ValidateAntiForgeryToken]

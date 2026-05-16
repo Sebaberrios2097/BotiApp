@@ -8,7 +8,6 @@ public interface IVentasRepository
     Task<IEnumerable<VenBoletas>> ObtenerBoletasAsync();
     Task<IEnumerable<VenBoletas>> ObtenerBoletasPorVendedorAsync(int idVendedor, int top = 100);
     Task<IEnumerable<VenBoletas>> ObtenerBoletasPorCajeroAsync(int idCajero, int top = 100);
-    Task<IEnumerable<VenBoletas>> ObtenerUltimasBoletasSistemaAsync(int top = 15);
     Task<VenBoletas?> ObtenerPorIdAsync(int id);
     Task<VenBoletas?> ObtenerBoletaParaCajaAsync(int id);
     Task<VenBoletas> CrearBoletaAsync(VenBoletas boleta, IEnumerable<VenBoletaDetalle> detalles);

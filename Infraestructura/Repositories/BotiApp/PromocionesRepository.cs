@@ -41,22 +41,6 @@ public class PromocionesRepository(BotiAppContext context) : IPromocionesReposit
         return promocion;
     }
 
-    public async Task<ProPromocion> ActualizarAsync(ProPromocion promocion)
-    {
-        context.ProPromocion.Update(promocion);
-        await context.SaveChangesAsync();
-        return promocion;
-    }
-
-    public async Task<bool> EliminarAsync(int id)
-    {
-        var promo = await context.ProPromocion.FindAsync(id);
-        if (promo is null) return false;
-        context.ProPromocion.Remove(promo);
-        await context.SaveChangesAsync();
-        return true;
-    }
-
     public async Task<bool?> ToggleEstadoAsync(int id)
     {
         var promo = await context.ProPromocion.FindAsync(id);
