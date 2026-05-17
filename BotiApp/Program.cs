@@ -19,7 +19,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan   = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
     });
-
+ 
 builder.Services.AddAuthorization(options =>
 {
     // Solo administrador
