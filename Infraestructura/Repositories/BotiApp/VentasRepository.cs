@@ -16,7 +16,8 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             .Include(b => b.IdCajeroNavigation).ThenInclude(u => u!.IdEmpleadoNavigation)
             .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdProductoNavigation)
             .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdPromocionNavigation)
-            .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdOfertaProductoNavigation);
+            .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdOfertaProductoNavigation)
+            .Include(b => b.VenMetodosPagoBoleta).ThenInclude(m => m.IdMetodoPagoNavigation);
 
     public async Task<IEnumerable<VenBoletas>> ObtenerBoletasAsync()
         => await BoletasConIncludes()

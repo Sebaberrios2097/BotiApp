@@ -21,6 +21,14 @@ public class DashboardViewModel
     public int TotalOrdenesPendientes   { get; set; }
     public int TotalProductosBajoStock  { get; set; }
 
+    // ── Gráficos y datos expandibles (admin) ──────────────────────────────
+    /// <summary>Montos de ventas pagadas agrupados por día del mes (índice 0 = día 1).</summary>
+    public long[] VentasPorDiaMes { get; set; } = [];
+    /// <summary>Monto total cobrado agrupado por nombre de método de pago.</summary>
+    public Dictionary<string, long> MontosPorMetodoPago { get; set; } = [];
+    /// <summary>Lista de productos activos con stock ≤ 5.</summary>
+    public List<ProProductos> ProductosBajoStock { get; set; } = [];
+
     // ── Últimas boletas del sistema (admin) ────────────────────────────────
     public IEnumerable<VenBoletas> UltimasBoletas { get; set; } = [];
 

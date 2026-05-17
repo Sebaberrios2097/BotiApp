@@ -45,6 +45,26 @@ namespace BotiApp.Controllers
                 vm.MontoTotalMes             = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
                 vm.TotalProductosBajoStock   = productos.Count(p => p.Stock <= 5 && p.Estado);
                 vm.UltimasBoletas            = boletas.Take(15);
+
+                // Productos bajo stock (lista expandible)
+                vm.ProductosBajoStock = productos
+                    .Where(p => p.Stock <= 5 && p.Estado)
+                    .OrderBy(p => p.Stock)
+                    .ToList();
+
+                // Ventas por día del mes (boletas pagadas, usando FechaPago)
+                int diasEnMes = DateTime.DaysInMonth(anio, mes);
+                var ventasPorDia = new long[diasEnMes];
+                foreach (var b in boletas.Where(x => x.IdEstadoBoleta == 3 && x.FechaPago.HasValue))
+                    ventasPorDia[b.FechaPago!.Value.Day - 1] += b.MontoTotal;
+                vm.VentasPorDiaMes = ventasPorDia;
+
+                // Montos por método de pago (boletas pagadas)
+                vm.MontosPorMetodoPago = boletas
+                    .Where(b => b.IdEstadoBoleta == 3)
+                    .SelectMany(b => b.VenMetodosPagoBoleta)
+                    .GroupBy(m => m.IdMetodoPagoNavigation?.NombreMetodoPago ?? "Otro")
+                    .ToDictionary(g => g.Key, g => (long)g.Sum(m => m.Monto));
             }
             else if (ClaimHelper.EsVendedor(User))
             {

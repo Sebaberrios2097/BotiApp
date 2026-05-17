@@ -1,9 +1,16 @@
 ﻿@model BotiApp.Models.DashboardViewModel
 @using BotiApp.Helpers
+@using System.Text.Json
 @{
     ViewData["Title"] = "Dashboard";
     var mesActual     = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(DateTime.Today.Month);
     mesActual = char.ToUpper(mesActual[0]) + mesActual[1..];
+
+    // Datos para gráficos (admin)
+    var diasLabels   = Enumerable.Range(1, Model.VentasPorDiaMes.Length).Select(d => d.ToString()).ToArray();
+    var diasData     = Model.VentasPorDiaMes;
+    var metodosLabels = Model.MontosPorMetodoPago.Keys.ToArray();
+    var metodosData   = Model.MontosPorMetodoPago.Values.ToArray();
 }
 
 <style>
@@ -50,6 +57,21 @@
     .kpi-card.danger  { border-left-color: var(--color-danger);  }
     .kpi-card.info    { border-left-color: #6366f1; }
 
+    /* Card seleccionable (productos bajo stock) */
+    .kpi-card.clickable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+    }
+    .kpi-card.clickable:active { transform: scale(.98); }
+    .kpi-card-chevron {
+        margin-left: auto;
+        flex-shrink: 0;
+        transition: transform .25s;
+        fill: #9ca3af;
+    }
+    .kpi-card.active .kpi-card-chevron { transform: rotate(180deg); }
+
     .kpi-icon {
         width: 46px;
         height: 46px;
@@ -84,6 +106,75 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    /* ── Panel bajo stock ── */
+    .panel-bajo-stock {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.07);
+        overflow: hidden;
+        margin-top: -0.5rem;
+        margin-bottom: 1.75rem;
+        max-height: 0;
+        opacity: 0;
+        transition: max-height .35s ease, opacity .25s ease;
+    }
+    .panel-bajo-stock.open {
+        max-height: 500px;
+        opacity: 1;
+    }
+    .panel-bajo-stock-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: .85rem 1.4rem;
+        border-bottom: 1px solid #f1ede8;
+    }
+    .panel-bajo-stock-header h2 {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--color-secundario);
+        margin: 0;
+    }
+    .panel-bajo-stock-body { overflow-y: auto; max-height: 380px; }
+
+    /* ── Charts row ── */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.75rem;
+    }
+    .chart-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.07);
+        padding: 1.25rem 1.4rem;
+        display: flex;
+        flex-direction: column;
+    }
+    .chart-card-title {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--color-secundario);
+        margin: 0 0 1rem;
+    }
+    .chart-card-subtitle {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        font-weight: 400;
+        margin-left: .4rem;
+    }
+    .chart-wrap {
+        position: relative;
+        flex: 1;
+    }
+    .chart-empty {
+        text-align: center;
+        padding: 2rem 1rem;
+        color: #9ca3af;
+        font-size: .83rem;
     }
 
     /* ── Table card ── */
@@ -150,6 +241,10 @@
     .badge-anulada   { background: rgba(255,55,55,.12);  color: #dc2626; }
     .badge-pagada    { background: rgba(92,179,56,.15);  color: #16a34a; }
     .badge-otro      { background: rgba(99,102,241,.12); color: #4f46e5; }
+
+    /* badge stock */
+    .badge-stock-cero { background: rgba(255,55,55,.12); color: #dc2626; }
+    .badge-stock-low  { background: rgba(252,191,73,.2); color: #b45309; }
 
     .dash-empty {
         text-align: center;
@@ -231,7 +326,9 @@
                 <span class="kpi-label">Ingresos del mes</span>
             </div>
         </div>
-        <div class="kpi-card danger">
+
+        @* Card productos bajo stock — clickable *@
+        <div class="kpi-card danger clickable" id="card-bajo-stock" onclick="toggleBajoStock()" title="Click para ver detalle">
             <div class="kpi-icon danger">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
@@ -241,6 +338,119 @@
                 <span class="kpi-value">@Model.TotalProductosBajoStock</span>
                 <span class="kpi-label">Productos bajo stock</span>
             </div>
+            <svg class="kpi-card-chevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+                <path d="M7 10l5 5 5-5z"/>
+            </svg>
+        </div>
+    </div>
+
+    @* Panel expandible: productos bajo stock *@
+    <div class="panel-bajo-stock" id="panel-bajo-stock">
+        <div class="panel-bajo-stock-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                     style="fill:var(--color-danger);vertical-align:middle;margin-right:.35rem">
+                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                </svg>
+                Productos con stock bajo (≤ 5 unidades)
+            </h2>
+            <span>@Model.ProductosBajoStock.Count producto(s)</span>
+        </div>
+        @if (!Model.ProductosBajoStock.Any())
+        {
+            <div class="dash-empty">No hay productos con stock bajo.</div>
+        }
+        else
+        {
+            <div class="panel-bajo-stock-body">
+                <div class="table-responsive">
+                    <table class="dash-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Código</th>
+                                <th>Tipo</th>
+                                <th>Marca</th>
+                                <th style="text-align:right">Precio</th>
+                                <th style="text-align:center">Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in Model.ProductosBajoStock)
+                            {
+                                var stockBadge = p.Stock == 0 ? "badge-stock-cero" : "badge-stock-low";
+                                <tr>
+                                    <td><strong>@p.NombreProducto</strong></td>
+                                    <td style="color:#9ca3af">@(p.Codigo ?? "—")</td>
+                                    <td>@(p.IdTipoProductoNavigation?.NombreTipoProducto ?? "—")</td>
+                                    <td>@(p.IdMarcaNavigation?.NombreMarca ?? "—")</td>
+                                    <td style="text-align:right">$@p.Precio.ToString("N0")</td>
+                                    <td style="text-align:center">
+                                        <span class="badge-estado @stockBadge">@p.Stock</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* Gráficos *@
+    <div class="charts-grid">
+        @* Pie — Boletas por tipo *@
+        <div class="chart-card">
+            <p class="chart-card-title">
+                Boletas por tipo
+                <span class="chart-card-subtitle">@mesActual @DateTime.Today.Year</span>
+            </p>
+            @if (Model.TotalBoletasMes == 0)
+            {
+                <div class="chart-empty">Sin datos este mes.</div>
+            }
+            else
+            {
+                <div class="chart-wrap" style="height:220px">
+                    <canvas id="chartBoletasTipo"></canvas>
+                </div>
+            }
+        </div>
+
+        @* Line — Ventas del mes por día *@
+        <div class="chart-card" style="grid-column: span 2; min-width:0">
+            <p class="chart-card-title">
+                Ventas del mes
+                <span class="chart-card-subtitle">montos pagados por día — @mesActual @DateTime.Today.Year</span>
+            </p>
+            @if (!Model.VentasPorDiaMes.Any(v => v > 0))
+            {
+                <div class="chart-empty">No hay ventas pagadas este mes.</div>
+            }
+            else
+            {
+                <div class="chart-wrap" style="height:220px">
+                    <canvas id="chartVentasDia"></canvas>
+                </div>
+            }
+        </div>
+
+        @* Bar — Montos por método de pago *@
+        <div class="chart-card">
+            <p class="chart-card-title">
+                Métodos de pago
+                <span class="chart-card-subtitle">@mesActual @DateTime.Today.Year</span>
+            </p>
+            @if (!Model.MontosPorMetodoPago.Any())
+            {
+                <div class="chart-empty">Sin datos este mes.</div>
+            }
+            else
+            {
+                <div class="chart-wrap" style="height:220px">
+                    <canvas id="chartMetodosPago"></canvas>
+                </div>
+            }
         </div>
     </div>
 
@@ -297,6 +507,162 @@
             </div>
         }
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script>
+        // ── Colores corporativos ──────────────────────────────────────────────
+        const C_PRIMARY  = getComputedStyle(document.documentElement).getPropertyValue('--color-primario').trim()  || '#e76f2e';
+        const C_SUCCESS  = getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim()   || '#5cb338';
+        const C_WARNING  = getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim()   || '#fcbf49';
+        const C_DANGER   = getComputedStyle(document.documentElement).getPropertyValue('--color-danger').trim()    || '#ff3737';
+        const C_INFO     = '#6366f1';
+
+        Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
+        Chart.defaults.font.size   = 12;
+
+        // ── 1. Pie: Boletas por tipo ──────────────────────────────────────────
+        const ctxPie = document.getElementById('chartBoletasTipo');
+        if (ctxPie) {
+            new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pagadas', 'Pendientes', 'Anuladas'],
+                    datasets: [{
+                        data: [
+                            @Model.TotalBoletasPagadasMes,
+                            @Model.TotalBoletasPendientesMes,
+                            @Model.TotalBoletasAnuladasMes
+                        ],
+                        backgroundColor: [C_SUCCESS, C_WARNING, C_DANGER],
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '62%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 14, boxWidth: 12 } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` ${ctx.label}: ${ctx.parsed} boleta(s)`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ── 2. Line: Ventas del mes por día ───────────────────────────────────
+        const ctxLine = document.getElementById('chartVentasDia');
+        if (ctxLine) {
+            const diasLabels = @Html.Raw(JsonSerializer.Serialize(diasLabels));
+            const diasData   = @Html.Raw(JsonSerializer.Serialize(diasData));
+
+            new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: diasLabels,
+                    datasets: [{
+                        label: 'Ventas ($)',
+                        data: diasData,
+                        borderColor: C_PRIMARY,
+                        backgroundColor: C_PRIMARY + '22',
+                        borderWidth: 2.5,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        fill: true,
+                        tension: 0.35
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` $${ctx.parsed.y.toLocaleString('es-CL')}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#9ca3af', maxTicksLimit: 16 }
+                        },
+                        y: {
+                            grid: { color: '#f3f0ec' },
+                            ticks: {
+                                color: '#9ca3af',
+                                callback: v => '$' + v.toLocaleString('es-CL')
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // ── 3. Bar: Montos por método de pago ─────────────────────────────────
+        const ctxBar = document.getElementById('chartMetodosPago');
+        if (ctxBar) {
+            const metLabels = @Html.Raw(JsonSerializer.Serialize(metodosLabels));
+            const metData   = @Html.Raw(JsonSerializer.Serialize(metodosData));
+
+            const barColors = [C_PRIMARY, C_INFO, C_SUCCESS, C_WARNING, C_DANGER,
+                               '#0ea5e9', '#a855f7', '#f97316', '#14b8a6', '#ec4899'];
+
+            new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: metLabels,
+                    datasets: [{
+                        label: 'Monto ($)',
+                        data: metData,
+                        backgroundColor: metLabels.map((_, i) => barColors[i % barColors.length] + 'cc'),
+                        borderColor:     metLabels.map((_, i) => barColors[i % barColors.length]),
+                        borderWidth: 1.5,
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` $${ctx.parsed.y.toLocaleString('es-CL')}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#9ca3af' } },
+                        y: {
+                            grid: { color: '#f3f0ec' },
+                            ticks: {
+                                color: '#9ca3af',
+                                callback: v => '$' + v.toLocaleString('es-CL')
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // ── Panel bajo stock ──────────────────────────────────────────────────
+        function toggleBajoStock() {
+            const card  = document.getElementById('card-bajo-stock');
+            const panel = document.getElementById('panel-bajo-stock');
+            card.classList.toggle('active');
+            panel.classList.toggle('open');
+        }
+    </script>
 }
 
 @* ═══════════════════════════════════════════════════ *@
