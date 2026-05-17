@@ -41,10 +41,11 @@
         })
     }));
 
-    var urlBuscar   = Url.Action("BuscarBoletaAjax",   "Ventas", new { area = "Ventas" });
-    var urlModifica = Url.Action("ModificarBoletaAjax", "Ventas", new { area = "Ventas" });
-    var urlCobrar   = Url.Action("CobrarBoletaAjax",   "Ventas", new { area = "Ventas" });
-    var urlAnular   = Url.Action("AnularBoletaAjax",   "Ventas", new { area = "Ventas" });
+    var urlBuscar   = Url.Action("BuscarBoletaAjax",      "Ventas", new { area = "Ventas" });
+    var urlModifica = Url.Action("ModificarBoletaAjax",   "Ventas", new { area = "Ventas" });
+    var urlCobrar   = Url.Action("CobrarBoletaAjax",      "Ventas", new { area = "Ventas" });
+    var urlAnular   = Url.Action("AnularBoletaAjax",      "Ventas", new { area = "Ventas" });
+    var urlPendientes = Url.Action("BoletasPendientesAjax", "Ventas", new { area = "Ventas" });
 }
 
 <style>
@@ -337,6 +338,37 @@
 
 /* ══════════════════════════════════════════════════════ TOAST */
 .toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
+
+/* ══════════════════════════════════════════════════════ BOLETAS PENDIENTES */
+.pend-subheader { display:flex; align-items:center; justify-content:space-between; padding:.55rem .75rem; background:#f5f0eb; border-radius:8px; margin-top:.1rem; }
+.pend-subheader-left { display:flex; align-items:center; gap:.4rem; }
+.pend-subheader-left svg { width:13px; height:13px; fill:#a89080; flex-shrink:0; }
+.pend-subheader-left span { font-size:.72rem; font-weight:700; color:#a89080; text-transform:uppercase; letter-spacing:.04em; }
+.pend-header-count { background:var(--color-primario); color:#fff; border-radius:99px; font-size:.67rem; font-weight:800; padding:.1rem .45rem; }
+.pend-header-count.nuevo { animation:pendPulse .5s ease; }
+@@keyframes pendPulse { 0%{transform:scale(1)} 40%{transform:scale(1.35)} 100%{transform:scale(1)} }
+.btn-pend-refresh { background:rgba(133,93,59,.12); border:none; border-radius:6px; cursor:pointer; color:#a89080; width:24px; height:24px; display:flex; align-items:center; justify-content:center; transition:background .15s; flex-shrink:0; }
+.btn-pend-refresh:hover { background:rgba(133,93,59,.22); }
+.btn-pend-refresh svg { width:13px; height:13px; fill:currentColor; }
+.btn-pend-refresh.girando svg { animation:spinR .6s linear infinite; }
+.pend-last-update { font-size:.67rem; color:#c9b8a8; }
+.pend-list { display:flex; flex-direction:column; }
+.pend-item { display:flex; align-items:center; gap:.65rem; padding:.55rem 1.15rem; border-bottom:1px solid #f7f2ef; cursor:pointer; transition:background .12s; }
+.pend-item:last-child { border-bottom:none; }
+.pend-item:hover { background:rgba(231,111,46,.05); }
+.pend-item.pend-item-nuevo { animation:pendNewRow .7s ease; }
+@@keyframes pendNewRow { from{background:rgba(231,111,46,.18)} to{background:transparent} }
+.pend-id { font-size:.85rem; font-weight:800; color:var(--color-secundario); min-width:40px; flex-shrink:0; }
+.pend-item:hover .pend-id { color:var(--color-primario); }
+.pend-info { display:flex; flex-direction:column; flex:1; min-width:0; }
+.pend-vendedor { font-size:.78rem; font-weight:600; color:var(--color-secundario); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pend-fecha { font-size:.7rem; color:#a89080; }
+.pend-right { display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; gap:.08rem; }
+.pend-monto { font-size:.82rem; font-weight:700; color:var(--color-primario); }
+.pend-prods { font-size:.67rem; color:#a89080; }
+.pend-empty { text-align:center; padding:1.25rem 1rem; color:#b8a898; font-size:.82rem; }
+.pend-empty svg { width:32px; height:32px; fill:#ddd0c4; display:block; margin:0 auto .45rem; }
+.pend-loading { text-align:center; padding:1.1rem; color:#b8a898; font-size:.8rem; }
 .toast-msg { display:flex; align-items:center; gap:.6rem; padding:.75rem 1.1rem; border-radius:10px; font-size:.88rem; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease; }
 .toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
 .toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
@@ -422,13 +454,13 @@
     <!-- ══ COLUMNA IZQUIERDA: boleta ══ -->
     <div style="display:flex; flex-direction:column; gap:1.2rem;">
 
-        <!-- Buscador -->
-        <div class="cj-panel">
+        <!-- Panel unificado: Buscador + Boletas Recientes/Pendientes -->
+        <div class="cj-panel" id="pendPanel">
             <div class="cj-panel-header">
-                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                <span>Buscar boleta</span>
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-3 7H7v-2h3v2zm3-4H7v-2h6v2zm0 4h-2v-2h2v2z"/></svg>
+                <span>Boletas</span>
             </div>
-            <div class="cj-panel-body" style="padding:.85rem 1.15rem;">
+            <div class="cj-panel-body" style="gap:.85rem; padding:.85rem 1.15rem 0;">
                 <div class="cj-search-row">
                     <input type="number" id="inputNBoleta" placeholder="N° de boleta" min="1"
                            onkeydown="if(event.key==='Enter') buscarBoleta()" />
@@ -437,6 +469,22 @@
                         Buscar
                     </button>
                 </div>
+                <div class="pend-subheader">
+                    <div class="pend-subheader-left">
+                        <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+                        <span>Recientes · Pendientes de pago</span>
+                        <span class="pend-header-count" id="pendCount">0</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:.4rem;">
+                        <span id="pendLastUpdate" class="pend-last-update"></span>
+                        <button class="btn-pend-refresh" onclick="cargarBoletasPendientes(true)" title="Actualizar lista">
+                            <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="pendListContainer" style="padding-bottom:.5rem;">
+                <div class="pend-loading">Cargando…</div>
             </div>
         </div>
 
@@ -623,6 +671,7 @@
 
 @section Scripts {
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8/dist/browser/signalr.min.js"></script>
 <script>
 (function () {
     /* ── Datos del servidor ──────────────────────────────────────────────── */
@@ -636,6 +685,7 @@
     const URL_MODIFICA = '@Html.Raw(urlModifica)';
     const URL_COBRAR   = '@Html.Raw(urlCobrar)';
     const URL_ANULAR   = '@Html.Raw(urlAnular)';
+    const URL_PENDIENTES = '@Html.Raw(urlPendientes)';
 
     /* ── Mapa de retornables ─────────────────────────────────────────────── */
     const RETORNABLES_MAP = {};
@@ -1448,6 +1498,7 @@
         if (!res.ok) { toast(res.mensaje, 'error'); return; }
         toast(res.mensaje, 'exito');
         cargarBoleta(res.boleta);
+        cargarBoletasPendientes();
     };
 
     /* ════════════════════════════════════════════════════
@@ -1765,10 +1816,120 @@
         boletaActual.idEstado = 2;
         boletaActual.estado   = 'Anulada';
         cargarBoleta(boletaActual);
+        cargarBoletasPendientes();
     }
 
     /* Cerrar modal con Escape */
     document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+
+    /* ════════════════════════════════════════════════════
+       PANEL BOLETAS PENDIENTES (SignalR — push real)
+    ════════════════════════════════════════════════════ */
+    var _pendIds    = new Set();   // IDs conocidos para detectar nuevas boletas
+    var _pendLoaded = false;       // true tras primera carga exitosa → no mostrar "Cargando…" en refrescos
+
+    window.cargarBoletasPendientes = async function (manual) {
+        var container  = document.getElementById('pendListContainer');
+        var btnRefresh = document.querySelector('.btn-pend-refresh');
+        if (!container) return;
+        if (manual) {
+            if (btnRefresh) btnRefresh.classList.add('girando');
+        } else if (!_pendLoaded) {
+            container.innerHTML = '<div class="pend-loading">Cargando…</div>';
+        }
+        var data;
+        try {
+            var r = await fetch(URL_PENDIENTES, { credentials: 'same-origin' });
+            if (!r.ok) throw new Error(r.status);
+            data = await r.json();
+        } catch {
+            if (!_pendLoaded)
+                container.innerHTML = '<div class="pend-empty"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>Error al cargar</div>';
+            if (btnRefresh) btnRefresh.classList.remove('girando');
+            return;
+        }
+        _pendLoaded = true;
+        if (btnRefresh) btnRefresh.classList.remove('girando');
+
+        // Detectar nuevas boletas
+        var incomingIds = new Set(data.map(b => b.idBoleta));
+        var hayNuevas   = data.some(b => !_pendIds.has(b.idBoleta));
+        _pendIds        = incomingIds;
+
+        // Actualizar badge
+        var badge = document.getElementById('pendCount');
+        if (badge) {
+            badge.textContent = data.length;
+            if (hayNuevas && data.length > 0) {
+                badge.classList.remove('nuevo');
+                void badge.offsetWidth;
+                badge.classList.add('nuevo');
+            }
+        }
+
+        // Hora de última actualización
+        var luEl = document.getElementById('pendLastUpdate');
+        if (luEl) luEl.textContent = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        if (!data.length) {
+            container.innerHTML =
+                '<div class="pend-empty"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>Sin boletas pendientes</div>';
+            return;
+        }
+
+        var list = document.createElement('div');
+        list.className = 'pend-list';
+        data.forEach(b => {
+            var item = document.createElement('div');
+            item.className = 'pend-item';
+            if (hayNuevas && !document.querySelector('.pend-item[data-id="' + b.idBoleta + '"]')) {
+                item.classList.add('pend-item-nuevo');
+            }
+            item.dataset.id = b.idBoleta;
+            item.title = 'Cargar boleta #' + b.idBoleta;
+            item.innerHTML =
+                '<span class="pend-id">#' + b.idBoleta + '</span>' +
+                '<div class="pend-info">' +
+                    '<span class="pend-vendedor">' + x(b.vendedor) + '</span>' +
+                    '<span class="pend-fecha">' + x(b.fechaEmision) + '</span>' +
+                '</div>' +
+                '<div class="pend-right">' +
+                    '<span class="pend-monto">' + fmt(b.montoTotal) + '</span>' +
+                    '<span class="pend-prods">' + b.cantProductos + ' prod.</span>' +
+                '</div>';
+            item.onclick = () => {
+                document.getElementById('inputNBoleta').value = b.idBoleta;
+                buscarBoleta();
+            };
+            list.appendChild(item);
+        });
+        container.innerHTML = '';
+        container.appendChild(list);
+    };
+
+    // ── Conexión SignalR ──────────────────────────────────────────────────────
+    (function iniciarSignalR() {
+        var conn = new signalR.HubConnectionBuilder()
+            .withUrl('/hubs/boleta')
+            .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+            .configureLogging(signalR.LogLevel.Warning)
+            .build();
+
+        conn.on('NuevaBoleta', function () {
+            cargarBoletasPendientes(false);
+        });
+
+        // Al volver a conectar tras una interrupción, refrescar por si se perdió algún evento
+        conn.onreconnected(function () {
+            cargarBoletasPendientes(false);
+        });
+
+        conn.start().catch(function (err) {
+            console.warn('SignalR Boleta: no se pudo conectar —', err);
+        });
+    })();
+
+    cargarBoletasPendientes(false);
 
 })();
 </script>

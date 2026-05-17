@@ -8,6 +8,7 @@ public interface IVentasRepository
     Task<IEnumerable<VenBoletas>> ObtenerBoletasAsync();
     Task<IEnumerable<VenBoletas>> ObtenerBoletasPorVendedorAsync(int idVendedor, int top = 100);
     Task<IEnumerable<VenBoletas>> ObtenerBoletasPorCajeroAsync(int idCajero, int top = 100);
+    Task<IEnumerable<VenBoletas>> ObtenerBoletasPendientesAsync(int top = 20);
     Task<VenBoletas?> ObtenerPorIdAsync(int id);
     Task<VenBoletas?> ObtenerBoletaParaCajaAsync(int id);
     Task<VenBoletas> CrearBoletaAsync(VenBoletas boleta, IEnumerable<VenBoletaDetalle> detalles);
@@ -31,4 +32,5 @@ public interface IVentasRepository
     Task<IEnumerable<VenBoletas>> ObtenerBoletasDelMesAsync(int anio, int mes);
     Task<IEnumerable<VenBoletas>> ObtenerBoletasVendedorDelMesAsync(int idVendedor, int anio, int mes);
     Task<IEnumerable<VenBoletas>> ObtenerBoletasCajeroDelMesAsync(int idCajero, int anio, int mes);
+    Task<IEnumerable<(int Anio, int Mes)>> ObtenerPeriodosConMovimientoAsync();
 }

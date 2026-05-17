@@ -12,6 +12,12 @@ public class DashboardViewModel
     public string NombreUsuario { get; set; } = string.Empty;
     public string TipoUsuario   { get; set; } = string.Empty;
 
+    // ── Período seleccionado y períodos con actividad ──────────────────────
+    public int Mes  { get; set; }
+    public int Anio { get; set; }
+    /// <summary>Meses (desc) que tienen al menos una boleta emitida.</summary>
+    public List<(int Anio, int Mes)> PeriodosDisponibles { get; set; } = [];
+
     // ── Tarjetas de resumen (admin) ────────────────────────────────────────
     public int TotalBoletasMes          { get; set; }
     public int TotalBoletasPagadasMes   { get; set; }

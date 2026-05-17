@@ -1,3 +1,4 @@
+using BotiApp.Hubs;
 using BotiApp.Middleware;
 using Infraestructura.Context;
 using Infraestructura.Entities.BotiApp;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR();
 builder.Services.AddInfraestructura(builder.Configuration);
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -78,5 +80,7 @@ app.MapAreaControllerRoute(
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Login}/{action=Login}/{id?}");
+
+app.MapHub<BoletaHub>("/hubs/boleta");
 
 app.Run();

@@ -1,0 +1,452 @@
+@model BotiApp.Models.OfertaProductoViewModel
+@{
+    var p         = Model.Producto;
+    var activa    = Model.OfertaActiva;
+    var promos    = Model.PromosActivas.ToList();
+    var historial = Model.Historial.ToList();
+    var hoyStr    = DateTime.Today.ToString("yyyy-MM-dd");
+    var descuento = activa is not null
+        ? (int)Math.Round((1.0 - (double)activa.PrecioOferta / p.Precio) * 100)
+        : 0;
+}
+<style>
+/* ── Header ────────────────────────────────────────────────────────── */
+.mo-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:1.1rem 1.5rem; border-bottom:1px solid #f0ebe5;
+    background:var(--color-secundario); border-radius:16px 16px 0 0;
+}
+.mo-header-left { display:flex; align-items:center; gap:.65rem; }
+.mo-header-left svg { width:20px; height:20px; fill:var(--color-primario); }
+.mo-header-left h2 { font-size:1rem; font-weight:700; color:#fff; margin:0; }
+.mo-close {
+    width:32px; height:32px; border-radius:8px; border:none; cursor:pointer;
+    background:rgba(255,255,255,.08); color:rgba(255,255,255,.7);
+    display:flex; align-items:center; justify-content:center; transition:background .2s;
+}
+.mo-close:hover { background:rgba(255,255,255,.15); color:#fff; }
+.mo-close svg { width:18px; height:18px; fill:currentColor; }
+
+/* ── Producto info ─────────────────────────────────────────────────── */
+.mo-prod {
+    display:flex; align-items:center; gap:1rem;
+    padding:1.1rem 1.5rem; border-bottom:1px solid #f0ebe5; background:#faf7f5;
+}
+.mo-prod-img { width:64px; height:64px; border-radius:10px; object-fit:cover; border:1px solid #e8ddd4; flex-shrink:0; }
+.mo-prod-ph {
+    width:64px; height:64px; border-radius:10px; background:#ede8e3;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.mo-prod-ph svg { width:28px; height:28px; fill:#c9b8a4; }
+.mo-prod-info { flex:1; min-width:0; }
+.mo-prod-nombre { font-size:1rem; font-weight:700; color:var(--color-secundario); }
+.mo-prod-meta   { font-size:.78rem; color:#9a8070; margin-top:.1rem; }
+.mo-prod-precios { display:flex; align-items:center; gap:.75rem; margin-top:.35rem; flex-wrap:wrap; }
+.mo-prod-precio-normal { font-size:.88rem; color:#7a6050; }
+.mo-prod-precio-oferta {
+    font-size:1rem; font-weight:700; color:#16a34a;
+    display:flex; align-items:center; gap:.4rem;
+}
+.mo-prod-descuento {
+    font-size:.72rem; font-weight:700; background:#dcfce7; color:#166534;
+    padding:.15rem .5rem; border-radius:99px;
+}
+
+/* ── Body ──────────────────────────────────────────────────────────── */
+.mo-body { padding:1.25rem 1.5rem; overflow-y:auto; max-height:55vh; }
+
+/* Banner promo */
+.mo-banner {
+    display:flex; align-items:flex-start; gap:.65rem;
+    background:#fffbeb; border:1px solid #fcd34d; border-radius:8px;
+    padding:.7rem 1rem; margin-bottom:1rem; font-size:.82rem; color:#92400e;
+}
+.mo-banner svg { width:15px; height:15px; fill:#d97706; flex-shrink:0; margin-top:.15rem; }
+.mo-banner strong { font-weight:700; }
+
+/* Oferta activa */
+.mo-activa {
+    background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px;
+    padding:.9rem 1.1rem; margin-bottom:1.1rem;
+}
+.mo-activa-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:.65rem; }
+.mo-activa-tag {
+    display:inline-flex; align-items:center; gap:.35rem;
+    font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#166534;
+}
+.mo-activa-tag::before { content:''; width:7px; height:7px; border-radius:50%; background:#16a34a; display:inline-block; }
+.mo-activa-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.65rem; }
+.mo-activa-lbl { font-size:.7rem; color:#5a7a5a; margin-bottom:.1rem; }
+.mo-activa-val { font-size:.92rem; font-weight:700; color:#14532d; }
+.mo-activa-val.precio { color:#16a34a; font-size:1rem; }
+.mo-btn-des {
+    display:inline-flex; align-items:center; gap:.35rem;
+    padding:.35rem .8rem; background:rgba(220,38,38,.08);
+    color:#dc2626; border:1px solid rgba(220,38,38,.2);
+    border-radius:7px; font-size:.78rem; font-weight:600;
+    cursor:pointer; transition:background .15s;
+}
+.mo-btn-des:hover { background:rgba(220,38,38,.14); }
+.mo-btn-des:disabled { opacity:.5; cursor:not-allowed; }
+.mo-btn-des svg { width:13px; height:13px; fill:#dc2626; }
+
+/* Sección título */
+.mo-sec { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#9a8070; margin:.05rem 0 .7rem; }
+
+/* Formulario */
+.mo-form-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.7rem; margin-bottom:.5rem; }
+.mo-field label { display:block; font-size:.75rem; font-weight:600; color:var(--color-secundario); margin-bottom:.28rem; }
+.mo-field label span { color:#dc2626; }
+.mo-field input {
+    width:100%; padding:.45rem .7rem; border:1.5px solid #ddd5cc;
+    border-radius:7px; font-size:.87rem; color:var(--color-secundario);
+    background:#faf7f5; transition:border-color .15s; box-sizing:border-box;
+}
+.mo-field input:focus { outline:none; border-color:var(--color-primario); background:#fff; }
+.mo-note { font-size:.74rem; color:#9a8070; margin-bottom:.6rem; }
+.mo-warn { font-size:.74rem; color:#92400e; background:#fffbeb; border:1px solid #fcd34d; border-radius:6px; padding:.35rem .65rem; margin-bottom:.6rem; }
+.mo-form-error {
+    font-size:.81rem; color:#dc2626; background:rgba(220,38,38,.07);
+    border-radius:6px; padding:.4rem .7rem; display:none; margin-bottom:.5rem;
+}
+.mo-btn-guardar {
+    display:inline-flex; align-items:center; gap:.4rem;
+    padding:.5rem 1.2rem; background:var(--color-primario); color:#fff;
+    border:none; border-radius:8px; font-size:.87rem; font-weight:700;
+    cursor:pointer; transition:opacity .15s;
+}
+.mo-btn-guardar:disabled { opacity:.55; cursor:not-allowed; }
+.mo-btn-guardar svg { width:15px; height:15px; fill:#fff; }
+
+/* Historial */
+.mo-hist { margin-top:1.25rem; }
+.mo-hist-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+.mo-hist-table th {
+    text-align:left; padding:.42rem .6rem; font-size:.69rem; font-weight:700;
+    color:#9a8070; text-transform:uppercase; letter-spacing:.04em;
+    border-bottom:1px solid #ede8e3;
+}
+.mo-hist-table td { padding:.48rem .6rem; border-bottom:1px solid #f5f0ea; }
+.mo-hist-table tr:last-child td { border-bottom:none; }
+.mo-hist-badge { display:inline-block; font-size:.69rem; font-weight:700; padding:.13rem .5rem; border-radius:99px; }
+.mo-hist-badge.activa   { background:rgba(22,163,74,.1);   color:#166534; }
+.mo-hist-badge.inactiva { background:rgba(156,163,175,.15); color:#6b7280; }
+
+/* Historial acciones */
+.mo-hist-acc { white-space:nowrap; }
+.mo-btn-act {
+    display:inline-flex; align-items:center;
+    padding:.25rem .6rem; background:rgba(22,163,74,.1);
+    color:#166534; border:1px solid rgba(22,163,74,.3);
+    border-radius:6px; font-size:.73rem; font-weight:600;
+    cursor:pointer; transition:background .15s;
+}
+.mo-btn-act:hover { background:rgba(22,163,74,.18); }
+.mo-btn-act:disabled { opacity:.5; cursor:not-allowed; }
+.mo-btn-edit {
+    display:inline-flex; align-items:center;
+    padding:.25rem .6rem; background:#f0ebe5;
+    color:var(--color-secundario); border:1px solid #ddd5cc;
+    border-radius:6px; font-size:.73rem; font-weight:600;
+    cursor:pointer; transition:background .15s; margin-left:.3rem;
+}
+.mo-btn-edit:hover { background:#e5ddd5; }
+.mo-btn-cancelar {
+    display:none; align-items:center;
+    padding:.5rem 1rem; background:#f0ebe5; color:var(--color-secundario);
+    border:none; border-radius:8px; font-size:.87rem; font-weight:600;
+    cursor:pointer; margin-left:.5rem;
+}
+.mo-btn-cancelar:hover { background:#e5ddd5; }
+
+/* Footer */
+.mo-footer {
+    padding:.85rem 1.5rem; border-top:1px solid #f0ebe5;
+    background:#fff; border-radius:0 0 16px 16px;
+}
+.mo-btn-cerrar {
+    display:inline-flex; align-items:center; gap:.4rem;
+    padding:.48rem 1.1rem; background:#f0ebe5; color:var(--color-secundario);
+    border:none; border-radius:8px; font-size:.87rem; font-weight:600; cursor:pointer;
+}
+.mo-btn-cerrar:hover { background:#e5ddd5; }
+</style>
+
+<!-- Header -->
+<div class="mo-header">
+    <div class="mo-header-left">
+        <svg viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58s1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41s-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
+        <h2>Gestión de oferta</h2>
+    </div>
+    <button class="mo-close" onclick="cerrarModal()">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+</div>
+
+<!-- Producto -->
+<div class="mo-prod">
+    @if (p.Imagen is { Length: > 0 })
+    {
+        <img class="mo-prod-img" src="/Productos/Productos/Imagen/@p.IdProducto" alt="@p.NombreProducto" />
+    }
+    else
+    {
+        <div class="mo-prod-ph">
+            <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+        </div>
+    }
+    <div class="mo-prod-info">
+        <div class="mo-prod-nombre">@p.NombreProducto</div>
+        <div class="mo-prod-meta">@(p.IdTipoProductoNavigation?.NombreTipoProducto ?? "—") · @(p.IdMarcaNavigation?.NombreMarca ?? "—")</div>
+        <div class="mo-prod-precios">
+            <span class="mo-prod-precio-normal">Normal: <strong>$@p.Precio.ToString("N0")</strong></span>
+            @if (activa is not null)
+            {
+                <span class="mo-prod-precio-oferta">
+                    <svg width="14" height="14" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58s1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41s-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z" fill="#16a34a"/></svg>
+                    Oferta: $@activa.PrecioOferta.ToString("N0")
+                    <span class="mo-prod-descuento">-@descuento%</span>
+                </span>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Body -->
+<div class="mo-body">
+
+    @* Banner promo *@
+    @if (promos.Any())
+    {
+        <div class="mo-banner">
+            <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+            <div><strong>Producto en @(promos.Count == 1 ? "una promoción activa" : $"{promos.Count} promociones activas"):</strong>
+            @string.Join(", ", promos.Select(x => $"«{x.Nombre}»")) — la oferta se aplica en paralelo.</div>
+        </div>
+    }
+
+    @* Oferta vigente *@
+    @if (activa is not null)
+    {
+        <div class="mo-activa">
+            <div class="mo-activa-head">
+                <span class="mo-activa-tag">Oferta vigente</span>
+                <button class="mo-btn-des" id="btnDesactivar" onclick="moDesactivar(@activa.IdOfertaProducto, @p.IdProducto)">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+                    Desactivar
+                </button>
+            </div>
+            <div class="mo-activa-grid">
+                <div>
+                    <div class="mo-activa-lbl">Precio oferta</div>
+                    <div class="mo-activa-val precio">$@activa.PrecioOferta.ToString("N0")</div>
+                </div>
+                <div>
+                    <div class="mo-activa-lbl">Desde</div>
+                    <div class="mo-activa-val">@activa.FechaInicioOferta.ToString("dd/MM/yyyy")</div>
+                </div>
+                <div>
+                    <div class="mo-activa-lbl">Hasta</div>
+                    <div class="mo-activa-val">@(activa.FechaTerminoOferta.HasValue ? activa.FechaTerminoOferta.Value.ToString("dd/MM/yyyy") : "Sin límite")</div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* Formulario *@
+    <div class="mo-sec" id="moSecTitulo" data-original="@(activa is not null ? "Reemplazar oferta" : "Nueva oferta")">@(activa is not null ? "Reemplazar oferta" : "Nueva oferta")</div>
+    @if (activa is not null)
+    {
+        <p class="mo-warn">Guardar reemplazará la oferta vigente desactivándola primero.</p>
+    }
+    <form id="moFormOferta" onsubmit="return false;">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="idProducto" value="@p.IdProducto" />
+        <input type="hidden" id="moIdOferta"  name="idOferta"   value="0" />
+        <div class="mo-form-row">
+            <div class="mo-field">
+                <label>Precio oferta ($) <span>*</span></label>
+                <input type="number" id="moPrecio" name="precioOferta" min="1" step="1" placeholder="Ej: 1490" required />
+            </div>
+            <div class="mo-field">
+                <label>Fecha inicio <span>*</span></label>
+                <input type="date" id="moFechaInicio" name="fechaInicio" value="@hoyStr" data-hoy="@hoyStr" required />
+            </div>
+            <div class="mo-field">
+                <label>Fecha término</label>
+                <input type="date" id="moFechaTermino" name="fechaTermino" />
+            </div>
+        </div>
+        <p class="mo-note">Sin fecha de término la oferta no tiene vencimiento.</p>
+        <div class="mo-form-error" id="moFormError"></div>
+        <button type="button" class="mo-btn-guardar" id="moBtnGuardar" onclick="moGuardar(@p.IdProducto)">
+            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+            <span id="moBtnGuardarTexto">Guardar oferta</span>
+        </button>
+        <button type="button" class="mo-btn-cancelar" id="moBtnCancelar" onclick="moCancelarEdicion()">Cancelar</button>
+    </form>
+
+    @* Historial *@
+    @if (historial.Any())
+    {
+        <div class="mo-hist">
+            <div class="mo-sec">Historial</div>
+            <table class="mo-hist-table">
+                <thead>
+                    <tr>
+                        <th>Precio oferta</th>
+                        <th>Desde</th>
+                        <th>Hasta</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int hiIdx = 0; }
+                    @foreach (var o in historial)
+                    {
+                        var esActiva     = activa?.IdOfertaProducto == o.IdOfertaProducto;
+                        var puedeActivar = hiIdx == 0 && activa is null;
+                        var fechaIniJs   = o.FechaInicioOferta.ToString("yyyy-MM-dd");
+                        var fechaFinJs   = o.FechaTerminoOferta.HasValue ? o.FechaTerminoOferta.Value.ToString("yyyy-MM-dd") : "";
+                        hiIdx++;
+                        <tr>
+                            <td><strong>$@o.PrecioOferta.ToString("N0")</strong></td>
+                            <td>@o.FechaInicioOferta.ToString("dd/MM/yyyy")</td>
+                            <td>@(o.FechaTerminoOferta.HasValue ? o.FechaTerminoOferta.Value.ToString("dd/MM/yyyy") : "Sin límite")</td>
+                            <td><span class="mo-hist-badge @(esActiva ? "activa" : "inactiva")">@(esActiva ? "Activa" : "Inactiva")</span></td>
+                            <td class="mo-hist-acc">
+                                @if (puedeActivar)
+                                {
+                                    <button class="mo-btn-act" onclick="moActivar(@o.IdOfertaProducto, @p.IdProducto)">Activar</button>
+                                }
+                                <button class="mo-btn-edit" onclick="moEditar(@o.IdOfertaProducto, @o.PrecioOferta, '@fechaIniJs', '@fechaFinJs')">Editar</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+</div>
+
+<!-- Footer -->
+<div class="mo-footer">
+    <button class="mo-btn-cerrar" onclick="cerrarModal()">Cerrar</button>
+</div>
+
+<script>
+function moMostrarError(msg) {
+    var el = document.getElementById('moFormError');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+}
+
+async function moGuardar(idProducto) {
+    var btn      = document.getElementById('moBtnGuardar');
+    var form     = document.getElementById('moFormOferta');
+    var idOferta = parseInt(document.getElementById('moIdOferta').value || '0');
+    moMostrarError('');
+
+    var precio = document.getElementById('moPrecio').value;
+    var inicio = document.getElementById('moFechaInicio').value;
+
+    if (!precio || parseInt(precio) <= 0) { moMostrarError('Ingresa un precio de oferta válido.'); return; }
+    if (!inicio) { moMostrarError('Selecciona una fecha de inicio.'); return; }
+
+    if (btn) btn.disabled = true;
+    try {
+        var url  = idOferta > 0
+            ? '/Productos/Ofertas/Modificar/' + idOferta
+            : '/Productos/Ofertas/Crear';
+        var resp = await fetch(url, { method: 'POST', body: new FormData(form) });
+        var data = await resp.json();
+        if (data.ok) {
+            mostrarToast(data.mensaje, 'exito');
+            abrirModal('/Productos/Ofertas/ModalOfertas/' + idProducto);
+        } else {
+            moMostrarError(data.mensaje);
+            if (btn) btn.disabled = false;
+        }
+    } catch {
+        moMostrarError('Error de conexión.');
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function moDesactivar(idOferta, idProducto) {
+    var btn  = document.getElementById('btnDesactivar');
+    var form = new FormData();
+    form.append('__RequestVerificationToken', csrfToken());
+    if (btn) btn.disabled = true;
+    try {
+        var resp = await fetch('/Productos/Ofertas/Desactivar/' + idOferta, { method: 'POST', body: form });
+        var data = await resp.json();
+        mostrarToast(data.mensaje, data.ok ? 'exito' : 'error');
+        if (data.ok) {
+            abrirModal('/Productos/Ofertas/ModalOfertas/' + idProducto);
+        } else {
+            if (btn) btn.disabled = false;
+        }
+    } catch {
+        mostrarToast('Error de conexión.', 'error');
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function moActivar(idOferta, idProducto) {
+    var form = new FormData();
+    form.append('__RequestVerificationToken', csrfToken());
+    try {
+        var resp = await fetch('/Productos/Ofertas/Activar/' + idOferta, { method: 'POST', body: form });
+        var data = await resp.json();
+        mostrarToast(data.mensaje, data.ok ? 'exito' : 'error');
+        if (data.ok) abrirModal('/Productos/Ofertas/ModalOfertas/' + idProducto);
+    } catch {
+        mostrarToast('Error de conexión.', 'error');
+    }
+}
+
+function moEditar(idOferta, precio, fechaInicio, fechaTermino) {
+    document.getElementById('moIdOferta').value     = idOferta;
+    document.getElementById('moPrecio').value       = precio;
+    document.getElementById('moFechaInicio').value  = fechaInicio;
+    document.getElementById('moFechaTermino').value = fechaTermino || '';
+
+    var sec = document.getElementById('moSecTitulo');
+    if (sec) sec.textContent = 'Editar oferta';
+
+    var span = document.getElementById('moBtnGuardarTexto');
+    if (span) span.textContent = 'Actualizar oferta';
+
+    var btnC = document.getElementById('moBtnCancelar');
+    if (btnC) btnC.style.display = 'inline-flex';
+
+    var form = document.getElementById('moFormOferta');
+    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    moMostrarError('');
+}
+
+function moCancelarEdicion() {
+    document.getElementById('moIdOferta').value     = '0';
+    document.getElementById('moPrecio').value       = '';
+    document.getElementById('moFechaTermino').value = '';
+
+    var fi = document.getElementById('moFechaInicio');
+    if (fi) fi.value = fi.dataset.hoy || '';
+
+    var sec = document.getElementById('moSecTitulo');
+    if (sec) sec.textContent = sec.dataset.original || 'Nueva oferta';
+
+    var span = document.getElementById('moBtnGuardarTexto');
+    if (span) span.textContent = 'Guardar oferta';
+
+    var btnC = document.getElementById('moBtnCancelar');
+    if (btnC) btnC.style.display = 'none';
+
+    moMostrarError('');
+}
+</script>

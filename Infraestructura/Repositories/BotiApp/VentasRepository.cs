@@ -41,6 +41,14 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             .Take(top)
             .ToListAsync();
 
+    public async Task<IEnumerable<VenBoletas>> ObtenerBoletasPendientesAsync(int top = 20)
+        => await BoletasConIncludes()
+            .AsNoTracking()
+            .Where(b => b.IdEstadoBoleta == 1)
+            .OrderByDescending(b => b.FechaEmision)
+            .Take(top)
+            .ToListAsync();
+
     public async Task<VenBoletas?> ObtenerPorIdAsync(int id)
         => await BoletasConIncludes()
             .AsNoTracking()
@@ -270,4 +278,15 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
                      && b.FechaEmision.Value.Month == mes)
             .OrderByDescending(b => b.FechaEmision)
             .ToListAsync();
+
+    public async Task<IEnumerable<(int Anio, int Mes)>> ObtenerPeriodosConMovimientoAsync()
+    {
+        var raw = await context.VenBoletas
+            .Where(b => b.FechaEmision.HasValue)
+            .Select(b => new { Year = b.FechaEmision!.Value.Year, Month = b.FechaEmision.Value.Month })
+            .Distinct()
+            .OrderByDescending(x => x.Year).ThenByDescending(x => x.Month)
+            .ToListAsync();
+        return raw.Select(x => (x.Year, x.Month));
+    }
 }

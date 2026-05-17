@@ -1,15 +1,17 @@
 ﻿using BotiApp.Areas.Ventas.Models;
 using BotiApp.Helpers;
+using BotiApp.Hubs;
 using Infraestructura.Entities.BotiApp;
 using Infraestructura.Repositories.BotiApp.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace BotiApp.Areas.Ventas.Controllers;
 
 [Area("Ventas")]
 [Authorize]
-public class VentasController(IVentasRepository ventasRepository) : Controller
+public class VentasController(IVentasRepository ventasRepository, IHubContext<BoletaHub> boletaHub) : Controller
 {
     // ── GET /Ventas/Ventas/Generar ────────────────────────────────────────────
     [Authorize(Policy = "AdminOVendedor")]
@@ -136,6 +138,9 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
         var creada = await ventasRepository.CrearBoletaAsync(boleta, detalles);
         var completa = await ventasRepository.ObtenerPorIdAsync(creada.IdBoleta);
 
+        // Notificar a todos los cajeros conectados en tiempo real
+        await boletaHub.Clients.All.SendAsync("NuevaBoleta");
+
         return Json(new
         {
             ok = true,
@@ -227,6 +232,24 @@ public class VentasController(IVentasRepository ventasRepository) : Controller
             return Json(new { ok = false, mensaje = "La boleta no existe o no está en estado Generada." });
 
         return Json(new { ok = true, mensaje = $"Boleta N° {request.IdBoleta} anulada correctamente." });
+    }
+
+    // ── GET: boletas pendientes para panel rápido en Caja ────────────────────
+    [HttpGet]
+    public async Task<IActionResult> BoletasPendientesAjax()
+    {
+        var boletas = await ventasRepository.ObtenerBoletasPendientesAsync(top: 20);
+        var result = boletas.Select(b => new
+        {
+            idBoleta = b.IdBoleta,
+            fechaEmision = b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
+            vendedor = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } ev
+                ? $"{ev.NombresEmpleado} {ev.Apellido1}".Trim()
+                : "—",
+            montoTotal = b.MontoTotal,
+            cantProductos = b.VenBoletaDetalle.Count
+        });
+        return Json(result);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

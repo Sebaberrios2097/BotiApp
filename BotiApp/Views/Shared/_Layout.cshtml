@@ -436,6 +436,23 @@
                 transform: scale(1.07);
             }
 
+            /* ── Transiciones SPA ── */
+            @@keyframes spaEnter {
+                from { opacity: 0; transform: translateY(18px); }
+                to   { opacity: 1; transform: translateY(0); }
+            }
+
+            .page-content.spa-exit {
+                opacity: 0;
+                transform: translateY(-8px);
+                transition: opacity .15s ease, transform .15s ease;
+                pointer-events: none;
+            }
+
+            .page-content.spa-enter {
+                animation: spaEnter .3s cubic-bezier(.25, .46, .45, .94) both;
+            }
+
             @@media (max-width: 768px) {
                 .sidebar {
                     position: fixed;
@@ -737,7 +754,9 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+    <div id="page-scripts-zone" hidden>
+        @await RenderSectionAsync("Scripts", required: false)
+    </div>
 
     <script>
             function updateClock() {

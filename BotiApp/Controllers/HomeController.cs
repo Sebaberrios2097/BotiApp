@@ -21,21 +21,30 @@ namespace BotiApp.Controllers
 
         // ── Dashboard ─────────────────────────────────────────────────────────
         // Carga KPIs diferenciados según el rol del usuario autenticado.
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? mes, int? anio)
         {
-            var hoy  = DateTime.Today;
-            var anio = hoy.Year;
-            var mes  = hoy.Month;
+            var hoy = DateTime.Today;
+
+            // Períodos con al menos una boleta emitida (desc)
+            var periodos = (await _ventas.ObtenerPeriodosConMovimientoAsync()).ToList();
+
+            // Período seleccionado: parámetro de URL > más reciente con movimiento > mes actual
+            var (anioSel, mesSel) = (mes.HasValue && anio.HasValue)
+                ? (anio.Value, mes.Value)
+                : periodos.Count > 0 ? periodos[0] : (hoy.Year, hoy.Month);
 
             var vm = new DashboardViewModel
             {
-                NombreUsuario = ClaimHelper.GetNombreCompleto(User),
-                TipoUsuario   = ClaimHelper.GetTipoUsuario(User)
+                NombreUsuario       = ClaimHelper.GetNombreCompleto(User),
+                TipoUsuario         = ClaimHelper.GetTipoUsuario(User),
+                Mes                 = mesSel,
+                Anio                = anioSel,
+                PeriodosDisponibles = periodos,
             };
 
             if (ClaimHelper.EsAdmin(User))
             {
-                var boletas   = (await _ventas.ObtenerBoletasDelMesAsync(anio, mes)).ToList();
+                var boletas   = (await _ventas.ObtenerBoletasDelMesAsync(anioSel, mesSel)).ToList();
                 var productos = (await _productos.ObtenerTodosAsync()).ToList();
 
                 vm.TotalBoletasMes           = boletas.Count;
@@ -53,7 +62,7 @@ namespace BotiApp.Controllers
                     .ToList();
 
                 // Ventas por día del mes (boletas pagadas, usando FechaPago)
-                int diasEnMes = DateTime.DaysInMonth(anio, mes);
+                int diasEnMes = DateTime.DaysInMonth(anioSel, mesSel);
                 var ventasPorDia = new long[diasEnMes];
                 foreach (var b in boletas.Where(x => x.IdEstadoBoleta == 3 && x.FechaPago.HasValue))
                     ventasPorDia[b.FechaPago!.Value.Day - 1] += b.MontoTotal;
@@ -69,7 +78,7 @@ namespace BotiApp.Controllers
             else if (ClaimHelper.EsVendedor(User))
             {
                 var idUsuario = ClaimHelper.GetIdUsuario(User);
-                var boletas   = (await _ventas.ObtenerBoletasVendedorDelMesAsync(idUsuario, anio, mes)).ToList();
+                var boletas   = (await _ventas.ObtenerBoletasVendedorDelMesAsync(idUsuario, anioSel, mesSel)).ToList();
 
                 vm.VendedorBoletasMes        = boletas.Count;
                 vm.VendedorMontoMes          = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
@@ -79,7 +88,7 @@ namespace BotiApp.Controllers
             else if (ClaimHelper.EsCajero(User))
             {
                 var idUsuario = ClaimHelper.GetIdUsuario(User);
-                var boletas   = (await _ventas.ObtenerBoletasCajeroDelMesAsync(idUsuario, anio, mes)).ToList();
+                var boletas   = (await _ventas.ObtenerBoletasCajeroDelMesAsync(idUsuario, anioSel, mesSel)).ToList();
 
                 vm.CajeroBoletasCobradas = boletas.Count(b => b.IdEstadoBoleta == 3);
                 vm.CajeroBoletasAnuladas = boletas.Count(b => b.IdEstadoBoleta == 2);

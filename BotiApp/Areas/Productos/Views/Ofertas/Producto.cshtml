@@ -1,0 +1,399 @@
+@model BotiApp.Models.OfertaProductoViewModel
+@{
+    var p       = Model.Producto;
+    var activa  = Model.OfertaActiva;
+    var promos  = Model.PromosActivas.ToList();
+    var historial = Model.Historial.ToList();
+    ViewData["Title"] = $"Ofertas — {p.NombreProducto}";
+}
+
+<style>
+/* ── Layout ────────────────────────────────────────────────────────── */
+.ofe-page { max-width: 860px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+
+/* ── Encabezado del producto ───────────────────────────────────────── */
+.ofe-header {
+    display: flex; align-items: center; gap: 1.25rem;
+    background: #fff; border: 1px solid #ede8e3; border-radius: 14px;
+    padding: 1.25rem 1.5rem; margin-bottom: 1.25rem;
+}
+.ofe-header-img {
+    width: 72px; height: 72px; border-radius: 10px; object-fit: cover;
+    border: 1px solid #ede8e3; flex-shrink: 0;
+}
+.ofe-header-ph {
+    width: 72px; height: 72px; border-radius: 10px; background: #f5f0ea;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ofe-header-ph svg { width: 32px; height: 32px; fill: #c9b8a4; }
+.ofe-header-info { flex: 1; min-width: 0; }
+.ofe-header-nombre { font-size: 1.15rem; font-weight: 700; color: var(--color-secundario); }
+.ofe-header-meta   { font-size: .83rem; color: #9a8070; margin-top: .2rem; }
+.ofe-header-precio { font-size: 1rem; font-weight: 600; color: var(--color-primario); margin-top: .3rem; }
+.ofe-back {
+    display: inline-flex; align-items: center; gap: .4rem;
+    font-size: .85rem; color: var(--color-primario); text-decoration: none;
+    font-weight: 600; padding: .4rem .75rem; border-radius: 8px;
+    background: rgba(231,111,46,.08); transition: background .15s;
+}
+.ofe-back:hover { background: rgba(231,111,46,.16); }
+.ofe-back svg   { width: 16px; height: 16px; fill: var(--color-primario); }
+
+/* ── Banner promo ──────────────────────────────────────────────────── */
+.ofe-banner-promo {
+    display: flex; align-items: flex-start; gap: .75rem;
+    background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px;
+    padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+}
+.ofe-banner-promo svg { width: 20px; height: 20px; fill: #d97706; flex-shrink: 0; margin-top: .1rem; }
+.ofe-banner-promo-txt { font-size: .88rem; color: #92400e; }
+.ofe-banner-promo-txt strong { display: block; font-weight: 700; margin-bottom: .15rem; }
+
+/* ── Cards ─────────────────────────────────────────────────────────── */
+.ofe-card {
+    background: #fff; border: 1px solid #ede8e3; border-radius: 14px;
+    padding: 1.5rem; margin-bottom: 1.25rem;
+}
+.ofe-card-title {
+    font-size: .95rem; font-weight: 700; color: var(--color-secundario);
+    margin-bottom: 1.1rem; display: flex; align-items: center; gap: .5rem;
+}
+.ofe-card-title svg { width: 18px; height: 18px; fill: var(--color-primario); }
+
+/* ── Oferta activa ─────────────────────────────────────────────────── */
+.ofe-activa-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 1rem; align-items: center;
+}
+@@media (max-width: 600px) { .ofe-activa-grid { grid-template-columns: 1fr 1fr; } }
+.ofe-activa-label { font-size: .78rem; color: #9a8070; margin-bottom: .2rem; }
+.ofe-activa-val   { font-size: 1rem; font-weight: 700; color: var(--color-secundario); }
+.ofe-activa-val.precio-oferta { color: var(--color-success); font-size: 1.15rem; }
+.ofe-badge-activa {
+    display: inline-flex; align-items: center; gap: .3rem;
+    background: rgba(22,163,74,.1); color: #166534;
+    font-size: .75rem; font-weight: 700; padding: .25rem .7rem;
+    border-radius: 99px;
+}
+.ofe-badge-activa::before {
+    content: ''; display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; background: #16a34a;
+}
+.ofe-btn-desactivar {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .5rem 1rem; background: rgba(220,38,38,.07);
+    color: #dc2626; border: 1px solid rgba(220,38,38,.2);
+    border-radius: 8px; font-size: .85rem; font-weight: 600;
+    cursor: pointer; transition: background .15s;
+}
+.ofe-btn-desactivar:hover { background: rgba(220,38,38,.14); }
+.ofe-btn-desactivar svg { width: 15px; height: 15px; fill: #dc2626; }
+
+/* ── Formulario nueva oferta ───────────────────────────────────────── */
+.ofe-form-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+}
+@@media (max-width: 600px) { .ofe-form-grid { grid-template-columns: 1fr; } }
+.ofe-field label {
+    display: block; font-size: .8rem; font-weight: 600;
+    color: var(--color-secundario); margin-bottom: .35rem;
+}
+.ofe-field label span { color: #dc2626; }
+.ofe-field input {
+    width: 100%; padding: .55rem .8rem; border: 1.5px solid #ddd5cc;
+    border-radius: 8px; font-size: .92rem; color: var(--color-secundario);
+    background: #faf7f5; transition: border-color .15s;
+}
+.ofe-field input:focus { outline: none; border-color: var(--color-primario); background: #fff; }
+.ofe-form-note { font-size: .78rem; color: #9a8070; margin-top: .75rem; }
+.ofe-btn-crear {
+    margin-top: 1.1rem; display: inline-flex; align-items: center; gap: .5rem;
+    padding: .6rem 1.4rem; background: var(--color-primario); color: #fff;
+    border: none; border-radius: 9px; font-size: .92rem; font-weight: 700;
+    cursor: pointer; transition: opacity .15s;
+}
+.ofe-btn-crear:disabled { opacity: .55; cursor: not-allowed; }
+.ofe-btn-crear svg { width: 16px; height: 16px; fill: #fff; }
+.ofe-form-error {
+    margin-top: .6rem; font-size: .85rem; color: #dc2626;
+    background: rgba(220,38,38,.07); border-radius: 7px;
+    padding: .5rem .85rem; display: none;
+}
+
+/* ── Historial ─────────────────────────────────────────────────────── */
+.ofe-hist-table { width: 100%; border-collapse: collapse; font-size: .87rem; }
+.ofe-hist-table th {
+    text-align: left; padding: .55rem .75rem; font-size: .75rem;
+    font-weight: 700; color: #9a8070; text-transform: uppercase;
+    letter-spacing: .04em; border-bottom: 1px solid #ede8e3;
+}
+.ofe-hist-table td { padding: .6rem .75rem; border-bottom: 1px solid #f5f0ea; }
+.ofe-hist-table tr:last-child td { border-bottom: none; }
+.ofe-hist-badge {
+    display: inline-block; font-size: .72rem; font-weight: 700;
+    padding: .2rem .6rem; border-radius: 99px;
+}
+.ofe-hist-badge.activa   { background: rgba(22,163,74,.1);  color: #166534; }
+.ofe-hist-badge.inactiva { background: rgba(156,163,175,.15); color: #6b7280; }
+.ofe-hist-empty {
+    text-align: center; padding: 2.5rem; color: #9a8070; font-size: .88rem;
+}
+</style>
+
+<div class="ofe-page">
+
+    <!-- Volver -->
+    <a href="/Productos/Productos" class="ofe-back nav-sublink" style="display:inline-flex;margin-bottom:1.1rem">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        Volver a Productos
+    </a>
+
+    <!-- Encabezado del producto -->
+    <div class="ofe-header">
+        @if (p.Imagen is { Length: > 0 })
+        {
+            <img class="ofe-header-img" src="/Productos/Productos/Imagen/@p.IdProducto" alt="@p.NombreProducto" />
+        }
+        else
+        {
+            <div class="ofe-header-ph">
+                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            </div>
+        }
+        <div class="ofe-header-info">
+            <div class="ofe-header-nombre">@p.NombreProducto</div>
+            <div class="ofe-header-meta">
+                @(p.IdTipoProductoNavigation?.NombreTipoProducto ?? "—") · @(p.IdMarcaNavigation?.NombreMarca ?? "—")
+            </div>
+            <div class="ofe-header-precio">Precio normal: $@p.Precio.ToString("N0")</div>
+        </div>
+    </div>
+
+    <!-- Banner: producto en promo activa -->
+    @if (promos.Any())
+    {
+        <div class="ofe-banner-promo">
+            <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+            <div class="ofe-banner-promo-txt">
+                <strong>Este producto forma parte de @(promos.Count == 1 ? "una promoción activa" : $"{promos.Count} promociones activas").</strong>
+                @foreach (var promo in promos)
+                {
+                    <span>«@promo.Nombre»@(promo != promos.Last() ? ", " : "")</span>
+                }
+                — La oferta se aplicará en paralelo a la promoción.
+            </div>
+        </div>
+    }
+
+    <!-- Oferta vigente -->
+    @if (activa is not null)
+    {
+        <div class="ofe-card">
+            <div class="ofe-card-title">
+                <svg viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58s1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41s-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
+                Oferta vigente
+            </div>
+            <div class="ofe-activa-grid">
+                <div>
+                    <div class="ofe-activa-label">Precio oferta</div>
+                    <div class="ofe-activa-val precio-oferta">$@activa.PrecioOferta.ToString("N0")</div>
+                </div>
+                <div>
+                    <div class="ofe-activa-label">Desde</div>
+                    <div class="ofe-activa-val">@activa.FechaInicioOferta.ToString("dd/MM/yyyy")</div>
+                </div>
+                <div>
+                    <div class="ofe-activa-label">Hasta</div>
+                    <div class="ofe-activa-val">@(activa.FechaTerminoOferta.HasValue ? activa.FechaTerminoOferta.Value.ToString("dd/MM/yyyy") : "Sin límite")</div>
+                </div>
+                <div>
+                    <div class="ofe-activa-label">Estado</div>
+                    <span class="ofe-badge-activa">Activa</span>
+                </div>
+            </div>
+            <div style="margin-top:1.1rem">
+                <button class="ofe-btn-desactivar" id="btnDesactivar" onclick="desactivarOferta(@activa.IdOfertaProducto)">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+                    Desactivar oferta
+                </button>
+            </div>
+        </div>
+    }
+
+    <!-- Formulario nueva oferta -->
+    <div class="ofe-card">
+        <div class="ofe-card-title">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+            @(activa is not null ? "Reemplazar oferta" : "Nueva oferta")
+        </div>
+        @if (activa is not null)
+        {
+            <p style="font-size:.85rem;color:#9a8070;margin-bottom:1rem;">
+                Crear una nueva oferta desactivará automáticamente la vigente.
+            </p>
+        }
+        <form id="formNuevaOferta" onsubmit="return false;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="idProducto" value="@p.IdProducto" />
+            <div class="ofe-form-grid">
+                <div class="ofe-field">
+                    <label>Precio oferta ($) <span>*</span></label>
+                    <input type="number" id="precioOferta" name="precioOferta" min="1" step="1" placeholder="Ej: 1490" required />
+                </div>
+                <div class="ofe-field">
+                    <label>Fecha de inicio <span>*</span></label>
+                    <input type="date" id="fechaInicio" name="fechaInicio" required />
+                </div>
+                <div class="ofe-field">
+                    <label>Fecha de término</label>
+                    <input type="date" id="fechaTermino" name="fechaTermino" />
+                </div>
+            </div>
+            <p class="ofe-form-note">Dejar la fecha de término en blanco crea una oferta sin vencimiento.</p>
+            <div class="ofe-form-error" id="ofeFormError"></div>
+            <button type="button" class="ofe-btn-crear" id="btnCrear" onclick="crearOferta()">
+                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                Guardar oferta
+            </button>
+        </form>
+    </div>
+
+    <!-- Historial -->
+    <div class="ofe-card">
+        <div class="ofe-card-title">
+            <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+            Historial de ofertas
+        </div>
+        @if (!historial.Any())
+        {
+            <div class="ofe-hist-empty">Sin ofertas registradas para este producto.</div>
+        }
+        else
+        {
+            <table class="ofe-hist-table">
+                <thead>
+                    <tr>
+                        <th>Precio oferta</th>
+                        <th>Desde</th>
+                        <th>Hasta</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyHistorial">
+                    @foreach (var o in historial)
+                    {
+                        var esActiva = activa?.IdOfertaProducto == o.IdOfertaProducto;
+                        <tr>
+                            <td><strong>$@o.PrecioOferta.ToString("N0")</strong></td>
+                            <td>@o.FechaInicioOferta.ToString("dd/MM/yyyy")</td>
+                            <td>@(o.FechaTerminoOferta.HasValue ? o.FechaTerminoOferta.Value.ToString("dd/MM/yyyy") : "Sin límite")</td>
+                            <td>
+                                <span class="ofe-hist-badge @(esActiva ? "activa" : "inactiva")">
+                                    @(esActiva ? "Activa" : "Inactiva")
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+</div>
+
+@section Scripts {
+<script>
+var _ofeProductoId = @p.IdProducto;
+var _csrfToken     = document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
+
+// Pre-fill fecha inicio con hoy
+(function () {
+    var hoy = new Date();
+    var iso = hoy.toISOString().split('T')[0];
+    var fi  = document.getElementById('fechaInicio');
+    if (fi && !fi.value) fi.value = iso;
+})();
+
+function mostrarError(msg) {
+    var el = document.getElementById('ofeFormError');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+}
+
+async function crearOferta() {
+    var form  = document.getElementById('formNuevaOferta');
+    var btn   = document.getElementById('btnCrear');
+    mostrarError('');
+
+    var precio   = document.getElementById('precioOferta').value;
+    var inicio   = document.getElementById('fechaInicio').value;
+    var termino  = document.getElementById('fechaTermino').value;
+
+    if (!precio || parseInt(precio) <= 0) { mostrarError('Ingresa un precio de oferta válido.'); return; }
+    if (!inicio) { mostrarError('Selecciona una fecha de inicio.'); return; }
+
+    var body = new FormData(form);
+    if (btn) { btn.disabled = true; btn.querySelector('svg + *') ? null : null; btn.childNodes.forEach(n => { if (n.nodeType === 3) n.textContent = ' Guardando…'; }); }
+
+    try {
+        var resp = await fetch('/Productos/Ofertas/Crear', { method: 'POST', body });
+        var data = await resp.json();
+        if (data.ok) {
+            mostrarToast(data.mensaje, 'exito');
+            if (window.spaNavigate) {
+                window.spaNavigate(window.location.href, false);
+            } else {
+                window.location.reload();
+            }
+        } else {
+            mostrarError(data.mensaje);
+        }
+    } catch {
+        mostrarError('Error de conexión. Inténtalo de nuevo.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.childNodes.forEach(n => { if (n.nodeType === 3) n.textContent = ' Guardar oferta'; }); }
+    }
+}
+
+async function desactivarOferta(idOferta) {
+    var btn = document.getElementById('btnDesactivar');
+    if (btn) btn.disabled = true;
+
+    var form = new FormData();
+    form.append('__RequestVerificationToken', _csrfToken);
+
+    try {
+        var resp = await fetch('/Productos/Ofertas/Desactivar/' + idOferta, { method: 'POST', body: form });
+        var data = await resp.json();
+        mostrarToast(data.mensaje, data.ok ? 'exito' : 'error');
+        if (data.ok) {
+            if (window.spaNavigate) {
+                window.spaNavigate(window.location.href, false);
+            } else {
+                window.location.reload();
+            }
+        }
+    } catch {
+        mostrarToast('Error de conexión.', 'error');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+function mostrarToast(msg, tipo) {
+    var iconos = {
+        exito: '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>',
+        error: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>'
+    };
+    var w = document.getElementById('toastWrap');
+    if (!w) return;
+    var t = document.createElement('div'); t.className = 'toast-msg ' + tipo;
+    t.innerHTML = (iconos[tipo] || '') + '<span>' + msg + '</span>';
+    w.appendChild(t);
+    setTimeout(function () { t.style.opacity = '0'; }, 3500);
+    setTimeout(function () { t.remove(); }, 3800);
+}
+</script>
+}

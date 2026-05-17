@@ -102,6 +102,13 @@
     </div>
 </div>
 
+<!-- Modal: Recibir orden (actualizar precios de venta + confirmar recepción) -->
+<div class="m-overlay" id="overlayRecibir" onclick="cerrarModalRecibir(event)">
+    <div class="m-box" style="max-width:780px;">
+        <div id="bodyRecibir" style="padding:1.5rem 1.5rem 1.25rem"></div>
+    </div>
+</div>
+
 <!-- Encabezado -->
 <div class="page-header-card">
     <div class="page-header-left">
@@ -181,12 +188,15 @@
                                 <button class="btn-precios" data-precios="@o.IdOrdenCompra" onclick="abrirEditarPrecios(@o.IdOrdenCompra)" title="@(o.IdEstadoOrdenCompra == 1 ? "Gestionar precios y productos" : "Editar precios")">
                                     <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                                 </button>
-                                <button class="btn-accion" style="background:rgba(99,102,241,.12);color:#6366f1;" data-ventas="@o.IdOrdenCompra" onclick="abrirPreciosVenta(@o.IdOrdenCompra)" title="Actualizar precios de venta">
-                                    <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
-                                </button>
+                                @if (o.IdEstadoOrdenCompra == 2)
+                                {
+                                    <button class="btn-accion" style="background:rgba(99,102,241,.12);color:#6366f1;" data-ventas="@o.IdOrdenCompra" onclick="abrirPreciosVenta(@o.IdOrdenCompra)" title="Actualizar precios de venta">
+                                        <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                                    </button>
+                                }
                                 @if (o.IdEstadoOrdenCompra == 1)
                                 {
-                                    <button class="btn-accion btn-recibir" data-recibir="@o.IdOrdenCompra" onclick="recibirOrden(@o.IdOrdenCompra)" title="Marcar como recibida">
+                                    <button class="btn-accion btn-recibir" data-recibir="@o.IdOrdenCompra" onclick="abrirRecibirOrden(@o.IdOrdenCompra)" title="Marcar como recibida">
                                         <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                                     </button>
                                     <button class="btn-accion btn-anular" data-anular="@o.IdOrdenCompra" onclick="anularOrden(@o.IdOrdenCompra)" title="Anular orden">
@@ -272,20 +282,144 @@ function toggleDetalle(id) {
 }
 
 // ── Cambiar estado ────────────────────────────────────────────────────────────
-async function recibirOrden(id) {
-    const result = await Swal.fire({
-        title: `¿Recibir orden #${id}?`,
-        html: 'Se marcará como <strong>Recibida</strong> y se actualizará el stock de los productos.',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, recibir',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#16a34a',
-        cancelButtonColor: '#6b7280',
-        reverseButtons: true
+async function abrirRecibirOrden(id) {
+    const overlay = document.getElementById('overlayRecibir');
+    document.getElementById('bodyRecibir').innerHTML =
+        '<div style="text-align:center;padding:3rem;color:#a89080;">Cargando…</div>';
+    overlay.classList.add('open');
+
+    const o = await fetch(`@Url.Action("OrdenParaEditar", "OrdenesCompra", new { area = "Compras" })?id=${id}`)
+        .then(r => r.json());
+    _ordenRecibir = o;
+    document.getElementById('bodyRecibir').innerHTML = renderModalRecibir(o);
+}
+
+var _ordenRecibir = null;
+
+function renderModalRecibir(o) {
+    const IVA = 0.19;
+    const rows = o.detalles.map(d => {
+        const precioCompra = d.precioUnitario;
+        const sinIva = Math.round(precioCompra / (1 + IVA));
+        return `<tr data-idproducto="${d.idProducto}">
+            <td style="padding:.45rem .65rem;border-bottom:1px solid #f4f0eb;color:var(--color-secundario);">${escHtml(String(d.producto))}</td>
+            <td style="padding:.45rem .65rem;border-bottom:1px solid #f4f0eb;text-align:right;color:#9a8070;">$${sinIva.toLocaleString('es-CL')}</td>
+            <td style="padding:.45rem .65rem;border-bottom:1px solid #f4f0eb;text-align:right;font-weight:600;color:var(--color-primario);">$${precioCompra.toLocaleString('es-CL')}</td>
+            <td style="padding:.45rem .65rem;border-bottom:1px solid #f4f0eb;text-align:right;">
+                <span style="font-size:.84rem;color:#9a8070;margin-right:.35rem;">$${d.precioVenta.toLocaleString('es-CL')}</span>
+            </td>
+            <td style="padding:.45rem .65rem;border-bottom:1px solid #f4f0eb;">
+                <input type="number" class="precio-input precio-venta-recibir-input" min="0" value="${d.precioVenta}"
+                    style="width:110px;" data-compra="${precioCompra}" placeholder="Precio venta">
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `
+        <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0ebe5;padding-bottom:1rem;margin-bottom:1rem;">
+            <div>
+                <h2 style="font-size:1.1rem;font-weight:700;color:var(--color-secundario);margin:0;">Recibir Orden — Actualizar Precios de Venta</h2>
+                <p style="font-size:.82rem;color:#9a8070;margin:.2rem 0 0;">#${o.idOrdenCompra} &mdash; ${escHtml(o.proveedor)}</p>
+            </div>
+            <button onclick="cerrarModalRecibir()" style="background:none;border:none;cursor:pointer;color:#9a8070;font-size:1.5rem;line-height:1;">&times;</button>
+        </div>
+
+        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:.65rem 1rem;margin-bottom:1rem;">
+            <p style="font-size:.82rem;color:#15803d;margin:0;">
+                <strong>Revisa y ajusta los precios de venta</strong> antes de confirmar la recepción. Al confirmar, el stock se actualizará y la orden quedará marcada como <strong>Recibida</strong>.
+            </p>
+        </div>
+
+        <div style="background:#f0f4ff;border:1.5px solid #c7d2fe;border-radius:10px;padding:.75rem 1rem;margin-bottom:1.25rem;">
+            <p style="font-size:.78rem;font-weight:700;color:#6366f1;margin:0 0 .6rem;text-transform:uppercase;letter-spacing:.4px;">Calcular por % de ganancia</p>
+            <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+                <label style="font-size:.86rem;color:#4338ca;font-weight:600;">Ganancia</label>
+                <div style="display:flex;align-items:center;border:1.5px solid #c7d2fe;border-radius:7px;overflow:hidden;background:#fff;">
+                    <input type="number" id="inputPorcentajeRecibir" min="0" max="999" value="30"
+                        style="width:72px;padding:.35rem .5rem;border:none;outline:none;font-size:.9rem;text-align:right;">
+                    <span style="padding:.35rem .55rem;background:#eef2ff;color:#6366f1;font-size:.86rem;font-weight:700;border-left:1.5px solid #c7d2fe;">%</span>
+                </div>
+                <button onclick="calcularPreciosVentaRecibir()"
+                    style="padding:.38rem .9rem;background:#6366f1;color:#fff;border:none;border-radius:7px;font-size:.86rem;font-weight:600;cursor:pointer;">
+                    Calcular
+                </button>
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+                <thead>
+                    <tr style="background:#faf6f3;">
+                        <th style="padding:.45rem .65rem;text-align:left;font-size:.77rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Producto</th>
+                        <th style="padding:.45rem .65rem;text-align:right;font-size:.77rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Compra sin IVA</th>
+                        <th style="padding:.45rem .65rem;text-align:right;font-size:.77rem;color:var(--color-primario);border-bottom:1px solid #ede5dc;">Compra con IVA</th>
+                        <th style="padding:.45rem .65rem;text-align:right;font-size:.77rem;color:#9a8070;border-bottom:1px solid #ede5dc;">Precio venta actual</th>
+                        <th style="padding:.45rem .65rem;text-align:left;font-size:.77rem;color:#6366f1;border-bottom:1px solid #ede5dc;">Precio venta nuevo</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyPreciosVentaRecibir">${rows}</tbody>
+            </table>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.25rem;padding-top:.85rem;border-top:2px solid #f0ebe5;">
+            <button onclick="cerrarModalRecibir()"
+                style="padding:.55rem 1.2rem;border:1.5px solid #e8ddd4;border-radius:8px;background:#fff;font-size:.88rem;font-weight:600;cursor:pointer;color:var(--color-secundario);">
+                Cancelar
+            </button>
+            <button onclick="confirmarYRecibir(${o.idOrdenCompra})"
+                style="padding:.55rem 1.4rem;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;">
+                Confirmar y recibir
+            </button>
+        </div>`;
+}
+
+function calcularPreciosVentaRecibir() {
+    const pct = parseFloat(document.getElementById('inputPorcentajeRecibir').value) || 0;
+    document.querySelectorAll('#tbodyPreciosVentaRecibir tr[data-idproducto]').forEach(row => {
+        const inp = row.querySelector('.precio-venta-recibir-input');
+        const precioCompra = parseInt(inp.dataset.compra) || 0;
+        inp.value = Math.round(precioCompra * (1 + pct / 100));
     });
-    if (!result.isConfirmed) return;
-    await _cambiarEstado(id, 2, 'Recibida');
+}
+
+async function confirmarYRecibir(idOrden) {
+    const items = [];
+    document.querySelectorAll('#tbodyPreciosVentaRecibir tr[data-idproducto]').forEach(row => {
+        const idProducto  = parseInt(row.dataset.idproducto);
+        const nuevoPrecio = parseInt(row.querySelector('.precio-venta-recibir-input').value) || 0;
+        if (idProducto > 0 && nuevoPrecio > 0) items.push({ idProducto, nuevoPrecio });
+    });
+    if (!items.length) { mostrarToast('No hay precios de venta para guardar.', 'error'); return; }
+
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+    // 1. Guardar precios de venta
+    const resPrecios = await fetch('@Url.Action("ActualizarPreciosVenta", "OrdenesCompra", new { area = "Compras" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+        body: JSON.stringify({ items })
+    }).then(r => r.json());
+
+    if (!resPrecios.ok) { mostrarToast(resPrecios.mensaje, 'error'); return; }
+
+    // 2. Marcar como recibida
+    const form = new URLSearchParams({ id: idOrden, idEstado: 2, __RequestVerificationToken: token });
+    const resEstado = await fetch('@Url.Action("CambiarEstado", "OrdenesCompra", new { area = "Compras" })', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString()
+    }).then(r => r.json());
+
+    if (!resEstado.ok) { mostrarToast(resEstado.mensaje, 'error'); return; }
+
+    document.getElementById('overlayRecibir').classList.remove('open');
+    mostrarToast(resEstado.mensaje, 'exito');
+    setTimeout(() => location.reload(), 1500);
+}
+
+function cerrarModalRecibir(e) {
+    if (e && e.target !== document.getElementById('overlayRecibir')) return;
+    document.getElementById('overlayRecibir').classList.remove('open');
 }
 
 async function anularOrden(id) {

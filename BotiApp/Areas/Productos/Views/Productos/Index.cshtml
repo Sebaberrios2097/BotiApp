@@ -82,6 +82,8 @@
     .btn-acc.toggle-on:hover  { background:rgba(239,68,68,.2);   transform:scale(1.1); }
     .btn-acc.toggle-off { background:rgba(34,197,94,.1);  color:#16a34a; }
     .btn-acc.toggle-off:hover { background:rgba(34,197,94,.2);  transform:scale(1.1); }
+    .btn-acc.oferta   { background:rgba(234,179,8,.1);   color:#b45309; }
+    .btn-acc.oferta:hover   { background:rgba(234,179,8,.2);   transform:scale(1.1); }
     .btn-acc.eliminar { background:rgba(239,68,68,.1);   color:#dc2626; }
     .btn-acc.eliminar:hover { background:rgba(239,68,68,.2);   transform:scale(1.1); }
 
@@ -270,11 +272,11 @@
       <button class=""btn-acc editar"" title=""Editar"" onclick=""abrirModal('/Productos/Productos/ModalEditar/{p.IdProducto}')"">
         <svg viewBox=""0 0 24 24""><path d=""M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z""/></svg>
       </button>
+      <button class=""btn-acc oferta"" title=""Gestionar oferta"" onclick=""abrirModal('/Productos/Ofertas/ModalOfertas/{p.IdProducto}')"">
+        <svg viewBox=""0 0 24 24""><path d=""M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58s1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41s-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z""/></svg>
+      </button>
       <button class=""btn-acc {toggleClass}"" id=""btn-toggle-{p.IdProducto}"" title=""{toggleTitle}"" onclick=""toggleEstado({p.IdProducto})"">
         {toggleIcon}
-      </button>
-      <button class=""btn-acc eliminar"" title=""Eliminar"" onclick=""confirmarEliminar({p.IdProducto}, '{nombre}')"">
-        <svg viewBox=""0 0 24 24""><path d=""M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z""/></svg>
       </button>
     </div>
   </td>
@@ -285,15 +287,15 @@
 @section Scripts {
 <script>
 // ── Estado global ─────────────────────────────────────────────────────────
-const overlay  = document.getElementById('modalOverlay');
-const tbody    = document.getElementById('tbodyProductos');
-const csrfToken = () => document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
+var overlay  = document.getElementById('modalOverlay');
+var tbody    = document.getElementById('tbodyProductos');
+var csrfToken = () => document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
 
 // ── Paginado ──────────────────────────────────────────────────────────────
-let allRows = [];
-let filteredRows = [];
-let currentPage = 1;
-let pageSize = 10;
+var allRows = [];
+var filteredRows = [];
+var currentPage = 1;
+var pageSize = 10;
 
 function initPaginado() {
     allRows = Array.from(tbody.querySelectorAll('tr[data-id]'));
@@ -357,7 +359,7 @@ function btnPagDots() {
 }
 
 // ── Ordenamiento ──────────────────────────────────────────────────────────
-let sortCol = -1, sortAsc = true;
+var sortCol = -1, sortAsc = true;
 function sortTabla(col) {
     if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; }
     document.querySelectorAll('.pro-table thead th.sortable').forEach(th => {
@@ -376,7 +378,7 @@ function sortTabla(col) {
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────
-let retornablesCargados = false;
+var retornablesCargados = false;
 function cambiarTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -406,12 +408,23 @@ async function abrirModal(url) {
     try {
         const resp = await fetch(url);
         if (!resp.ok) throw new Error();
-        document.getElementById('modalBody').innerHTML = await resp.text();
+        const modalBody = document.getElementById('modalBody');
+        modalBody.innerHTML = await resp.text();
+        // Ejecutar scripts inyectados via innerHTML (no se ejecutan automáticamente)
+        modalBody.querySelectorAll('script').forEach(old => {
+            const s = document.createElement('script');
+            if (old.src) { s.src = old.src; s.async = false; }
+            else { s.textContent = old.textContent; }
+            s.setAttribute('data-modal-script', '');
+            document.body.appendChild(s);
+        });
     } catch { cerrarModal(); mostrarToast('Error al cargar el contenido.', 'error'); }
 }
 function cerrarModal() {
     prdDetenerScanner('crear');
     prdDetenerScanner('editar');
+    // Limpiar scripts de modal anteriores
+    document.querySelectorAll('script[data-modal-script]').forEach(s => s.remove());
     overlay.classList.remove('open');
     setTimeout(() => { document.getElementById('modalBody').innerHTML = ''; }, 250);
 }
@@ -419,7 +432,7 @@ overlay.addEventListener('click', e => { if (e.target === overlay) cerrarModal()
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
 
 // ── Escáner de código de barras (productos) ───────────────────────────────
-const _prdScanReaders = {};
+var _prdScanReaders = {};
 
 function _prdCargarZxing(cb) {
     if (window.ZXing) { cb(); return; }
@@ -611,6 +624,9 @@ function buildFila(p) {
       <button class="btn-acc editar" onclick="abrirModal('/Productos/Productos/ModalEditar/${p.idProducto}')" title="Editar">
         <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
       </button>
+      <button class="btn-acc oferta" title="Gestionar oferta" onclick="abrirModal('/Productos/Ofertas/ModalOfertas/${p.idProducto}')">
+        <svg viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58s1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41s-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
+      </button>
       <button class="btn-acc ${toggleClass}" id="btn-toggle-${p.idProducto}" title="${toggleTitle}" onclick="toggleEstado(${p.idProducto})">
         ${toggleIcon}
       </button>
@@ -657,8 +673,8 @@ function esc(s) {
 }
 
 // ── Modal selector de retornables ────────────────────────────────────────────
-let RETM_PRODUCTOS = [];
-let retmSeleccionados = new Map(); // idProducto → { valorEnvase, soloEfectivo }
+var RETM_PRODUCTOS = [];
+var retmSeleccionados = new Map(); // idProducto → { valorEnvase, soloEfectivo }
 
 window.abrirModalRetornables = function () {
     const dataEl = document.getElementById('retmProductosData');
@@ -881,6 +897,6 @@ async function eliminarRetornable(idProducto, nombre) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', initPaginado);
+if (document.readyState !== 'loading') { initPaginado(); } else { document.addEventListener('DOMContentLoaded', initPaginado); }
 </script>
 }
