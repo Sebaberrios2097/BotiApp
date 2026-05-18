@@ -278,6 +278,10 @@ public partial class BotiAppContext : DbContext
             entity.HasOne(d => d.IdUsuarioNavigation).WithMany(p => p.FiaAbonos)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Fia_Abonos_Usuario");
+
+            entity.HasOne(d => d.IdMetodoPagoNavigation).WithMany()
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Fia_Abonos_MetodoPago");
         });
 
         modelBuilder.Entity<VenEstadosBoletas>(entity =>

@@ -1,14 +1,16 @@
 using BotiApp.Helpers;
+using Infraestructura.Context;
 using Infraestructura.Entities.BotiApp;
 using Infraestructura.Repositories.BotiApp.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace BotiApp.Areas.Ventas.Controllers;
 
 [Area("Ventas")]
 [Authorize(Policy = "AdminOCajero")]
-public class FiadoController(IFiadoRepository fiadoRepository) : Controller
+public class FiadoController(IFiadoRepository fiadoRepository, BotiAppContext context) : Controller
 {
     // ── GET /Ventas/Fiado ─────────────────────────────────────────────────────
     public async Task<IActionResult> Index()
@@ -33,15 +35,17 @@ public class FiadoController(IFiadoRepository fiadoRepository) : Controller
 
         var boletasFiadas = await fiadoRepository.ObtenerBoletasFiadasPorClienteAsync(id);
         var abonos        = await fiadoRepository.ObtenerAbonosPorClienteAsync(id);
+        var metodosPago   = await context.VenMetodosPago.AsNoTracking().ToListAsync();
 
         var deudaTotal = boletasFiadas.Sum(b => b.MontoTotal);
 
         var vm = new FiadoClienteViewModel
         {
-            Cliente      = cliente,
+            Cliente       = cliente,
             BoletasFiadas = boletasFiadas.ToList(),
             Abonos        = abonos.ToList(),
-            DeudaTotal    = deudaTotal
+            DeudaTotal    = deudaTotal,
+            MetodosPago   = metodosPago
         };
         return View(vm);
     }
@@ -54,6 +58,9 @@ public class FiadoController(IFiadoRepository fiadoRepository) : Controller
         if (request.Monto <= 0)
             return Json(new { ok = false, mensaje = "El monto debe ser mayor a 0." });
 
+        if (request.IdMetodoPago <= 0)
+            return Json(new { ok = false, mensaje = "Selecciona un método de pago." });
+
         var idUsuario = ClaimHelper.GetIdUsuario(User);
         if (idUsuario == 0)
             return Json(new { ok = false, mensaje = "No se pudo identificar el usuario." });
@@ -61,7 +68,7 @@ public class FiadoController(IFiadoRepository fiadoRepository) : Controller
         try
         {
             var abono = await fiadoRepository.RegistrarAbonoAsync(
-                request.IdCliente, idUsuario, request.Monto, request.Observaciones);
+                request.IdCliente, idUsuario, request.Monto, request.IdMetodoPago, request.Observaciones);
 
             // Datos actualizados del cliente para refrescar la vista
             var cliente = await fiadoRepository.ObtenerClientePorIdAsync(request.IdCliente);
@@ -154,10 +161,11 @@ public class FiadoClienteViewModel
     public List<VenBoletas> BoletasFiadas { get; set; } = [];
     public List<FiaAbonos>  Abonos        { get; set; } = [];
     public int DeudaTotal                 { get; set; }
+    public List<VenMetodosPago> MetodosPago { get; set; } = [];
 }
 
 // ── Records de request ────────────────────────────────────────────────────────
-public record RegistrarAbonoRequest(int IdCliente, int Monto, string? Observaciones);
+public record RegistrarAbonoRequest(int IdCliente, int Monto, int IdMetodoPago, string? Observaciones);
 public record CrearClienteFiadoRequest(
     int Rut, string Nombres, string Apellido1,
     string? Apellido2, string? Telefono, string? Observaciones);

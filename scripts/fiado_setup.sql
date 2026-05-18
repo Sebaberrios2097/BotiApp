@@ -37,6 +37,7 @@ BEGIN
         Id_Abono        INT          IDENTITY(1,1) NOT NULL,
         Id_Cliente      INT          NOT NULL,
         Id_Usuario      INT          NOT NULL,          -- quien registró el abono (cajero/admin)
+        Id_Metodo_Pago  INT          NOT NULL,          -- método de pago del abono
         Monto           INT          NOT NULL,
         Fecha           DATETIME     NOT NULL DEFAULT GETDATE(),
         Observaciones   NVARCHAR(300) NULL,
@@ -44,8 +45,21 @@ BEGIN
         CONSTRAINT FK_Fia_Abonos_Cliente FOREIGN KEY (Id_Cliente)
             REFERENCES Fia_Clientes (Id_Cliente),
         CONSTRAINT FK_Fia_Abonos_Usuario FOREIGN KEY (Id_Usuario)
-            REFERENCES Emp_Usuario (Id_Usuario)
+            REFERENCES Emp_Usuario (Id_Usuario),
+        CONSTRAINT FK_Fia_Abonos_MetodoPago FOREIGN KEY (Id_Metodo_Pago)
+            REFERENCES Ven_Metodos_Pago (Id_Metodo_Pago)
     );
+END;
+
+-- 3b. Agregar Id_Metodo_Pago a Fia_Abonos si ya existe la tabla sin esa columna
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Fia_Abonos')
+   AND NOT EXISTS (SELECT 1 FROM sys.columns
+                   WHERE object_id = OBJECT_ID('Fia_Abonos') AND name = 'Id_Metodo_Pago')
+BEGIN
+    ALTER TABLE Fia_Abonos ADD Id_Metodo_Pago INT NOT NULL DEFAULT 1;
+    ALTER TABLE Fia_Abonos
+        ADD CONSTRAINT FK_Fia_Abonos_MetodoPago FOREIGN KEY (Id_Metodo_Pago)
+            REFERENCES Ven_Metodos_Pago (Id_Metodo_Pago);
 END;
 
 -- 4. FK de boleta → cliente fiado

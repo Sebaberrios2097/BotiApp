@@ -87,7 +87,7 @@ public class FiadoRepository(BotiAppContext context) : IFiadoRepository
     // ── Abonos ────────────────────────────────────────────────────────────────
 
     public async Task<FiaAbonos> RegistrarAbonoAsync(
-        int idCliente, int idUsuario, int monto, string? observaciones = null)
+        int idCliente, int idUsuario, int monto, int idMetodoPago, string? observaciones = null)
     {
         await using var tx = await context.Database.BeginTransactionAsync();
 
@@ -101,6 +101,7 @@ public class FiadoRepository(BotiAppContext context) : IFiadoRepository
         {
             IdCliente     = idCliente,
             IdUsuario     = idUsuario,
+            IdMetodoPago  = idMetodoPago,
             Monto         = monto,
             Fecha         = DateTime.Now,
             Observaciones = observaciones

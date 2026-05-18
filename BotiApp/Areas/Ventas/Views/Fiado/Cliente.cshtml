@@ -364,6 +364,7 @@
                             <div class="fc-abono-item">
                                 <div>
                                     <div class="fc-abono-fecha">@a.Fecha.ToString("dd/MM/yyyy HH:mm")</div>
+                                    <div class="fc-abono-obs" style="color:#6b7280">@(a.IdMetodoPagoNavigation?.NombreMetodoPago ?? "—")</div>
                                     @if (!string.IsNullOrWhiteSpace(a.Observaciones))
                                     {
                                         <div class="fc-abono-obs">@a.Observaciones</div>
@@ -385,6 +386,17 @@
                 <h2>Registrar abono</h2>
             </div>
             <div class="fc-abono-form">
+                @Html.AntiForgeryToken()
+                <div class="fc-form-group">
+                    <label for="abonoMetodoPago">Método de pago</label>
+                    <select class="fc-form-input" id="abonoMetodoPago">
+                        <option value="0">-- Selecciona un método --</option>
+                        @foreach (var m in Model.MetodosPago)
+                        {
+                            <option value="@m.IdMetodoPago">@m.NombreMetodoPago</option>
+                        }
+                    </select>
+                </div>
                 <div class="fc-form-group">
                     <label for="abonoMonto">Monto ($)</label>
                     <input class="fc-form-input" type="number" id="abonoMonto" min="1" step="1"
@@ -394,7 +406,7 @@
                 <div class="fc-form-group">
                     <label for="abonoObs">Observaciones <span style="color:#9ca3af;font-weight:400">(opcional)</span></label>
                     <textarea class="fc-form-input" id="abonoObs" rows="2"
-                              placeholder="Efectivo, transferencia, etc."></textarea>
+                              placeholder="Notas adicionales…"></textarea>
                 </div>
                 <button class="btn-registrar-abono" id="btnRegistrarAbono" onclick="registrarAbono()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" style="fill:#fff">
@@ -465,21 +477,26 @@
             list.className = 'fc-abono-list';
             if (cont) cont.appendChild(list);
         }
+        var metodoHtml = abono.metodoPago ? '<div class="fc-abono-obs" style="color:#6b7280">' + abono.metodoPago + '</div>' : '';
         var obs = abono.observaciones ? '<div class="fc-abono-obs">' + abono.observaciones + '</div>' : '';
         var item = document.createElement('div');
         item.className = 'fc-abono-item';
         item.innerHTML =
-            '<div><div class="fc-abono-fecha">' + abono.fecha + '</div>' + obs + '</div>' +
+            '<div><div class="fc-abono-fecha">' + abono.fecha + '</div>' + metodoHtml + obs + '</div>' +
             '<span class="fc-abono-monto">+' + _fmtPeso(abono.monto) + '</span>';
         list.insertBefore(item, list.firstChild);
     }
 
     window.registrarAbono = async function () {
-        var montoRaw = document.getElementById('abonoMonto')?.value ?? '';
-        var monto    = parseInt(montoRaw);
-        var obs      = (document.getElementById('abonoObs')?.value ?? '').trim();
+        var montoRaw  = document.getElementById('abonoMonto')?.value ?? '';
+        var monto     = parseInt(montoRaw);
+        var obs       = (document.getElementById('abonoObs')?.value ?? '').trim();
+        var metodoSel = document.getElementById('abonoMetodoPago');
+        var idMetodo  = parseInt(metodoSel?.value ?? '0');
+        var metodoNombre = metodoSel?.options[metodoSel.selectedIndex]?.text ?? '';
 
         if (!monto || monto <= 0) { _toast('Ingresa un monto válido.', 'error'); return; }
+        if (!idMetodo || idMetodo <= 0) { _toast('Selecciona un método de pago.', 'error'); return; }
 
         var btn = document.getElementById('btnRegistrarAbono');
         btn.disabled = true;
@@ -490,9 +507,12 @@
         try {
             var resp = await fetch(URL_ABONO, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? ''
+                },
                 credentials: 'same-origin',
-                body: JSON.stringify({ idCliente: ID_CLIENTE, monto: monto, observaciones: obs || null })
+                body: JSON.stringify({ idCliente: ID_CLIENTE, monto: monto, idMetodoPago: idMetodo, observaciones: obs || null })
             });
             res = await resp.json();
         } catch {
@@ -514,6 +534,7 @@
         var pad = function(n) { return String(n).padStart(2,'0'); };
         _prependAbono({
             monto: monto,
+            metodoPago: metodoNombre,
             observaciones: obs || null,
             fecha: pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear() +
                    ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes())
@@ -529,6 +550,7 @@
         // Limpiar form
         document.getElementById('abonoMonto').value = '';
         document.getElementById('abonoObs').value   = '';
+        if (metodoSel) metodoSel.value = '0';
     };
 })();
 </script>

@@ -116,7 +116,7 @@
 .precio-normal-tachado { text-decoration:line-through; color:#b8a898; font-size:.72rem; display:block; line-height:1.2; }
 .precio-descuento { color:#16a34a; font-weight:700; }
 
-/* Estado vacÃ­o */
+/* Estado vacío */
 .boletas-empty { text-align:center; padding:3.5rem 1rem; color:#b8a898; font-size:.88rem; }
 .boletas-empty svg { width:52px; height:52px; fill:#ddd0c4; display:block; margin:0 auto .75rem; }
 
@@ -210,9 +210,9 @@
         <div class="filtros-wrap">
             <div class="search-bar">
                 <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                <input type="text" id="txtBuscar" placeholder="Buscar por NÂ° boleta o cajeroâ€¦"
+                <input type="text" id="txtBuscar" placeholder="Buscar por N° boleta o cajero…"
                        oninput="aplicarFiltros()" autocomplete="off" />
-                <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">âœ•</button>
+                <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">✕</button>
             </div>
             <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
                 <select class="fil-estado" id="selEstado" onchange="aplicarFiltros()">
@@ -253,7 +253,7 @@
     var ES_CAJERO  = @Html.Raw(Model.EsCajero.ToString().ToLower());
     var ID_USUARIO = @Model.IdUsuarioActual;
 
-    // Ordenar DESC por NÂ° de boleta una sola vez
+    // Ordenar DESC por N° de boleta una sola vez
     BOLETAS.sort(function(a, b) { return b.id - a.id; });
 
     /* â”€â”€ Estado paginaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -318,7 +318,7 @@
         wrap.style.display = 'flex';
 
         var html = '';
-        html += '<button class="pag-btn" onclick="irPag(' + (paginaActual - 1) + ')" ' + (paginaActual === 1 ? 'disabled' : '') + '>â€¹</button>';
+        html += '<button class="pag-btn" onclick="irPag(' + (paginaActual - 1) + ')" ' + (paginaActual === 1 ? 'disabled' : '') + '>‹</button>';
 
         // Ventana de pÃ¡ginas: mÃ¡ximo 5 botones visibles
         var desde = Math.max(1, paginaActual - 2);
@@ -329,7 +329,7 @@
             html += '<button class="pag-btn' + (i === paginaActual ? ' active' : '') + '" onclick="irPag(' + i + ')">' + i + '</button>';
         }
 
-        html += '<button class="pag-btn" onclick="irPag(' + (paginaActual + 1) + ')" ' + (paginaActual === paginas ? 'disabled' : '') + '>â€º</button>';
+        html += '<button class="pag-btn" onclick="irPag(' + (paginaActual + 1) + ')" ' + (paginaActual === paginas ? 'disabled' : '') + '>›</button>';
         html += '<span class="pag-info">' + total + ' boletas</span>';
         wrap.innerHTML = html;
     }
@@ -373,7 +373,7 @@
                 var badge = d.nombrePromocion
                     ? ' <span class="etq-promo">ðŸ·ï¸ ' + x(d.nombrePromocion) + '</span>'
                     : d.nombreOferta
-                        ? ' <span class="etq-oferta">âœ¦ Oferta</span>'
+                        ? ' <span class="etq-oferta">✦ Oferta</span>'
                         : '';
                 var precioHtml = tieneDescuento
                     ? '<span class="precio-normal-tachado">$' + fmt(d.precioNormal) + '</span><span class="precio-descuento">$' + fmt(d.precioUnitario) + '</span>'
@@ -385,7 +385,7 @@
 
             return '<div class="bl-card" id="blc-' + b.id + '">' +
                 '<div class="bl-card-top" onclick="toggleDetalle(' + b.id + ')">' +
-                    '<span class="bl-num">NÂ° ' + b.id + '</span>' +
+                    '<span class="bl-num">N° ' + b.id + '</span>' +
                     '<span class="bl-fecha">' + x(b.fecha) + '</span>' +
                     infoHtml +
                     '<span class="bl-estado ' + estadoClass + '">' + x(b.estado) + '</span>' +
@@ -438,7 +438,7 @@
     };
 
     function mostrarTicketHistorial(b) {
-        var NOMBRE_LOCAL = 'BotillerÃ­a Cuatro Ases';
+        var NOMBRE_LOCAL = 'Botillería Cuatro Ases';
         var lineas = '';
 
         var envases      = b.detalle.filter(function(d) { return d.precioNormal === 0 && !d.nombrePromocion && !d.nombreOferta; });
@@ -529,19 +529,19 @@
             '<div class="ticket-wrap">' +
                 '<div class="ticket-actions">' +
                     '<button class="btn-print" onclick="window.print()">Imprimir</button>' +
-                    '<button class="btn-cerrar" onclick="document.getElementById(\'ticketOverlay\').remove()">âœ• Cerrar</button>' +
+                    '<button class="btn-cerrar" onclick="document.getElementById(\'ticketOverlay\').remove()">✕ Cerrar</button>' +
                 '</div>' +
                 '<div class="ticket">' +
                     '<div class="ticket-center ticket-bold" style="font-size:14px;">' + x(NOMBRE_LOCAL) + '</div>' +
                     '<div class="ticket-center" style="font-size:10px;">TICKET INTERNO</div>' +
                     '<hr class="ticket-hr-sol">' +
-                    '<div class="ticket-row"><span class="tk-l">NÂ° Boleta</span><span class="tk-r ticket-bold">' + b.id + '</span></div>' +
+                    '<div class="ticket-row"><span class="tk-l">N° Boleta</span><span class="tk-r ticket-bold">' + b.id + '</span></div>' +
                     '<div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">' + x(b.fecha) + '</span></div>' +
                     '<hr class="ticket-hr-sol">' +
-                    '<div class="ticket-row ticket-bold"><span class="tk-l">ARTÃCULO</span><span class="tk-r">VALOR</span></div>' +
+                    '<div class="ticket-row ticket-bold"><span class="tk-l">ARTÍCULO</span><span class="tk-r">VALOR</span></div>' +
                     lineas +
                     '<hr class="ticket-hr">' +
-                    '<div class="ticket-center" style="margin-top:.5rem;font-size:10px;">Â¡Gracias por su compra!</div>' +
+                    '<div class="ticket-center" style="margin-top:.5rem;font-size:10px;">¡Gracias por su compra!</div>' +
                 '</div>' +
             '</div>' +
         '</div>';

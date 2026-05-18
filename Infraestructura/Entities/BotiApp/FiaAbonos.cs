@@ -16,6 +16,9 @@ public partial class FiaAbonos
     [Column("Id_Usuario")]
     public int IdUsuario { get; set; }
 
+    [Column("Id_Metodo_Pago")]
+    public int IdMetodoPago { get; set; }
+
     [Column("Monto")]
     public int Monto { get; set; }
 
@@ -33,4 +36,7 @@ public partial class FiaAbonos
     [ForeignKey("IdUsuario")]
     [InverseProperty("FiaAbonos")]
     public virtual EmpUsuario IdUsuarioNavigation { get; set; } = null!;
+
+    [ForeignKey("IdMetodoPago")]
+    public virtual VenMetodosPago IdMetodoPagoNavigation { get; set; } = null!;
 }

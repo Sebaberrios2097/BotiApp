@@ -20,7 +20,7 @@ public interface IFiadoRepository
     /// sobre sus boletas más antiguas con estado Fiado (4).
     /// Devuelve el registro de abono creado.
     /// </summary>
-    Task<FiaAbonos> RegistrarAbonoAsync(int idCliente, int idUsuario, int monto, string? observaciones = null);
+    Task<FiaAbonos> RegistrarAbonoAsync(int idCliente, int idUsuario, int monto, int idMetodoPago, string? observaciones = null);
     Task<IEnumerable<FiaAbonos>> ObtenerAbonosPorClienteAsync(int idCliente);
 
     // ── Dashboard / globales ──────────────────────────────────────────────────
