@@ -86,9 +86,17 @@ public async Task<FiaClientes> CrearClienteAsync(FiaClientes cliente)
 
     // ── Abonos ────────────────────────────────────────────────────────────────
 
-    public async Task<FiaAbonos> RegistrarAbonoAsync(
-        int idCliente, int idUsuario, int monto, int idMetodoPago, string? observaciones = null)
+    public async Task<IEnumerable<FiaAbonos>> RegistrarAbonoAsync(
+        int idCliente, int idUsuario, IEnumerable<AbonoMetodoItem> metodos, string? observaciones = null)
     {
+        var metodosList = metodos.ToList();
+        if (metodosList.Count == 0)
+            throw new ArgumentException("Debe especificar al menos un método de pago.");
+
+        var totalMonto = metodosList.Sum(m => m.Monto);
+        if (totalMonto <= 0)
+            throw new ArgumentException("El monto total del abono debe ser mayor a 0.");
+
         await using var tx = await context.Database.BeginTransactionAsync();
 
         var cliente = await context.FiaClientes
@@ -96,20 +104,27 @@ public async Task<FiaClientes> CrearClienteAsync(FiaClientes cliente)
             .FirstOrDefaultAsync(c => c.IdCliente == idCliente && c.Estado)
             ?? throw new InvalidOperationException($"Cliente fiado {idCliente} no encontrado.");
 
-        // 1. Registrar abono histórico (siempre monto completo)
-        var abono = new FiaAbonos
-        {
-            IdCliente     = idCliente,
-            IdUsuario     = idUsuario,
-            IdMetodoPago  = idMetodoPago,
-            Monto         = monto,
-            Fecha         = DateTime.Now,
-            Observaciones = observaciones
-        };
-        context.FiaAbonos.Add(abono);
+        var fechaAbono = DateTime.Now;
+        var abonos = new List<FiaAbonos>();
 
-        // 2. Acreditar saldo a favor
-        cliente.SaldoAFavor += monto;
+        // 1. Crear un registro FiaAbonos por cada método de pago
+        foreach (var m in metodosList)
+        {
+            var abono = new FiaAbonos
+            {
+                IdCliente     = idCliente,
+                IdUsuario     = idUsuario,
+                IdMetodoPago  = m.IdMetodoPago,
+                Monto         = m.Monto,
+                Fecha         = fechaAbono,
+                Observaciones = observaciones
+            };
+            context.FiaAbonos.Add(abono);
+            abonos.Add(abono);
+        }
+
+        // 2. Acreditar saldo a favor con el total
+        cliente.SaldoAFavor += totalMonto;
 
         // 3. FIFO auto-pago: pagar boletas más antiguas mientras alcance el saldo
         var boletasPendientes = cliente.VenBoletas
@@ -123,14 +138,14 @@ public async Task<FiaClientes> CrearClienteAsync(FiaClientes cliente)
 
             cliente.SaldoAFavor  -= boleta.MontoTotal;
             boleta.IdEstadoBoleta = EstadoPagada;
-            boleta.FechaPago      = DateTime.Now;
+            boleta.FechaPago      = fechaAbono;
             boleta.IdCajero       = idUsuario;
         }
 
         await context.SaveChangesAsync();
         await tx.CommitAsync();
 
-        return abono;
+        return abonos;
     }
 
     public async Task<IEnumerable<FiaAbonos>> ObtenerAbonosPorClienteAsync(int idCliente)

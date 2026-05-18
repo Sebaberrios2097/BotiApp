@@ -54,11 +54,14 @@ public class FiadoController(IFiadoRepository fiadoRepository, BotiAppContext co
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RegistrarAbonoAjax([FromBody] RegistrarAbonoRequest request)
     {
-        if (request.Monto <= 0)
-            return Json(new { ok = false, mensaje = "El monto debe ser mayor a 0." });
+        if (request.Metodos == null || request.Metodos.Count == 0)
+            return Json(new { ok = false, mensaje = "Agrega al menos un método de pago." });
 
-        if (request.IdMetodoPago <= 0)
-            return Json(new { ok = false, mensaje = "Selecciona un método de pago." });
+        if (request.Metodos.Any(m => m.IdMetodoPago <= 0))
+            return Json(new { ok = false, mensaje = "Todos los métodos de pago deben ser válidos." });
+
+        if (request.Metodos.Any(m => m.Monto <= 0))
+            return Json(new { ok = false, mensaje = "El monto de cada método debe ser mayor a 0." });
 
         var idUsuario = ClaimHelper.GetIdUsuario(User);
         if (idUsuario == 0)
@@ -66,8 +69,18 @@ public class FiadoController(IFiadoRepository fiadoRepository, BotiAppContext co
 
         try
         {
-            var abono = await fiadoRepository.RegistrarAbonoAsync(
-                request.IdCliente, idUsuario, request.Monto, request.IdMetodoPago, request.Observaciones);
+            var items = request.Metodos.Select(m => new AbonoMetodoItem(m.IdMetodoPago, m.Monto));
+            var abonos = (await fiadoRepository.RegistrarAbonoAsync(
+                request.IdCliente, idUsuario, items, request.Observaciones)).ToList();
+
+            // Cargar nombres de métodos para la respuesta
+            var metodoIds = abonos.Select(a => a.IdMetodoPago).Distinct().ToList();
+            var metodos = await context.VenMetodosPago
+                .Where(m => metodoIds.Contains(m.IdMetodoPago))
+                .AsNoTracking()
+                .ToListAsync();
+
+            var totalMonto = abonos.Sum(a => a.Monto);
 
             // Datos actualizados del cliente para refrescar la vista
             var cliente = await fiadoRepository.ObtenerClientePorIdAsync(request.IdCliente);
@@ -76,9 +89,16 @@ public class FiadoController(IFiadoRepository fiadoRepository, BotiAppContext co
             return Json(new
             {
                 ok = true,
-                mensaje = $"Abono de ${abono.Monto:N0} registrado correctamente.",
+                mensaje     = $"Abono de ${totalMonto:N0} registrado correctamente.",
                 saldoAFavor = cliente?.SaldoAFavor ?? 0,
-                deudaTotal  = deuda.Sum(b => b.MontoTotal)
+                deudaTotal  = deuda.Sum(b => b.MontoTotal),
+                abonos = abonos.Select(a => new
+                {
+                    fecha         = a.Fecha.ToString("dd/MM/yyyy HH:mm"),
+                    metodoPago    = metodos.FirstOrDefault(m => m.IdMetodoPago == a.IdMetodoPago)?.NombreMetodoPago ?? "—",
+                    monto         = a.Monto,
+                    observaciones = a.Observaciones
+                }).ToArray()
             });
         }
         catch (Exception ex)
@@ -145,5 +165,6 @@ public class FiadoClienteViewModel
 }
 
 // ── Records de request ────────────────────────────────────────────────────────
-public record RegistrarAbonoRequest(int IdCliente, int Monto, int IdMetodoPago, string? Observaciones);
+public record AbonoMetodoDto(int IdMetodoPago, int Monto);
+public record RegistrarAbonoRequest(int IdCliente, List<AbonoMetodoDto> Metodos, string? Observaciones);
 public record CrearClienteFiadoRequest(string Nombre, string? Telefono);

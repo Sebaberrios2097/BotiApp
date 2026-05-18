@@ -53,6 +53,7 @@ namespace BotiApp.Controllers
                 totalBoletasPagadasMes    = vm.TotalBoletasPagadasMes,
                 totalBoletasPendientesMes = vm.TotalBoletasPendientesMes,
                 totalBoletasAnuladasMes   = vm.TotalBoletasAnuladasMes,
+                totalBoletasFiadasMes     = vm.TotalBoletasFiadasMes,
                 montoTotalMes             = vm.MontoTotalMes,
                 totalProductosBajoStock   = vm.TotalProductosBajoStock,
                 ventasPorDiaMes           = vm.VentasPorDiaMes,
@@ -145,9 +146,10 @@ namespace BotiApp.Controllers
                 vm.TotalBoletasPagadasMes    = boletas.Count(b => b.IdEstadoBoleta == 3);
                 vm.TotalBoletasAnuladasMes   = boletas.Count(b => b.IdEstadoBoleta == 2);
                 vm.TotalBoletasPendientesMes = boletas.Count(b => b.IdEstadoBoleta == 1);
+                vm.TotalBoletasFiadasMes     = boletas.Count(b => b.IdEstadoBoleta == 4);
                 vm.MontoTotalMes             = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
                 vm.TotalProductosBajoStock   = productos.Count(p => p.Stock <= 5 && p.Estado);
-                vm.UltimasBoletas            = boletas.Take(15);
+                vm.UltimasBoletas            = boletas.OrderByDescending(b => b.IdBoleta).Take(50);
 
                 // Productos bajo stock (lista expandible)
                 vm.ProductosBajoStock = productos

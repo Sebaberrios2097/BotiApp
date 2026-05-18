@@ -4,6 +4,11 @@
 @{
     ViewData["Title"] = "Fiado — " + Model.Cliente.Nombre;
     var urlRegistrarAbono = Url.Action("RegistrarAbonoAjax", "Fiado", new { area = "Ventas" })!;
+    var metodosPagoJson = JsonSerializer.Serialize(Model.MetodosPago.Select(m => new
+    {
+        id     = m.IdMetodoPago,
+        nombre = m.NombreMetodoPago
+    }));
 }
 
 <style>
@@ -175,6 +180,25 @@
     }
     .btn-registrar-abono:hover { opacity: .9; }
     .btn-registrar-abono:disabled { opacity: .55; cursor: default; }
+
+    /* ── Multi-método abono ── */
+    .abono-metodo-lista { display: flex; flex-direction: column; gap: .45rem; }
+    .abono-metodo-fila  { display: flex; align-items: center; gap: .4rem; }
+    .abono-metodo-fila select { flex: 1; padding: .42rem .6rem; border: 1px solid #e5e0d8; border-radius: 7px;
+        font-size: .82rem; color: var(--color-secundario); outline: none; }
+    .abono-metodo-fila select:focus { border-color: var(--color-primario); }
+    .abono-metodo-fila input  { width: 110px; padding: .42rem .6rem; border: 1px solid #e5e0d8; border-radius: 7px;
+        font-size: .82rem; color: var(--color-secundario); outline: none; }
+    .abono-metodo-fila input:focus  { border-color: var(--color-primario); }
+    .btn-quitar-metodo-fi { width: 24px; height: 24px; border: none; border-radius: 5px;
+        background: rgba(239,68,68,.12); color: #dc2626; cursor: pointer; font-size: .85rem;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .btn-quitar-metodo-fi:hover { background: rgba(239,68,68,.22); }
+    .btn-add-metodo-fi { align-self: flex-start; padding: .35rem .75rem; background: var(--color-secundario);
+        color: #fff; border: none; border-radius: 7px; font-size: .78rem; font-weight: 600; cursor: pointer; }
+    .btn-add-metodo-fi:hover { background: var(--color-primario); }
+    .abono-total-row { display: flex; justify-content: space-between; align-items: center;
+        padding: .35rem .1rem; font-size: .82rem; color: var(--color-secundario); font-weight: 600; }
 
     /* abono history list */
     .fc-abono-list { padding: .5rem 0; }
@@ -404,22 +428,20 @@
             </div>
             <div class="fc-abono-form">
                 @Html.AntiForgeryToken()
+
+                @* Lista de filas de métodos *@
                 <div class="fc-form-group">
-                    <label for="abonoMetodoPago">Método de pago</label>
-                    <select class="fc-form-input" id="abonoMetodoPago">
-                        <option value="0">-- Selecciona un método --</option>
-                        @foreach (var m in Model.MetodosPago)
-                        {
-                            <option value="@m.IdMetodoPago">@m.NombreMetodoPago</option>
-                        }
-                    </select>
+                    <label>Métodos de pago</label>
+                    <div class="abono-metodo-lista" id="abonoMetodoLista"></div>
+                    <button type="button" class="btn-add-metodo-fi" onclick="agregarFilaMetodo()">+ Agregar método</button>
                 </div>
-                <div class="fc-form-group">
-                    <label for="abonoMonto">Monto ($)</label>
-                    <input class="fc-form-input" type="number" id="abonoMonto" min="1" step="1"
-                           placeholder="Ej: 5000" />
-                    <span class="fc-form-hint">El monto se aplicará automáticamente a las boletas más antiguas (FIFO).</span>
+
+                @* Total calculado *@
+                <div class="abono-total-row">
+                    <span>Total abono:</span>
+                    <span id="abonoTotalDisplay">$0</span>
                 </div>
+
                 <div class="fc-form-group">
                     <label for="abonoObs">Observaciones <span style="color:#9ca3af;font-weight:400">(opcional)</span></label>
                     <textarea class="fc-form-input" id="abonoObs" rows="2"
@@ -456,8 +478,9 @@
 @section Scripts {
 <script>
 (function () {
-    var URL_ABONO  = '@Html.Raw(urlRegistrarAbono)';
-    var ID_CLIENTE = @Model.Cliente.IdCliente;
+    var URL_ABONO    = '@Html.Raw(urlRegistrarAbono)';
+    var ID_CLIENTE   = @Model.Cliente.IdCliente;
+    var METODOS_PAGO = @Html.Raw(metodosPagoJson);
 
     // ── Filtro año/mes boletas ────────────────────────────────────────────────
     window.filtrarBoletas = function () {
@@ -494,8 +517,66 @@
         if (el) el.textContent = val;
     }
 
+    // ── Multi-método: lista de filas ──────────────────────────────────────────
+    function _buildSelect(selectedId) {
+        var opts = METODOS_PAGO.map(function(m) {
+            var sel = m.id === selectedId ? ' selected' : '';
+            return '<option value="' + m.id + '"' + sel + '>' + m.nombre + '</option>';
+        }).join('');
+        return '<select onchange="_recalcTotal()">' + opts + '</select>';
+    }
+
+    window.agregarFilaMetodo = function () {
+        var lista = document.getElementById('abonoMetodoLista');
+        if (!lista) return;
+        var firstId = METODOS_PAGO.length ? METODOS_PAGO[0].id : 0;
+        var fila = document.createElement('div');
+        fila.className = 'abono-metodo-fila';
+        fila.innerHTML =
+            _buildSelect(firstId) +
+            '<input type="number" placeholder="Monto $" min="1" step="1" oninput="_recalcTotal()" />' +
+            '<button type="button" class="btn-quitar-metodo-fi" onclick="_quitarFila(this)" title="Quitar">×</button>';
+        lista.appendChild(fila);
+        _recalcTotal();
+    };
+
+    window._quitarFila = function (btn) {
+        var fila = btn.closest('.abono-metodo-fila');
+        if (fila) { fila.remove(); _recalcTotal(); }
+    };
+
+    window._recalcTotal = function () {
+        var total = _calcTotal();
+        var el = document.getElementById('abonoTotalDisplay');
+        if (el) el.textContent = _fmtPeso(total);
+    };
+
+    function _calcTotal() {
+        var lista = document.getElementById('abonoMetodoLista');
+        if (!lista) return 0;
+        var total = 0;
+        lista.querySelectorAll('.abono-metodo-fila input').forEach(function(inp) {
+            total += parseInt(inp.value) || 0;
+        });
+        return total;
+    }
+
+    function _recogerMetodos() {
+        var lista = document.getElementById('abonoMetodoLista');
+        if (!lista) return [];
+        var result = [];
+        lista.querySelectorAll('.abono-metodo-fila').forEach(function(fila) {
+            var sel   = fila.querySelector('select');
+            var input = fila.querySelector('input');
+            var id    = parseInt(sel?.value ?? '0');
+            var monto = parseInt(input?.value ?? '0');
+            if (id > 0 && monto > 0) result.push({ idMetodoPago: id, monto: monto });
+        });
+        return result;
+    }
+
+    // ── Prepend abono al historial ────────────────────────────────────────────
     function _prependAbono(abono) {
-        // Ocultar "sin abonos"
         var empty = document.getElementById('fcAbonoEmpty');
         if (empty) empty.style.display = 'none';
 
@@ -517,16 +598,12 @@
         list.insertBefore(item, list.firstChild);
     }
 
+    // ── Registrar abono ───────────────────────────────────────────────────────
     window.registrarAbono = async function () {
-        var montoRaw  = document.getElementById('abonoMonto')?.value ?? '';
-        var monto     = parseInt(montoRaw);
-        var obs       = (document.getElementById('abonoObs')?.value ?? '').trim();
-        var metodoSel = document.getElementById('abonoMetodoPago');
-        var idMetodo  = parseInt(metodoSel?.value ?? '0');
-        var metodoNombre = metodoSel?.options[metodoSel.selectedIndex]?.text ?? '';
+        var metodos = _recogerMetodos();
+        var obs     = (document.getElementById('abonoObs')?.value ?? '').trim();
 
-        if (!monto || monto <= 0) { _toast('Ingresa un monto válido.', 'error'); return; }
-        if (!idMetodo || idMetodo <= 0) { _toast('Selecciona un método de pago.', 'error'); return; }
+        if (!metodos.length) { _toast('Agrega al menos un método de pago con monto.', 'error'); return; }
 
         var btn = document.getElementById('btnRegistrarAbono');
         btn.disabled = true;
@@ -542,7 +619,7 @@
                     'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? ''
                 },
                 credentials: 'same-origin',
-                body: JSON.stringify({ idCliente: ID_CLIENTE, monto: monto, idMetodoPago: idMetodo, observaciones: obs || null })
+                body: JSON.stringify({ idCliente: ID_CLIENTE, metodos: metodos, observaciones: obs || null })
             });
             res = await resp.json();
         } catch {
@@ -556,32 +633,29 @@
         _toast(res.mensaje, 'ok');
 
         // Actualizar KPIs
-        _setVal('kpi-deuda-total',  _fmtPeso(res.deudaTotal));
-        _setVal('kpi-saldo-favor',  _fmtPeso(res.saldoAFavor));
+        _setVal('kpi-deuda-total', _fmtPeso(res.deudaTotal));
+        _setVal('kpi-saldo-favor', _fmtPeso(res.saldoAFavor));
 
-        // Agregar abono al historial
-        var now = new Date();
-        var pad = function(n) { return String(n).padStart(2,'0'); };
-        _prependAbono({
-            monto: monto,
-            metodoPago: metodoNombre,
-            observaciones: obs || null,
-            fecha: pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear() +
-                   ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes())
-        });
+        // Agregar cada abono al historial (los devuelve el servidor con nombre de método)
+        if (Array.isArray(res.abonos)) {
+            res.abonos.forEach(function(a) { _prependAbono(a); });
 
-        // Actualizar contador
-        var countEl = document.getElementById('fcAbonoCount');
-        if (countEl) {
-            var cur = parseInt(countEl.textContent) || 0;
-            countEl.textContent = (cur + 1) + ' abono(s)';
+            // Actualizar contador
+            var countEl = document.getElementById('fcAbonoCount');
+            if (countEl) {
+                var cur = parseInt(countEl.textContent) || 0;
+                countEl.textContent = (cur + res.abonos.length) + ' abono(s)';
+            }
         }
 
-        // Limpiar form
-        document.getElementById('abonoMonto').value = '';
-        document.getElementById('abonoObs').value   = '';
-        if (metodoSel) metodoSel.value = '0';
+        // Limpiar form: quitar todas las filas, limpiar obs, agregar fila inicial
+        document.getElementById('abonoMetodoLista').innerHTML = '';
+        document.getElementById('abonoObs').value = '';
+        agregarFilaMetodo();
     };
+
+    // ── Inicializar con una fila por defecto ──────────────────────────────────
+    agregarFilaMetodo();
 })();
 </script>
 }

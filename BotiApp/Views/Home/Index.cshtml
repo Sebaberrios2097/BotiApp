@@ -12,6 +12,18 @@
     var metodosLabels = Model.MontosPorMetodoPago.Keys.ToArray();
     var metodosData   = Model.MontosPorMetodoPago.Values.ToArray();
 
+    // JSON para tabla admin boletas (con paginación JS)
+    var ultimasBoletasJson = ClaimHelper.EsAdmin(User)
+        ? JsonSerializer.Serialize(Model.UltimasBoletas.Select(b => new {
+            id           = b.IdBoleta,
+            fechaEmision = b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
+            vendedor     = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } ve ? $"{ve.NombresEmpleado} {ve.Apellido1}" : "—",
+            cajero       = b.IdCajeroNavigation?.IdEmpleadoNavigation is { } ce ? $"{ce.NombresEmpleado} {ce.Apellido1}" : "—",
+            estado       = b.IdEstadoBoleta,
+            monto        = b.MontoTotal
+          }).ToArray())
+        : "[]";
+
     // Selector cascada: año → meses disponibles
     var mesesPorAnio = Model.PeriodosDisponibles
         .GroupBy(p => p.Anio)
@@ -279,6 +291,7 @@
     .badge-pendiente { background: rgba(252,191,73,.2);  color: #b45309; }
     .badge-anulada   { background: rgba(255,55,55,.12);  color: #dc2626; }
     .badge-pagada    { background: rgba(92,179,56,.15);  color: #16a34a; }
+    .badge-fiado     { background: rgba(99,102,241,.12); color: #4f46e5; }
     .badge-otro      { background: rgba(99,102,241,.12); color: #4f46e5; }
 
     /* badge stock */
@@ -554,58 +567,10 @@
 
     <div class="table-card">
         <div class="table-card-header">
-            <h2>Últimas boletas del sistema</h2>
+            <h2>Vales emitidos en el mes</h2>
             <span id="admin-boletas-period">@mesNombre @Model.Anio</span>
         </div>
-        <div id="admin-boletas-content">
-        @if (!Model.UltimasBoletas.Any())
-        {
-            <div class="dash-empty">No hay boletas registradas este mes.</div>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="dash-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Fecha emisión</th>
-                            <th>Vendedor</th>
-                            <th>Cajero</th>
-                            <th>Estado</th>
-                            <th style="text-align:right">Monto</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var b in Model.UltimasBoletas)
-                        {
-                            var vendedor = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } ve
-                                ? $"{ve.NombresEmpleado} {ve.Apellido1}"
-                                : "—";
-                            var cajero = b.IdCajeroNavigation?.IdEmpleadoNavigation is { } ce
-                                ? $"{ce.NombresEmpleado} {ce.Apellido1}"
-                                : "—";
-                            var (badgeClass, estadoText) = b.IdEstadoBoleta switch
-                            {
-                                1 => ("badge-pendiente", "Pendiente"),
-                                2 => ("badge-anulada",   "Anulada"),
-                                3 => ("badge-pagada",    "Pagada"),
-                                _ => ("badge-otro",      b.IdEstadoBoletaNavigation?.NombreEstadoBoleta ?? "—")
-                            };
-                            <tr>
-                                <td><strong>@b.IdBoleta</strong></td>
-                                <td>@(b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
-                                <td>@vendedor</td>
-                                <td>@cajero</td>
-                                <td><span class="badge-estado @badgeClass">@estadoText</span></td>
-                                <td style="text-align:right;font-weight:600">$@b.MontoTotal.ToString("N0")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-        </div>
+        <div id="admin-boletas-content"></div>
     </div>
 
 }
@@ -868,7 +833,7 @@
         return '$' + Number(n).toLocaleString('es-CL');
     }
     function _badgeEstado(estado) {
-        var m = {1:['badge-pendiente','Pendiente'],2:['badge-anulada','Anulada'],3:['badge-pagada','Pagada']};
+        var m = {1:['badge-pendiente','Pendiente'],2:['badge-anulada','Anulada'],3:['badge-pagada','Pagada'],4:['badge-fiado','Fiado']};
         var b = m[estado] || ['badge-otro', estado];
         return '<span class="badge-estado ' + b[0] + '">' + b[1] + '</span>';
     }
@@ -880,10 +845,18 @@
     }
 
     // ── Render helpers para tablas ────────────────────────────────────────────
-    function _renderAdminBoletasContent(boletas) {
-        if (!boletas || !boletas.length)
+    var _adminBoletasAll  = [];
+    var _adminBoletasPage = 1;
+    var _ADMIN_PAGE_SIZE  = 10;
+
+    function _buildAdminBoletasHtml() {
+        if (!_adminBoletasAll.length)
             return '<div class="dash-empty">No hay boletas registradas este mes.</div>';
-        var rows = boletas.map(function(b) {
+        var total    = _adminBoletasAll.length;
+        var totalPag = Math.ceil(total / _ADMIN_PAGE_SIZE);
+        var p        = _adminBoletasPage;
+        var slice    = _adminBoletasAll.slice((p - 1) * _ADMIN_PAGE_SIZE, p * _ADMIN_PAGE_SIZE);
+        var rows = slice.map(function(b) {
             return '<tr>' +
                 '<td><strong>' + b.id + '</strong></td>' +
                 '<td>' + _esc(b.fechaEmision) + '</td>' +
@@ -893,11 +866,38 @@
                 '<td style="text-align:right;font-weight:600">' + _fmtPeso(b.monto) + '</td>' +
                 '</tr>';
         }).join('');
-        return '<div class="table-responsive"><table class="dash-table">' +
+        var tabla = '<div class="table-responsive"><table class="dash-table">' +
             '<thead><tr><th>#</th><th>Fecha emisión</th><th>Vendedor</th><th>Cajero</th><th>Estado</th>' +
             '<th style="text-align:right">Monto</th></tr></thead>' +
             '<tbody>' + rows + '</tbody></table></div>';
+        if (totalPag <= 1) return tabla;
+        var nav = '<div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;font-size:.8rem;color:#9ca3af;">' +
+            '<span>Página ' + p + ' de ' + totalPag + ' (' + total + ' boletas)</span>' +
+            '<div style="display:flex;gap:.35rem;">' +
+            (p > 1 ? '<button onclick="_adminBoletasPrevPage()" style="padding:.3rem .7rem;border:1px solid #e0d5cc;border-radius:5px;background:#fff;cursor:pointer;font-size:.78rem;">← Ant.</button>' : '') +
+            (p < totalPag ? '<button onclick="_adminBoletasNextPage()" style="padding:.3rem .7rem;border:1px solid #e0d5cc;border-radius:5px;background:#fff;cursor:pointer;font-size:.78rem;">Sig. →</button>' : '') +
+            '</div></div>';
+        return tabla + nav;
     }
+
+    function _renderAdminBoletasContent(boletas) {
+        _adminBoletasAll  = boletas || [];
+        _adminBoletasPage = 1;
+        return _buildAdminBoletasHtml();
+    }
+
+    window._adminBoletasPrevPage = function() {
+        if (_adminBoletasPage > 1) {
+            _adminBoletasPage--;
+            _setHtml('admin-boletas-content', _buildAdminBoletasHtml());
+        }
+    };
+    window._adminBoletasNextPage = function() {
+        if (_adminBoletasPage < Math.ceil(_adminBoletasAll.length / _ADMIN_PAGE_SIZE)) {
+            _adminBoletasPage++;
+            _setHtml('admin-boletas-content', _buildAdminBoletasHtml());
+        }
+    };
     function _renderVendBoletasContent(boletas) {
         if (!boletas || !boletas.length)
             return '<div class="dash-empty">No tienes ventas registradas este mes.</div>';
@@ -990,10 +990,12 @@
         if (hasBoletas) {
             var pie = Chart.getChart(document.getElementById('chartBoletasTipo'));
             if (pie) {
-                pie.data.datasets[0].data = [d.totalBoletasPagadasMes, d.totalBoletasPendientesMes, d.totalBoletasAnuladasMes];
+                pie.data.labels = ['Pagadas', 'Pendientes', 'Anuladas', 'Fiadas'];
+                pie.data.datasets[0].data = [d.totalBoletasPagadasMes, d.totalBoletasPendientesMes, d.totalBoletasAnuladasMes, d.totalBoletasFiadasMes || 0];
+                pie.data.datasets[0].backgroundColor = [C_SUCCESS, C_WARNING, C_DANGER, C_INFO];
                 pie.update();
             } else {
-                _crearChartBoletasTipo(d.totalBoletasPagadasMes, d.totalBoletasPendientesMes, d.totalBoletasAnuladasMes);
+                _crearChartBoletasTipo(d.totalBoletasPagadasMes, d.totalBoletasPendientesMes, d.totalBoletasAnuladasMes, d.totalBoletasFiadasMes || 0);
             }
         }
 
@@ -1067,16 +1069,16 @@
         Chart.defaults.font.size   = 12;
 
         // ── Funciones de creación de gráficos (reutilizadas desde AJAX) ───────
-        function _crearChartBoletasTipo(pagadas, pendientes, anuladas) {
+        function _crearChartBoletasTipo(pagadas, pendientes, anuladas, fiadas) {
             var ctxPie = document.getElementById('chartBoletasTipo');
             if (!ctxPie) return;
             new Chart(ctxPie, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Pagadas', 'Pendientes', 'Anuladas'],
+                    labels: ['Pagadas', 'Pendientes', 'Anuladas', 'Fiadas'],
                     datasets: [{
-                        data: [pagadas, pendientes, anuladas],
-                        backgroundColor: [C_SUCCESS, C_WARNING, C_DANGER],
+                        data: [pagadas, pendientes, anuladas, fiadas || 0],
+                        backgroundColor: [C_SUCCESS, C_WARNING, C_DANGER, C_INFO],
                         borderWidth: 2,
                         borderColor: '#fff',
                         hoverOffset: 6
@@ -1198,7 +1200,8 @@
             _crearChartBoletasTipo(
                 @Model.TotalBoletasPagadasMes,
                 @Model.TotalBoletasPendientesMes,
-                @Model.TotalBoletasAnuladasMes
+                @Model.TotalBoletasAnuladasMes,
+                @Model.TotalBoletasFiadasMes
             );
         }
 
@@ -1225,6 +1228,14 @@
             card.classList.toggle('active');
             panel.classList.toggle('open');
         }
+
+        // ── Render inicial tabla boletas admin (paginación JS) ────────────────
+        (function() {
+            var initBoletas = @Html.Raw(ultimasBoletasJson);
+            if (typeof _renderAdminBoletasContent === 'function' && typeof _setHtml === 'function') {
+                _setHtml('admin-boletas-content', _renderAdminBoletasContent(initBoletas));
+            }
+        })();
     </script>
 }
 }

@@ -23,6 +23,7 @@ public class DashboardViewModel
     public int TotalBoletasPagadasMes   { get; set; }
     public int TotalBoletasAnuladasMes  { get; set; }
     public int TotalBoletasPendientesMes{ get; set; }
+    public int TotalBoletasFiadasMes    { get; set; }
     public long MontoTotalMes           { get; set; }
     public int TotalOrdenesPendientes   { get; set; }
     public int TotalProductosBajoStock  { get; set; }
