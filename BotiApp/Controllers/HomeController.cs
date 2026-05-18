@@ -23,6 +23,92 @@ namespace BotiApp.Controllers
         // Carga KPIs diferenciados según el rol del usuario autenticado.
         public async Task<IActionResult> Index(int? mes, int? anio)
         {
+            var vm = await BuildDashboardVmAsync(mes, anio);
+            return View(vm);
+        }
+
+        // Endpoint AJAX: devuelve los datos del dashboard para el período indicado
+        // sin recargar la vista completa.
+        [HttpGet]
+        public async Task<IActionResult> DashboardDataAjax(int? mes, int? anio)
+        {
+            var vm = await BuildDashboardVmAsync(mes, anio);
+
+            var mesNombre = System.Globalization.CultureInfo.CurrentCulture
+                .DateTimeFormat.GetMonthName(vm.Mes);
+            mesNombre = char.ToUpper(mesNombre[0]) + mesNombre[1..];
+
+            return Json(new
+            {
+                mes      = vm.Mes,
+                anio     = vm.Anio,
+                mesNombre,
+                // ── Admin ──────────────────────────────────────────────
+                totalBoletasMes           = vm.TotalBoletasMes,
+                totalBoletasPagadasMes    = vm.TotalBoletasPagadasMes,
+                totalBoletasPendientesMes = vm.TotalBoletasPendientesMes,
+                totalBoletasAnuladasMes   = vm.TotalBoletasAnuladasMes,
+                montoTotalMes             = vm.MontoTotalMes,
+                totalProductosBajoStock   = vm.TotalProductosBajoStock,
+                ventasPorDiaMes           = vm.VentasPorDiaMes,
+                diasLabels                = Enumerable
+                    .Range(1, vm.VentasPorDiaMes.Length > 0
+                        ? vm.VentasPorDiaMes.Length
+                        : DateTime.DaysInMonth(vm.Anio, vm.Mes))
+                    .Select(d => d.ToString()).ToArray(),
+                montosPorMetodoPagoLabels = vm.MontosPorMetodoPago.Keys.ToArray(),
+                montosPorMetodoPagoData   = vm.MontosPorMetodoPago.Values.ToArray(),
+                productosBajoStock = vm.ProductosBajoStock.Select(p => new
+                {
+                    nombre = p.NombreProducto,
+                    codigo = p.Codigo ?? "—",
+                    tipo   = p.IdTipoProductoNavigation?.NombreTipoProducto ?? "—",
+                    marca  = p.IdMarcaNavigation?.NombreMarca ?? "—",
+                    precio = p.Precio,
+                    stock  = p.Stock
+                }).ToArray(),
+                ultimasBoletas = vm.UltimasBoletas.Select(b => new
+                {
+                    id           = b.IdBoleta,
+                    fechaEmision = b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
+                    vendedor     = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } ve
+                                       ? $"{ve.NombresEmpleado} {ve.Apellido1}" : "—",
+                    cajero       = b.IdCajeroNavigation?.IdEmpleadoNavigation is { } ce
+                                       ? $"{ce.NombresEmpleado} {ce.Apellido1}" : "—",
+                    estado       = b.IdEstadoBoleta,
+                    monto        = b.MontoTotal
+                }).ToArray(),
+                // ── Vendedor ───────────────────────────────────────────
+                vendedorBoletasMes        = vm.VendedorBoletasMes,
+                vendedorMontoMes          = vm.VendedorMontoMes,
+                vendedorBoletasPendientes = vm.VendedorBoletasPendientes,
+                vendedorUltimasBoletas    = vm.VendedorUltimasBoletas.Select(b => new
+                {
+                    id           = b.IdBoleta,
+                    fechaEmision = b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
+                    estado       = b.IdEstadoBoleta,
+                    productos    = b.VenBoletaDetalle.Count,
+                    monto        = b.MontoTotal
+                }).ToArray(),
+                // ── Cajero ─────────────────────────────────────────────
+                cajeroBoletasCobradas = vm.CajeroBoletasCobradas,
+                cajeroBoletasAnuladas = vm.CajeroBoletasAnuladas,
+                cajeroMontoGestionado = vm.CajeroMontoGestionado,
+                cajeroUltimasBoletas  = vm.CajeroUltimasBoletas.Select(b => new
+                {
+                    id           = b.IdBoleta,
+                    fechaGestion = (b.FechaPago ?? b.FechaEmision)?.ToString("dd/MM/yyyy HH:mm") ?? "—",
+                    vendedor     = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } ve
+                                       ? $"{ve.NombresEmpleado} {ve.Apellido1}" : "—",
+                    estado       = b.IdEstadoBoleta,
+                    monto        = b.MontoTotal
+                }).ToArray()
+            });
+        }
+
+        // Construye el DashboardViewModel completo para el período indicado.
+        private async Task<DashboardViewModel> BuildDashboardVmAsync(int? mes, int? anio)
+        {
             var hoy = DateTime.Today;
 
             // Períodos con al menos una boleta emitida (desc)
@@ -96,7 +182,7 @@ namespace BotiApp.Controllers
                 vm.CajeroUltimasBoletas  = boletas.Take(10);
             }
 
-            return View(vm);
+            return vm;
         }
 
         // ── Vistas estáticas ──────────────────────────────────────────────────

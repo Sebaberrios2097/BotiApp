@@ -291,7 +291,30 @@
         color: #9ca3af;
         font-size: .88rem;
     }
+
+    /* ── Loading overlay ── */
+    .dash-loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(255,255,255,.45);
+        backdrop-filter: blur(1px);
+        z-index: 999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+    .dash-loading-overlay.visible { display: flex; }
+    .dash-spinner {
+        width: 36px; height: 36px;
+        border: 3px solid #e5e0d8;
+        border-top-color: var(--color-primario);
+        border-radius: 50%;
+        animation: dashSpin .7s linear infinite;
+    }
+    @@keyframes dashSpin { to { transform: rotate(360deg); } }
 </style>
+
+<div class="dash-loading-overlay" id="dash-overlay"><div class="dash-spinner"></div></div>
 
 <div class="dash-header">
     <div>
@@ -302,7 +325,7 @@
             </svg>
             Dashboard
         </h1>
-        <p>Bienvenido, <strong>@Model.NombreUsuario</strong> — Resumen de <strong>@mesNombre @Model.Anio</strong></p>
+        <p>Bienvenido, <strong>@Model.NombreUsuario</strong> — Resumen de <strong id="dash-period-label">@mesNombre @Model.Anio</strong></p>
     </div>
     @if (aniosDisponibles.Count > 0)
     {
@@ -343,7 +366,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">@Model.TotalBoletasMes</span>
+                <span class="kpi-value" id="kpi-boletas-total">@Model.TotalBoletasMes</span>
                 <span class="kpi-label">Boletas emitidas</span>
             </div>
         </div>
@@ -354,7 +377,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">@Model.TotalBoletasPagadasMes</span>
+                <span class="kpi-value" id="kpi-boletas-pagadas">@Model.TotalBoletasPagadasMes</span>
                 <span class="kpi-label">Boletas pagadas</span>
             </div>
         </div>
@@ -365,7 +388,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">@Model.TotalBoletasPendientesMes</span>
+                <span class="kpi-value" id="kpi-boletas-pendientes">@Model.TotalBoletasPendientesMes</span>
                 <span class="kpi-label">Boletas pendientes</span>
             </div>
         </div>
@@ -376,7 +399,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">@Model.TotalBoletasAnuladasMes</span>
+                <span class="kpi-value" id="kpi-boletas-anuladas">@Model.TotalBoletasAnuladasMes</span>
                 <span class="kpi-label">Boletas anuladas</span>
             </div>
         </div>
@@ -387,7 +410,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">$@Model.MontoTotalMes.ToString("N0")</span>
+                <span class="kpi-value" id="kpi-monto-total">$@Model.MontoTotalMes.ToString("N0")</span>
                 <span class="kpi-label">Ingresos del mes</span>
             </div>
         </div>
@@ -400,7 +423,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">@Model.TotalProductosBajoStock</span>
+                <span class="kpi-value" id="kpi-bajo-stock">@Model.TotalProductosBajoStock</span>
                 <span class="kpi-label">Productos bajo stock</span>
             </div>
             <svg class="kpi-card-chevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
@@ -419,14 +442,15 @@
                 </svg>
                 Productos con stock bajo (≤ 5 unidades)
             </h2>
-            <span>@Model.ProductosBajoStock.Count producto(s)</span>
+            <span id="bajo-stock-count">@Model.ProductosBajoStock.Count producto(s)</span>
         </div>
         @if (!Model.ProductosBajoStock.Any())
         {
-            <div class="dash-empty">No hay productos con stock bajo.</div>
+            <div id="bajo-stock-body"><div class="dash-empty">No hay productos con stock bajo.</div></div>
         }
         else
         {
+            <div id="bajo-stock-body">
             <div class="panel-bajo-stock-body">
                 <div class="table-responsive">
                     <table class="dash-table">
@@ -459,6 +483,7 @@
                     </table>
                 </div>
             </div>
+            </div>
         }
     </div>
 
@@ -468,62 +493,45 @@
         <div class="chart-card">
             <p class="chart-card-title">
                 Boletas por tipo
-                <span class="chart-card-subtitle">@mesNombre @Model.Anio</span>
+                <span class="chart-card-subtitle" id="chart-boletas-subtitle">@mesNombre @Model.Anio</span>
             </p>
-            @if (Model.TotalBoletasMes == 0)
-            {
-                <div class="chart-empty">Sin datos este mes.</div>
-            }
-            else
-            {
-                <div class="chart-wrap" style="height:220px">
-                    <canvas id="chartBoletasTipo"></canvas>
-                </div>
-            }
+            <div class="chart-empty" id="chartBoletasTipo-empty" @(Model.TotalBoletasMes == 0 ? "" : "hidden")>Sin datos este mes.</div>
+            <div class="chart-wrap" id="chartBoletasTipo-wrap" style="height:220px" @(Model.TotalBoletasMes > 0 ? "" : "hidden")>
+                <canvas id="chartBoletasTipo"></canvas>
+            </div>
         </div>
 
         @* Line — Ventas del mes por día *@
         <div class="chart-card" style="grid-column: span 2; min-width:0">
             <p class="chart-card-title">
                 Ventas del mes
-                <span class="chart-card-subtitle">montos pagados por día — @mesNombre @Model.Anio</span>
+                <span class="chart-card-subtitle" id="chart-ventas-subtitle">montos pagados por día — @mesNombre @Model.Anio</span>
             </p>
-            @if (!Model.VentasPorDiaMes.Any(v => v > 0))
-            {
-                <div class="chart-empty">No hay ventas pagadas este mes.</div>
-            }
-            else
-            {
-                <div class="chart-wrap" style="height:220px">
-                    <canvas id="chartVentasDia"></canvas>
-                </div>
-            }
+            <div class="chart-empty" id="chartVentasDia-empty" @(!Model.VentasPorDiaMes.Any(v => v > 0) ? "" : "hidden")>No hay ventas pagadas este mes.</div>
+            <div class="chart-wrap" id="chartVentasDia-wrap" style="height:220px" @(Model.VentasPorDiaMes.Any(v => v > 0) ? "" : "hidden")>
+                <canvas id="chartVentasDia"></canvas>
+            </div>
         </div>
 
         @* Bar — Montos por método de pago *@
         <div class="chart-card">
             <p class="chart-card-title">
                 Métodos de pago
-                <span class="chart-card-subtitle">@mesNombre @Model.Anio</span>
+                <span class="chart-card-subtitle" id="chart-metodos-subtitle">@mesNombre @Model.Anio</span>
             </p>
-            @if (!Model.MontosPorMetodoPago.Any())
-            {
-                <div class="chart-empty">Sin datos este mes.</div>
-            }
-            else
-            {
-                <div class="chart-wrap" style="height:220px">
-                    <canvas id="chartMetodosPago"></canvas>
-                </div>
-            }
+            <div class="chart-empty" id="chartMetodosPago-empty" @(!Model.MontosPorMetodoPago.Any() ? "" : "hidden")>Sin datos este mes.</div>
+            <div class="chart-wrap" id="chartMetodosPago-wrap" style="height:220px" @(Model.MontosPorMetodoPago.Any() ? "" : "hidden")>
+                <canvas id="chartMetodosPago"></canvas>
+            </div>
         </div>
     </div>
 
     <div class="table-card">
         <div class="table-card-header">
             <h2>Últimas boletas del sistema</h2>
-            <span>@mesNombre @Model.Anio</span>
+            <span id="admin-boletas-period">@mesNombre @Model.Anio</span>
         </div>
+        <div id="admin-boletas-content">
         @if (!Model.UltimasBoletas.Any())
         {
             <div class="dash-empty">No hay boletas registradas este mes.</div>
@@ -571,6 +579,7 @@
                 </table>
             </div>
         }
+        </div>
     </div>
 
 }
@@ -588,7 +597,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">@Model.VendedorBoletasMes</span>
+                <span class="kpi-value" id="kpi-vend-boletas">@Model.VendedorBoletasMes</span>
                 <span class="kpi-label">Ventas realizadas</span>
             </div>
         </div>
@@ -599,7 +608,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">$@Model.VendedorMontoMes.ToString("N0")</span>
+                <span class="kpi-value" id="kpi-vend-monto">$@Model.VendedorMontoMes.ToString("N0")</span>
                 <span class="kpi-label">Monto cobrado</span>
             </div>
         </div>
@@ -610,7 +619,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">@Model.VendedorBoletasPendientes</span>
+                <span class="kpi-value" id="kpi-vend-pendientes">@Model.VendedorBoletasPendientes</span>
                 <span class="kpi-label">Boletas pendientes</span>
             </div>
         </div>
@@ -618,9 +627,10 @@
 
     <div class="table-card">
         <div class="table-card-header">
-            <h2>Mis ventas de @mesNombre @Model.Anio</h2>
-            <span>Últimas @Model.VendedorUltimasBoletas.Count() registradas</span>
+            <h2 id="vend-tabla-title">Mis ventas de @mesNombre @Model.Anio</h2>
+            <span id="vend-tabla-count">Últimas @Model.VendedorUltimasBoletas.Count() registradas</span>
         </div>
+        <div id="vend-boletas-content">
         @if (!Model.VendedorUltimasBoletas.Any())
         {
             <div class="dash-empty">No tienes ventas registradas este mes.</div>
@@ -660,6 +670,7 @@
                 </table>
             </div>
         }
+        </div>
     </div>
 }
 
@@ -676,7 +687,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">@Model.CajeroBoletasCobradas</span>
+                <span class="kpi-value" id="kpi-caj-cobradas">@Model.CajeroBoletasCobradas</span>
                 <span class="kpi-label">Boletas cobradas</span>
             </div>
         </div>
@@ -687,7 +698,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">@Model.CajeroBoletasAnuladas</span>
+                <span class="kpi-value" id="kpi-caj-anuladas">@Model.CajeroBoletasAnuladas</span>
                 <span class="kpi-label">Boletas anuladas</span>
             </div>
         </div>
@@ -698,7 +709,7 @@
                 </svg>
             </div>
             <div class="kpi-body">
-                <span class="kpi-value">$@Model.CajeroMontoGestionado.ToString("N0")</span>
+                <span class="kpi-value" id="kpi-caj-monto">$@Model.CajeroMontoGestionado.ToString("N0")</span>
                 <span class="kpi-label">Monto gestionado</span>
             </div>
         </div>
@@ -706,9 +717,10 @@
 
     <div class="table-card">
         <div class="table-card-header">
-            <h2>Boletas gestionadas en @mesNombre @Model.Anio</h2>
-            <span>Últimas @Model.CajeroUltimasBoletas.Count() registradas</span>
+            <h2 id="caj-tabla-title">Boletas gestionadas en @mesNombre @Model.Anio</h2>
+            <span id="caj-tabla-count">Últimas @Model.CajeroUltimasBoletas.Count() registradas</span>
         </div>
+        <div id="caj-boletas-content">
         @if (!Model.CajeroUltimasBoletas.Any())
         {
             <div class="dash-empty">No has gestionado boletas este mes.</div>
@@ -750,7 +762,8 @@
                      </tbody>
                  </table>
              </div>
-         }
+        }
+        </div>
     </div>
 }
 
@@ -779,15 +792,234 @@
     function onAnioChange() {
         var anio  = parseInt(document.getElementById('selectAnio').value);
         var meses = _PERIODOS[anio] || [];
-        _poblarMeses(anio, null);
-        if (meses.length > 0)
-            window.spaNavigate('/Home/Index?mes=' + meses[0] + '&anio=' + anio, true);
+        _poblarMeses(anio, meses[0] || null);
+        if (meses.length > 0) _cargarDashboard(meses[0], anio);
     }
 
     function onMesChange() {
         var anio = parseInt(document.getElementById('selectAnio').value);
         var mes  = parseInt(document.getElementById('selectMes').value);
-        window.spaNavigate('/Home/Index?mes=' + mes + '&anio=' + anio, true);
+        _cargarDashboard(mes, anio);
+    }
+
+    // ── AJAX: carga datos del período sin recargar la página ─────────────────
+    function _cargarDashboard(mes, anio) {
+        var overlay = document.getElementById('dash-overlay');
+        if (overlay) overlay.classList.add('visible');
+
+        fetch('/Home/DashboardDataAjax?mes=' + mes + '&anio=' + anio, { credentials: 'same-origin' })
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function(d) {
+                _actualizarDashboard(d);
+                history.replaceState({}, '', '/Home/Index?mes=' + mes + '&anio=' + anio);
+            })
+            .catch(function(err) {
+                console.error('Error cargando dashboard:', err);
+            })
+            .finally(function() {
+                if (overlay) overlay.classList.remove('visible');
+            });
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function _setText(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
+    function _setHtml(id, html) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+    }
+    function _esc(s) {
+        var d = document.createElement('div');
+        d.textContent = s == null ? '' : String(s);
+        return d.innerHTML;
+    }
+    function _fmtPeso(n) {
+        return '$' + Number(n).toLocaleString('es-CL');
+    }
+    function _badgeEstado(estado) {
+        var m = {1:['badge-pendiente','Pendiente'],2:['badge-anulada','Anulada'],3:['badge-pagada','Pagada']};
+        var b = m[estado] || ['badge-otro', estado];
+        return '<span class="badge-estado ' + b[0] + '">' + b[1] + '</span>';
+    }
+    function _toggleChart(canvasId, hasData) {
+        var wrap  = document.getElementById(canvasId + '-wrap');
+        var empty = document.getElementById(canvasId + '-empty');
+        if (wrap)  wrap.hidden  = !hasData;
+        if (empty) empty.hidden =  hasData;
+    }
+
+    // ── Render helpers para tablas ────────────────────────────────────────────
+    function _renderAdminBoletasContent(boletas) {
+        if (!boletas || !boletas.length)
+            return '<div class="dash-empty">No hay boletas registradas este mes.</div>';
+        var rows = boletas.map(function(b) {
+            return '<tr>' +
+                '<td><strong>' + b.id + '</strong></td>' +
+                '<td>' + _esc(b.fechaEmision) + '</td>' +
+                '<td>' + _esc(b.vendedor) + '</td>' +
+                '<td>' + _esc(b.cajero) + '</td>' +
+                '<td>' + _badgeEstado(b.estado) + '</td>' +
+                '<td style="text-align:right;font-weight:600">' + _fmtPeso(b.monto) + '</td>' +
+                '</tr>';
+        }).join('');
+        return '<div class="table-responsive"><table class="dash-table">' +
+            '<thead><tr><th>#</th><th>Fecha emisión</th><th>Vendedor</th><th>Cajero</th><th>Estado</th>' +
+            '<th style="text-align:right">Monto</th></tr></thead>' +
+            '<tbody>' + rows + '</tbody></table></div>';
+    }
+    function _renderVendBoletasContent(boletas) {
+        if (!boletas || !boletas.length)
+            return '<div class="dash-empty">No tienes ventas registradas este mes.</div>';
+        var rows = boletas.map(function(b) {
+            return '<tr>' +
+                '<td><strong>' + b.id + '</strong></td>' +
+                '<td>' + _esc(b.fechaEmision) + '</td>' +
+                '<td>' + _badgeEstado(b.estado) + '</td>' +
+                '<td>' + b.productos + '</td>' +
+                '<td style="text-align:right;font-weight:600">' + _fmtPeso(b.monto) + '</td>' +
+                '</tr>';
+        }).join('');
+        return '<div class="table-responsive"><table class="dash-table">' +
+            '<thead><tr><th>#</th><th>Fecha</th><th>Estado</th><th>Productos</th>' +
+            '<th style="text-align:right">Monto</th></tr></thead>' +
+            '<tbody>' + rows + '</tbody></table></div>';
+    }
+    function _renderCajBoletasContent(boletas) {
+        if (!boletas || !boletas.length)
+            return '<div class="dash-empty">No has gestionado boletas este mes.</div>';
+        var rows = boletas.map(function(b) {
+            return '<tr>' +
+                '<td><strong>' + b.id + '</strong></td>' +
+                '<td>' + _esc(b.fechaGestion) + '</td>' +
+                '<td>' + _esc(b.vendedor) + '</td>' +
+                '<td>' + _badgeEstado(b.estado) + '</td>' +
+                '<td style="text-align:right;font-weight:600">' + _fmtPeso(b.monto) + '</td>' +
+                '</tr>';
+        }).join('');
+        return '<div class="table-responsive"><table class="dash-table">' +
+            '<thead><tr><th>#</th><th>Fecha pago / anulación</th><th>Vendedor</th><th>Estado</th>' +
+            '<th style="text-align:right">Monto</th></tr></thead>' +
+            '<tbody>' + rows + '</tbody></table></div>';
+    }
+    function _renderBajoStockBody(productos) {
+        if (!productos || !productos.length)
+            return '<div class="dash-empty">No hay productos con stock bajo.</div>';
+        var rows = productos.map(function(p) {
+            var badge = p.stock === 0 ? 'badge-stock-cero' : 'badge-stock-low';
+            return '<tr>' +
+                '<td><strong>' + _esc(p.nombre) + '</strong></td>' +
+                '<td style="color:#9ca3af">' + _esc(p.codigo) + '</td>' +
+                '<td>' + _esc(p.tipo) + '</td>' +
+                '<td>' + _esc(p.marca) + '</td>' +
+                '<td style="text-align:right">$' + Number(p.precio).toLocaleString('es-CL') + '</td>' +
+                '<td style="text-align:center"><span class="badge-estado ' + badge + '">' + p.stock + '</span></td>' +
+                '</tr>';
+        }).join('');
+        return '<div class="panel-bajo-stock-body"><div class="table-responsive">' +
+            '<table class="dash-table"><thead><tr>' +
+            '<th>Producto</th><th>Código</th><th>Tipo</th><th>Marca</th>' +
+            '<th style="text-align:right">Precio</th><th style="text-align:center">Stock</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+    }
+
+    // ── Actualización in-place del dashboard ──────────────────────────────────
+    function _actualizarDashboard(d) {
+        var lbl = d.mesNombre + ' ' + d.anio;
+
+        // Header
+        _setText('dash-period-label', lbl);
+
+        // ── Admin KPIs ────────────────────────────────────────────────────────
+        _setText('kpi-boletas-total',      d.totalBoletasMes);
+        _setText('kpi-boletas-pagadas',    d.totalBoletasPagadasMes);
+        _setText('kpi-boletas-pendientes', d.totalBoletasPendientesMes);
+        _setText('kpi-boletas-anuladas',   d.totalBoletasAnuladasMes);
+        _setText('kpi-monto-total',        _fmtPeso(d.montoTotalMes));
+        _setText('kpi-bajo-stock',         d.totalProductosBajoStock);
+
+        // ── Admin — bajo stock panel ──────────────────────────────────────────
+        _setText('bajo-stock-count', d.totalProductosBajoStock + ' producto(s)');
+        // Cerrar panel y reconstruir contenido
+        var cardBajoStock  = document.getElementById('card-bajo-stock');
+        var panelBajoStock = document.getElementById('panel-bajo-stock');
+        if (cardBajoStock)  cardBajoStock.classList.remove('active');
+        if (panelBajoStock) panelBajoStock.classList.remove('open');
+        _setHtml('bajo-stock-body', _renderBajoStockBody(d.productosBajoStock));
+
+        // ── Admin — gráficos ──────────────────────────────────────────────────
+        _setText('chart-boletas-subtitle', lbl);
+        _setText('chart-ventas-subtitle',  'montos pagados por día — ' + lbl);
+        _setText('chart-metodos-subtitle', lbl);
+
+        // Pie: Boletas por tipo
+        var hasBoletas = d.totalBoletasMes > 0;
+        _toggleChart('chartBoletasTipo', hasBoletas);
+        if (hasBoletas) {
+            var pie = Chart.getChart(document.getElementById('chartBoletasTipo'));
+            if (pie) {
+                pie.data.datasets[0].data = [d.totalBoletasPagadasMes, d.totalBoletasPendientesMes, d.totalBoletasAnuladasMes];
+                pie.update();
+            } else {
+                _crearChartBoletasTipo(d.totalBoletasPagadasMes, d.totalBoletasPendientesMes, d.totalBoletasAnuladasMes);
+            }
+        }
+
+        // Line: Ventas por día
+        var hasVentas = d.ventasPorDiaMes && d.ventasPorDiaMes.some(function(v){ return v > 0; });
+        _toggleChart('chartVentasDia', hasVentas);
+        if (hasVentas) {
+            var line = Chart.getChart(document.getElementById('chartVentasDia'));
+            if (line) {
+                line.data.labels = d.diasLabels;
+                line.data.datasets[0].data = d.ventasPorDiaMes;
+                line.update();
+            } else {
+                _crearChartVentasDia(d.diasLabels, d.ventasPorDiaMes);
+            }
+        }
+
+        // Bar: Métodos de pago
+        var hasMetodos = d.montosPorMetodoPagoLabels && d.montosPorMetodoPagoLabels.length > 0;
+        _toggleChart('chartMetodosPago', hasMetodos);
+        if (hasMetodos) {
+            var bar = Chart.getChart(document.getElementById('chartMetodosPago'));
+            if (bar) {
+                var barColors = [C_PRIMARY, C_INFO, C_SUCCESS, C_WARNING, C_DANGER,
+                                 '#0ea5e9', '#a855f7', '#f97316', '#14b8a6', '#ec4899'];
+                bar.data.labels = d.montosPorMetodoPagoLabels;
+                bar.data.datasets[0].data = d.montosPorMetodoPagoData;
+                bar.data.datasets[0].backgroundColor = d.montosPorMetodoPagoLabels.map(function(_,i){ return barColors[i % barColors.length] + 'cc'; });
+                bar.data.datasets[0].borderColor      = d.montosPorMetodoPagoLabels.map(function(_,i){ return barColors[i % barColors.length]; });
+                bar.update();
+            } else {
+                _crearChartMetodosPago(d.montosPorMetodoPagoLabels, d.montosPorMetodoPagoData);
+            }
+        }
+
+        // ── Admin — tabla boletas ─────────────────────────────────────────────
+        _setText('admin-boletas-period', lbl);
+        _setHtml('admin-boletas-content', _renderAdminBoletasContent(d.ultimasBoletas));
+
+        // ── Vendedor ──────────────────────────────────────────────────────────
+        _setText('kpi-vend-boletas',    d.vendedorBoletasMes);
+        _setText('kpi-vend-monto',      _fmtPeso(d.vendedorMontoMes));
+        _setText('kpi-vend-pendientes', d.vendedorBoletasPendientes);
+        _setText('vend-tabla-title',    'Mis ventas de ' + lbl);
+        _setText('vend-tabla-count',    'Últimas ' + (d.vendedorUltimasBoletas ? d.vendedorUltimasBoletas.length : 0) + ' registradas');
+        _setHtml('vend-boletas-content', _renderVendBoletasContent(d.vendedorUltimasBoletas));
+
+        // ── Cajero ────────────────────────────────────────────────────────────
+        _setText('kpi-caj-cobradas', d.cajeroBoletasCobradas);
+        _setText('kpi-caj-anuladas', d.cajeroBoletasAnuladas);
+        _setText('kpi-caj-monto',    _fmtPeso(d.cajeroMontoGestionado));
+        _setText('caj-tabla-title',  'Boletas gestionadas en ' + lbl);
+        _setText('caj-tabla-count',  'Últimas ' + (d.cajeroUltimasBoletas ? d.cajeroUltimasBoletas.length : 0) + ' registradas');
+        _setHtml('caj-boletas-content', _renderCajBoletasContent(d.cajeroUltimasBoletas));
     }
 
     _poblarMeses(_ANIO_SEL, _MES_SEL);
@@ -806,20 +1038,16 @@
         Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
         Chart.defaults.font.size   = 12;
 
-        // ── 1. Pie: Boletas por tipo ──────────────────────────────────────────
-        var ctxPie = document.getElementById('chartBoletasTipo');
-        if (ctxPie) {
-            Chart.getChart(ctxPie)?.destroy();
+        // ── Funciones de creación de gráficos (reutilizadas desde AJAX) ───────
+        function _crearChartBoletasTipo(pagadas, pendientes, anuladas) {
+            var ctxPie = document.getElementById('chartBoletasTipo');
+            if (!ctxPie) return;
             new Chart(ctxPie, {
                 type: 'doughnut',
                 data: {
                     labels: ['Pagadas', 'Pendientes', 'Anuladas'],
                     datasets: [{
-                        data: [
-                            @Model.TotalBoletasPagadasMes,
-                            @Model.TotalBoletasPendientesMes,
-                            @Model.TotalBoletasAnuladasMes
-                        ],
+                        data: [pagadas, pendientes, anuladas],
                         backgroundColor: [C_SUCCESS, C_WARNING, C_DANGER],
                         borderWidth: 2,
                         borderColor: '#fff',
@@ -834,7 +1062,7 @@
                         legend: { position: 'bottom', labels: { padding: 14, boxWidth: 12 } },
                         tooltip: {
                             callbacks: {
-                                label: ctx => ` ${ctx.label}: ${ctx.parsed} boleta(s)`
+                                label: function(ctx) { return ' ' + ctx.label + ': ' + ctx.parsed + ' boleta(s)'; }
                             }
                         }
                     }
@@ -842,20 +1070,16 @@
             });
         }
 
-        // ── 2. Line: Ventas del mes por día ───────────────────────────────────
-        var ctxLine = document.getElementById('chartVentasDia');
-        if (ctxLine) {
-            Chart.getChart(ctxLine)?.destroy();
-            var diasLabels = @Html.Raw(JsonSerializer.Serialize(diasLabels));
-            var diasData   = @Html.Raw(JsonSerializer.Serialize(diasData));
-
+        function _crearChartVentasDia(labels, data) {
+            var ctxLine = document.getElementById('chartVentasDia');
+            if (!ctxLine) return;
             new Chart(ctxLine, {
                 type: 'line',
                 data: {
-                    labels: diasLabels,
+                    labels: labels,
                     datasets: [{
                         label: 'Ventas ($)',
-                        data: diasData,
+                        data: data,
                         borderColor: C_PRIMARY,
                         backgroundColor: C_PRIMARY + '22',
                         borderWidth: 2.5,
@@ -872,7 +1096,7 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: ctx => ` $${ctx.parsed.y.toLocaleString('es-CL')}`
+                                label: function(ctx) { return ' $' + ctx.parsed.y.toLocaleString('es-CL'); }
                             }
                         }
                     },
@@ -885,7 +1109,7 @@
                             grid: { color: '#f3f0ec' },
                             ticks: {
                                 color: '#9ca3af',
-                                callback: v => '$' + v.toLocaleString('es-CL')
+                                callback: function(v) { return '$' + v.toLocaleString('es-CL'); }
                             },
                             beginAtZero: true
                         }
@@ -894,16 +1118,11 @@
             });
         }
 
-        // ── 3. Bar: Montos por método de pago ─────────────────────────────────
-        var ctxBar = document.getElementById('chartMetodosPago');
-        if (ctxBar) {
-            Chart.getChart(ctxBar)?.destroy();
-            var metLabels = @Html.Raw(JsonSerializer.Serialize(metodosLabels));
-            var metData   = @Html.Raw(JsonSerializer.Serialize(metodosData));
-
+        function _crearChartMetodosPago(metLabels, metData) {
+            var ctxBar = document.getElementById('chartMetodosPago');
+            if (!ctxBar) return;
             var barColors = [C_PRIMARY, C_INFO, C_SUCCESS, C_WARNING, C_DANGER,
                              '#0ea5e9', '#a855f7', '#f97316', '#14b8a6', '#ec4899'];
-
             new Chart(ctxBar, {
                 type: 'bar',
                 data: {
@@ -911,8 +1130,8 @@
                     datasets: [{
                         label: 'Monto ($)',
                         data: metData,
-                        backgroundColor: metLabels.map((_, i) => barColors[i % barColors.length] + 'cc'),
-                        borderColor:     metLabels.map((_, i) => barColors[i % barColors.length]),
+                        backgroundColor: metLabels.map(function(_,i){ return barColors[i % barColors.length] + 'cc'; }),
+                        borderColor:     metLabels.map(function(_,i){ return barColors[i % barColors.length]; }),
                         borderWidth: 1.5,
                         borderRadius: 6,
                         borderSkipped: false
@@ -925,7 +1144,7 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: ctx => ` $${ctx.parsed.y.toLocaleString('es-CL')}`
+                                label: function(ctx) { return ' $' + ctx.parsed.y.toLocaleString('es-CL'); }
                             }
                         }
                     },
@@ -935,13 +1154,40 @@
                             grid: { color: '#f3f0ec' },
                             ticks: {
                                 color: '#9ca3af',
-                                callback: v => '$' + v.toLocaleString('es-CL')
+                                callback: function(v) { return '$' + v.toLocaleString('es-CL'); }
                             },
                             beginAtZero: true
                         }
                     }
                 }
             });
+        }
+
+        // ── Inicialización de gráficos en el primer render ────────────────────
+        // Solo se crean si el canvas está visible (no hidden)
+        var ctxPie = document.getElementById('chartBoletasTipo');
+        if (ctxPie && !ctxPie.closest('[hidden]')) {
+            _crearChartBoletasTipo(
+                @Model.TotalBoletasPagadasMes,
+                @Model.TotalBoletasPendientesMes,
+                @Model.TotalBoletasAnuladasMes
+            );
+        }
+
+        var ctxLine = document.getElementById('chartVentasDia');
+        if (ctxLine && !ctxLine.closest('[hidden]')) {
+            _crearChartVentasDia(
+                @Html.Raw(JsonSerializer.Serialize(diasLabels)),
+                @Html.Raw(JsonSerializer.Serialize(diasData))
+            );
+        }
+
+        var ctxBar = document.getElementById('chartMetodosPago');
+        if (ctxBar && !ctxBar.closest('[hidden]')) {
+            _crearChartMetodosPago(
+                @Html.Raw(JsonSerializer.Serialize(metodosLabels)),
+                @Html.Raw(JsonSerializer.Serialize(metodosData))
+            );
         }
 
         // ── Panel bajo stock ──────────────────────────────────────────────────

@@ -31,6 +31,8 @@ public partial class VenBoletas
     [Column("Fecha_Pago", TypeName = "datetime")]
     public DateTime? FechaPago { get; set; }
 
+    public string? Observaciones { get; set; }
+
     [ForeignKey("IdEstadoBoleta")]
     [InverseProperty("VenBoletas")]
     public virtual VenEstadosBoletas IdEstadoBoletaNavigation { get; set; } = null!;
