@@ -123,12 +123,12 @@ public class EmpleadosController(
         if (!ClaimHelper.EsAdmin(User))
             return Json(new { ok = false, mensaje = "Sin permiso." });
 
-        var actualizado = await empleadoRepo.Update(req.IdEmpleado, req.Nombres, req.Apellido1, req.Apellido2, req.Fono, req.Correo);
+        var actualizado = await empleadoRepo.Update(req.IdEmpleado, req.Nombres, req.Apellido1, req.Apellido2, req.Fono, req.Correo, req.Rut);
         if (actualizado is null)
             return Json(new { ok = false, mensaje = "Empleado no encontrado." });
 
-        var rut    = actualizado.Rut.ToString();
-        var rutFmt = rut.Length >= 2 ? rut[..^1] + "-" + rut[^1..] : rut;
+        var dv     = CalcDv(actualizado.Rut);
+        var rutFmt = $"{actualizado.Rut}-{dv}";
         var nombre = $"{actualizado.NombresEmpleado} {actualizado.Apellido1}{(actualizado.Apellido2 != null ? " " + actualizado.Apellido2 : "")}";
 
         return Json(new
@@ -137,7 +137,8 @@ public class EmpleadosController(
             mensaje    = "Datos del empleado actualizados.",
             idEmpleado = actualizado.IdEmpleado,
             nombre,
-            rut        = rutFmt,
+            rut        = actualizado.Rut,
+            rutFmt,
             fono       = actualizado.Fono,
             correo     = actualizado.Correo
         });
@@ -151,42 +152,29 @@ public class EmpleadosController(
         if (!ClaimHelper.EsAdmin(User))
             return Json(new { ok = false, mensaje = "Sin permiso." });
 
-        // Generar contraseña aleatoria segura
-        const string upper   = "ABCDEFGHJKMNPQRSTUVWXYZ";
-        const string lower   = "abcdefghjkmnpqrstuvwxyz";
-        const string digits  = "23456789";
-        const string special = "@#!$";
-        var rng   = System.Security.Cryptography.RandomNumberGenerator.Create();
-        var bytes = new byte[12];
-        rng.GetBytes(bytes);
-        var partes = new[]
-        {
-            upper  [bytes[0]  % upper.Length].ToString(),
-            upper  [bytes[1]  % upper.Length].ToString(),
-            lower  [bytes[2]  % lower.Length].ToString(),
-            lower  [bytes[3]  % lower.Length].ToString(),
-            digits [bytes[4]  % digits.Length].ToString(),
-            digits [bytes[5]  % digits.Length].ToString(),
-            digits [bytes[6]  % digits.Length].ToString(),
-            special[bytes[7]  % special.Length].ToString(),
-            lower  [bytes[8]  % lower.Length].ToString(),
-            upper  [bytes[9]  % upper.Length].ToString(),
-            digits [bytes[10] % digits.Length].ToString(),
-            lower  [bytes[11] % lower.Length].ToString()
-        };
-        var nuevaClave = string.Concat(partes.OrderBy(_ => Guid.NewGuid()));
+        if (string.IsNullOrWhiteSpace(req.NuevaClave) || req.NuevaClave.Length < 6)
+            return Json(new { ok = false, mensaje = "La contraseña debe tener al menos 6 caracteres." });
 
-        var resultado = await sp.SpEmpResetContrasena(req.IdUsuario, nuevaClave);
+        var resultado = await sp.SpEmpResetContrasena(req.IdUsuario, req.NuevaClave.Trim());
         if (resultado < 1)
             return Json(new { ok = false, mensaje = resultado == -1 ? "Usuario no encontrado." : "No se pudo restablecer la contraseña." });
 
-        return Json(new { ok = true, mensaje = "Contraseña restablecida correctamente.", nuevaClave });
+        return Json(new { ok = true, mensaje = "Contraseña actualizada correctamente." });
+    }
+
+    /* ── Helper: calcula dígito verificador RUT chileno ──────────────────── */
+    private static string CalcDv(int rut)
+    {
+        int suma = 0, mul = 2, n = rut;
+        while (n > 0) { suma += (n % 10) * mul; n /= 10; mul = mul == 7 ? 2 : mul + 1; }
+        int dv = 11 - (suma % 11);
+        return dv == 11 ? "0" : dv == 10 ? "K" : dv.ToString();
     }
 
     /* ── Records ──────────────────────────────────────────────────────────── */
     public record CrearEmpleadoRequest(string Nombres, string Apellido1, string? Apellido2, int Rut, string? Fono, string? Correo);
     public record CrearUsuarioRequest(int IdEmpleado, int IdTipoUsuario);
     public record ToggleEstadoRequest(int IdUsuario);
-    public record EditarEmpleadoRequest(int IdEmpleado, string Nombres, string Apellido1, string? Apellido2, string? Fono, string? Correo);
-    public record ResetPasswordRequest(int IdUsuario);
+    public record EditarEmpleadoRequest(int IdEmpleado, string Nombres, string Apellido1, string? Apellido2, string? Fono, string? Correo, int? Rut);
+    public record ResetPasswordRequest(int IdUsuario, string NuevaClave);
 }

@@ -35,7 +35,7 @@ namespace Infraestructura.Repositories.BotiApp
             return empleado;
         }
 
-        public async Task<EmpEmpleado?> Update(int idEmpleado, string nombres, string apellido1, string? apellido2, string? fono, string? correo)
+        public async Task<EmpEmpleado?> Update(int idEmpleado, string nombres, string apellido1, string? apellido2, string? fono, string? correo, int? rut = null)
         {
             var emp = await _db.EmpEmpleado.FindAsync(idEmpleado);
             if (emp is null) return null;
@@ -45,6 +45,8 @@ namespace Infraestructura.Repositories.BotiApp
             emp.Apellido2       = string.IsNullOrWhiteSpace(apellido2) ? null : apellido2.Trim();
             emp.Fono            = string.IsNullOrWhiteSpace(fono)    ? null : fono.Trim();
             emp.Correo          = string.IsNullOrWhiteSpace(correo)  ? null : correo.Trim();
+            if (rut.HasValue && rut.Value > 0)
+                emp.Rut = rut.Value;
 
             await _db.SaveChangesAsync();
             return emp;

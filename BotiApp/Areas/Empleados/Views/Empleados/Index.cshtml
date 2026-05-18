@@ -10,6 +10,14 @@
     var urlEditar       = Url.Action("EditarEmpleadoAjax", "Empleados", new { area = "Empleados" });
     var urlReset        = Url.Action("ResetPasswordAjax",  "Empleados", new { area = "Empleados" });
     var esAdmin         = ClaimHelper.EsAdmin(User);
+
+    // Calcula el dígito verificador de un RUT chileno (sin DV)
+    Func<int, string> calcDv = (rut) => {
+        int suma = 0, mul = 2, n = rut;
+        while (n > 0) { suma += (n % 10) * mul; n /= 10; mul = mul == 7 ? 2 : mul + 1; }
+        int dv = 11 - (suma % 11);
+        return dv == 11 ? "0" : dv == 10 ? "K" : dv.ToString();
+    };
 }
 
 <style>
@@ -264,11 +272,17 @@
                     <input type="text" id="editApellido2" placeholder="Opcional" maxlength="50" />
                 </div>
                 <div class="emp-field">
+                    <label>RUT completo <span style="color:#dc2626">*</span></label>
+                    <input type="text" id="editRut" placeholder="Ej: 12345678-9" maxlength="12"
+                           oninput="onRutInput(this)" onblur="onRutBlur(this)" autocomplete="off" />
+                    <span class="field-hint" id="editRutHint"></span>
+                </div>
+            </div>
+            <div class="emp-form-row">
+                <div class="emp-field">
                     <label>Teléfono</label>
                     <input type="text" id="editFono" placeholder="Ej: +56 9 1234 5678" maxlength="50" />
                 </div>
-            </div>
-            <div class="emp-form-row full">
                 <div class="emp-field">
                     <label>Correo</label>
                     <input type="email" id="editCorreo" placeholder="correo@ejemplo.com" maxlength="150" />
@@ -276,18 +290,19 @@
             </div>
             @if (esAdmin)
             {
-            <!-- Sección reset contraseña: visible solo si el empleado tiene usuario -->
+            <!-- Sección cambio contraseña: visible solo si el empleado tiene usuario -->
             <div class="emp-reset-section" id="resetSection" style="display:none;">
-                <p class="emp-reset-title">Contraseña de acceso</p>
-                <div id="resetResultado" style="display:none;" class="emp-reset-result">
-                    Nueva contraseña: <span id="resetClaveGenerada"></span>
-                    <button class="btn-copy-pass" title="Copiar" onclick="copiarClave()">
-                        <svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
-                    </button>
+                <p class="emp-reset-title">Cambiar contraseña de acceso</p>
+                <div class="emp-form-row full">
+                    <div class="emp-field">
+                        <label>Nueva contraseña <span style="color:#dc2626">*</span></label>
+                        <input type="password" id="resetNuevaClave" placeholder="Mín. 6 caracteres" maxlength="100"
+                               style="font-family:monospace;" autocomplete="new-password" />
+                    </div>
                 </div>
-                <button class="btn-emp-cancelar" id="btnResetPass" onclick="resetPassword()" style="align-self:flex-start; color:#6366f1; border-color:rgba(99,102,241,.3);">
+                <button class="btn-emp-cancelar" id="btnResetPass" onclick="cambiarPassword()" style="align-self:flex-start; color:#6366f1; border-color:rgba(99,102,241,.3);">
                     <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:.3rem"><path d="M12 1C8.676 1 5.866 2.98 4.52 5.811L2 3v7h7L6.536 7.536A7 7 0 1 1 12 19c-2.585 0-4.879-1.41-6.138-3.5H3.598C5.043 18.14 8.29 21 12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9z"/></svg>
-                    Generar nueva contraseña
+                    Cambiar contraseña
                 </button>
             </div>
             }
@@ -356,8 +371,8 @@
                 var u         = emp.EmpUsuario;
                 var tieneUser = u != null;
                 var activo    = tieneUser && u!.Estado;
-                var rut       = emp.Rut.ToString();
-                var rutFormat = rut.Length >= 2 ? rut[..^1] + "-" + rut[^1..] : rut;
+                var dv        = calcDv(emp.Rut);
+                var rutFormat = $"{emp.Rut}-{dv}";
                 var nombre    = $"{emp.NombresEmpleado} {emp.Apellido1}{(emp.Apellido2 != null ? " " + emp.Apellido2 : "")}";
 
                 <tr data-nombre="@nombre.ToLower()"
@@ -416,17 +431,18 @@
 
                     <!-- Columna acciones -->
                     @{
-                        var nombresJs  = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.NombresEmpleado);
-                        var ap1Js      = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Apellido1);
-                        var ap2Js      = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Apellido2 ?? "");
-                        var fonoJs     = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Fono ?? "");
-                        var correoJs   = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Correo ?? "");
+                        var nombresJs   = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.NombresEmpleado);
+                        var ap1Js       = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Apellido1);
+                        var ap2Js       = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Apellido2 ?? "");
+                        var fonoJs      = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Fono ?? "");
+                        var correoJs    = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Correo ?? "");
                         var idUsuarioJs = tieneUser ? u!.IdUsuario.ToString() : "0";
+                        // Pasa el número de RUT (sin DV) al JS; el JS recalcula y formatea
                     }
                     <td id="td-acc-@emp.IdEmpleado">
                         <div class="td-acciones">
                             <button class="btn-edit"
-                                    onclick="abrirModalEditar(@emp.IdEmpleado,'@nombresJs','@ap1Js','@ap2Js','@fonoJs','@correoJs',@idUsuarioJs)"
+                                    onclick="abrirModalEditar(@emp.IdEmpleado,'@nombresJs','@ap1Js','@ap2Js','@fonoJs','@correoJs',@idUsuarioJs,@emp.Rut)"
                                     title="Editar datos del empleado">
                                 <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                                 Editar
@@ -775,8 +791,68 @@
             : `${vis} de ${total} empleado${total !== 1 ? 's' : ''}`;
     }
 
+    /* ── Utilidades RUT chileno ────────────────────────────────────────────── */
+    function calcularDv(num) {
+        var suma = 0, mul = 2, n = num;
+        while (n > 0) { suma += (n % 10) * mul; n = Math.floor(n / 10); mul = mul === 7 ? 2 : mul + 1; }
+        var dv = 11 - (suma % 11);
+        return dv === 11 ? '0' : dv === 10 ? 'K' : String(dv);
+    }
+
+    function formatearRutVisual(raw) {
+        // Elimina todo excepto dígitos y K/k
+        var limpio = raw.replace(/[^0-9kK]/g, '').toUpperCase();
+        if (limpio.length < 2) return limpio;
+        var dv  = limpio.slice(-1);
+        var num = limpio.slice(0, -1);
+        return num + '-' + dv;
+    }
+
+    function extraerNumRut(raw) {
+        // Retorna solo la parte numérica (sin DV) como int, o NaN
+        var limpio = raw.replace(/[^0-9kK]/g, '');
+        if (limpio.length < 2) return NaN;
+        return parseInt(limpio.slice(0, -1));
+    }
+
+    function extraerDvRut(raw) {
+        var limpio = raw.replace(/[^0-9kK]/g, '').toUpperCase();
+        return limpio.length >= 1 ? limpio.slice(-1) : '';
+    }
+
+    function validarRut(raw) {
+        var num = extraerNumRut(raw);
+        if (isNaN(num) || num < 1000000) return false;
+        var dvIngresado = extraerDvRut(raw);
+        return calcularDv(num) === dvIngresado;
+    }
+
+    window.onRutInput = function (el) {
+        // Mientras el usuario tipea: solo auto-inserta el guión visual
+        var pos = el.selectionStart;
+        el.value = formatearRutVisual(el.value);
+        // Mantener hint limpio mientras escribe
+        var hint = document.getElementById('editRutHint');
+        if (hint) { hint.textContent = ''; hint.style.color = ''; }
+        el.classList.remove('input-error');
+    };
+
+    window.onRutBlur = function (el) {
+        var val  = el.value.trim();
+        var hint = document.getElementById('editRutHint');
+        if (!val) { if (hint) { hint.textContent = ''; } return; }
+        el.value = formatearRutVisual(val);
+        if (validarRut(val)) {
+            el.classList.remove('input-error');
+            if (hint) { hint.textContent = 'RUT válido ✓'; hint.style.color = '#16a34a'; }
+        } else {
+            el.classList.add('input-error');
+            if (hint) { hint.textContent = 'Dígito verificador incorrecto'; hint.style.color = '#dc2626'; }
+        }
+    };
+
     /* ── Modal editar empleado ─────────────────────────────────────────────── */
-    window.abrirModalEditar = function (idEmpleado, nombres, apellido1, apellido2, fono, correo, idUsuario) {
+    window.abrirModalEditar = function (idEmpleado, nombres, apellido1, apellido2, fono, correo, idUsuario, rutNum) {
         document.getElementById('editIdEmpleado').value = idEmpleado;
         document.getElementById('editIdUsuario').value  = idUsuario;
         document.getElementById('editNombres').value    = nombres;
@@ -785,14 +861,27 @@
         document.getElementById('editFono').value       = fono   || '';
         document.getElementById('editCorreo').value     = correo || '';
 
-        // Limpiar errores y resultado reset
-        ['editNombres','editApellido1'].forEach(id => document.getElementById(id).classList.remove('input-error'));
-        const resetRes = document.getElementById('resetResultado');
-        if (resetRes) resetRes.style.display = 'none';
+        // Poblar RUT con formato visual (recalculando DV desde el número almacenado)
+        var rutEl = document.getElementById('editRut');
+        if (rutEl) {
+            rutEl.value = rutNum > 0 ? rutNum + '-' + calcularDv(rutNum) : '';
+            rutEl.classList.remove('input-error');
+        }
+        var hint = document.getElementById('editRutHint');
+        if (hint) { hint.textContent = ''; hint.style.color = ''; }
 
-        // Mostrar sección reset solo si el empleado tiene usuario
-        const resetSec = document.getElementById('resetSection');
-        if (resetSec) resetSec.style.display = idUsuario > 0 ? '' : 'none';
+        // Limpiar errores
+        ['editNombres','editApellido1'].forEach(function(id) {
+            document.getElementById(id).classList.remove('input-error');
+        });
+
+        // Sección contraseña: visible solo si tiene usuario
+        var resetSec = document.getElementById('resetSection');
+        if (resetSec) {
+            resetSec.style.display = idUsuario > 0 ? '' : 'none';
+            var claveEl = document.getElementById('resetNuevaClave');
+            if (claveEl) claveEl.value = '';
+        }
 
         document.getElementById('modalEditarEmp').style.display = 'flex';
         document.getElementById('editNombres').focus();
@@ -803,26 +892,41 @@
     };
 
     window.guardarEdicion = async function () {
-        const nombres   = document.getElementById('editNombres').value.trim();
-        const apellido1 = document.getElementById('editApellido1').value.trim();
-        let valido = true;
-        [['editNombres', nombres], ['editApellido1', apellido1]].forEach(([id, val]) => {
-            const el = document.getElementById(id);
+        var nombres   = document.getElementById('editNombres').value.trim();
+        var apellido1 = document.getElementById('editApellido1').value.trim();
+        var rutRaw    = document.getElementById('editRut').value.trim();
+        var valido    = true;
+
+        [['editNombres', nombres], ['editApellido1', apellido1]].forEach(function([id, val]) {
+            var el = document.getElementById(id);
             if (!val) { el.classList.add('input-error'); valido = false; }
             else        el.classList.remove('input-error');
         });
+
+        // Validar RUT si se ingresó
+        var rutNum = null;
+        if (rutRaw) {
+            if (!validarRut(rutRaw)) {
+                document.getElementById('editRut').classList.add('input-error');
+                var hint = document.getElementById('editRutHint');
+                if (hint) { hint.textContent = 'Dígito verificador incorrecto'; hint.style.color = '#dc2626'; }
+                valido = false;
+            } else {
+                rutNum = extraerNumRut(rutRaw);
+            }
+        }
         if (!valido) return;
 
-        const idEmpleado = parseInt(document.getElementById('editIdEmpleado').value);
-        const apellido2  = document.getElementById('editApellido2').value.trim() || null;
-        const fono       = document.getElementById('editFono').value.trim()      || null;
-        const correo     = document.getElementById('editCorreo').value.trim()    || null;
+        var idEmpleado = parseInt(document.getElementById('editIdEmpleado').value);
+        var apellido2  = document.getElementById('editApellido2').value.trim() || null;
+        var fono       = document.getElementById('editFono').value.trim()      || null;
+        var correo     = document.getElementById('editCorreo').value.trim()    || null;
 
-        const btn = document.getElementById('btnGuardarEdicion');
+        var btn = document.getElementById('btnGuardarEdicion');
         btn.disabled = true;
         btn.innerHTML = '<span class="spin-sm"></span> Guardando…';
 
-        const res = await post(URL_EDITAR, { idEmpleado, nombres, apellido1, apellido2, fono, correo });
+        var res = await post(URL_EDITAR, { idEmpleado, nombres, apellido1, apellido2, fono, correo, rut: rutNum });
 
         btn.disabled = false;
         btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg> Guardar cambios';
@@ -832,19 +936,25 @@
         toast(res.mensaje, 'exito');
         cerrarModalEditar();
 
-        // Actualizar nombre en la fila
-        const nombreCompleto = `${nombres} ${apellido1}${apellido2 ? ' ' + apellido2 : ''}`;
-        const fila = document.getElementById(`td-acc-${idEmpleado}`)?.closest('tr');
+        // Actualizar fila en el DOM
+        var nombreCompleto = nombres + ' ' + apellido1 + (apellido2 ? ' ' + apellido2 : '');
+        var fila = document.getElementById('td-acc-' + idEmpleado)?.closest('tr');
         if (fila) {
             fila.querySelector('.td-nombre').textContent = nombreCompleto;
             fila.dataset.nombre = nombreCompleto.toLowerCase();
 
+            // Actualizar RUT si cambió
+            if (res.rutFmt) {
+                var tdRut = fila.querySelector('.td-rut');
+                if (tdRut) tdRut.textContent = res.rutFmt;
+            }
+
             // Actualizar contacto
-            const tdContact = fila.querySelector('.td-contact');
+            var tdContact = fila.querySelector('.td-contact');
             if (tdContact) {
-                let html = '';
-                if (fono)   html += `<div>📞 ${esc(fono)}</div>`;
-                if (correo) html += `<div>✉ ${esc(correo)}</div>`;
+                var html = '';
+                if (fono)   html += '<div>📞 ' + esc(fono) + '</div>';
+                if (correo) html += '<div>✉ ' + esc(correo) + '</div>';
                 if (!fono && !correo) html = '<span style="color:#c8bdb5">—</span>';
                 tdContact.innerHTML = html;
             }
@@ -852,30 +962,32 @@
         filtrar();
     };
 
-    /* ── Reset contraseña ──────────────────────────────────────────────────── */
-    window.resetPassword = async function () {
-        const idUsuario = parseInt(document.getElementById('editIdUsuario').value);
+    /* ── Cambiar contraseña (admin escribe la nueva clave) ─────────────────── */
+    window.cambiarPassword = async function () {
+        var idUsuario  = parseInt(document.getElementById('editIdUsuario').value);
+        var nuevaClave = document.getElementById('resetNuevaClave')?.value.trim();
         if (!idUsuario) return;
 
-        const btn = document.getElementById('btnResetPass');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spin-sm"></span> Generando…';
+        if (!nuevaClave || nuevaClave.length < 6) {
+            toast('La contraseña debe tener al menos 6 caracteres.', 'error');
+            document.getElementById('resetNuevaClave')?.classList.add('input-error');
+            return;
+        }
+        document.getElementById('resetNuevaClave')?.classList.remove('input-error');
 
-        const res = await post(URL_RESET, { idUsuario });
+        var btn = document.getElementById('btnResetPass');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin-sm"></span> Guardando…';
+
+        var res = await post(URL_RESET, { idUsuario, nuevaClave });
 
         btn.disabled = false;
-        btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:.3rem"><path d="M12 1C8.676 1 5.866 2.98 4.52 5.811L2 3v7h7L6.536 7.536A7 7 0 1 1 12 19c-2.585 0-4.879-1.41-6.138-3.5H3.598C5.043 18.14 8.29 21 12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9z"/></svg> Generar nueva contraseña';
+        btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:.3rem"><path d="M12 1C8.676 1 5.866 2.98 4.52 5.811L2 3v7h7L6.536 7.536A7 7 0 1 1 12 19c-2.585 0-4.879-1.41-6.138-3.5H3.598C5.043 18.14 8.29 21 12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9z"/></svg> Cambiar contraseña';
 
-        if (!res || !res.ok) { toast(res?.mensaje ?? 'Error al resetear contraseña.', 'error'); return; }
+        if (!res || !res.ok) { toast(res?.mensaje ?? 'Error al cambiar la contraseña.', 'error'); return; }
 
-        document.getElementById('resetClaveGenerada').textContent = res.nuevaClave;
-        document.getElementById('resetResultado').style.display = 'flex';
-        toast('Contraseña reseteada correctamente.', 'exito');
-    };
-
-    window.copiarClave = function () {
-        const clave = document.getElementById('resetClaveGenerada').textContent;
-        navigator.clipboard.writeText(clave).then(() => toast('Contraseña copiada al portapapeles.', 'exito'));
+        document.getElementById('resetNuevaClave').value = '';
+        toast(res.mensaje, 'exito');
     };
 
 })();
