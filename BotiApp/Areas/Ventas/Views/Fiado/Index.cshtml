@@ -1,4 +1,4 @@
-@using BotiApp.Helpers
+@* @using BotiApp.Helpers *@
 @using Infraestructura.Entities.BotiApp
 @model BotiApp.Areas.Ventas.Controllers.FiadoIndexViewModel
 @{
@@ -233,7 +233,6 @@
                 <thead>
                     <tr>
                         <th>Cliente</th>
-                        <th>RUT</th>
                         <th>Teléfono</th>
                         <th style="text-align:right">Saldo a favor</th>
                         <th style="text-align:right">Deuda boletas</th>
@@ -245,18 +244,9 @@
                     {
                         var deudaBoletas = c.VenBoletas.Where(b => b.IdEstadoBoleta == 4).Sum(b => b.MontoTotal);
                         var balance      = deudaBoletas - c.SaldoAFavor;
-                        var rutFormato   = $"{c.Rut:N0}-{RutHelper.CalcularDv(c.Rut)}";
                         var badgeClass   = balance > 50000 ? "alta" : balance > 10000 ? "media" : balance > 0 ? "baja" : "cero";
-                        var nombreCompleto = $"{c.Nombres} {c.Apellido1} {c.Apellido2}".Trim();
-                        <tr data-nombre="@nombreCompleto.ToLower()" data-rut="@c.Rut">
-                            <td>
-                                <strong>@nombreCompleto</strong>
-                                @if (!string.IsNullOrWhiteSpace(c.Observaciones))
-                                {
-                                    <div style="font-size:.75rem;color:#9ca3af;margin-top:.15rem">@c.Observaciones</div>
-                                }
-                            </td>
-                            <td style="color:#6b7280;white-space:nowrap">@rutFormato</td>
+                        <tr data-nombre="@c.Nombre.ToLower()">
+                            <td><strong>@c.Nombre</strong></td>
                             <td style="color:#6b7280">@(c.Telefono ?? "—")</td>
                             <td style="text-align:right;color:#16a34a;font-weight:600">
                                 @(c.SaldoAFavor > 0 ? "$" + c.SaldoAFavor.ToString("N0") : "—")
@@ -292,8 +282,7 @@
         var visibles = 0;
         filas.forEach(function (tr) {
             var nombre = tr.dataset.nombre ?? '';
-            var rut    = tr.dataset.rut ?? '';
-            var match  = !q || nombre.includes(q) || rut.includes(q);
+            var match  = !q || nombre.includes(q);
             tr.style.display = match ? '' : 'none';
             if (match) visibles++;
         });

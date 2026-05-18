@@ -7,7 +7,7 @@ public interface IFiadoRepository
     // ── Clientes ──────────────────────────────────────────────────────────────
     Task<IEnumerable<FiaClientes>> ObtenerClientesAsync(string? q = null);
     Task<FiaClientes?> ObtenerClientePorIdAsync(int id);
-    Task<FiaClientes?> ObtenerClientePorRutAsync(int rut);
+
     Task<FiaClientes> CrearClienteAsync(FiaClientes cliente);
     Task<FiaClientes?> ActualizarClienteAsync(FiaClientes datos);
 

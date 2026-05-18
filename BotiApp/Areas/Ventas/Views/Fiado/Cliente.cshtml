@@ -1,11 +1,8 @@
-@using BotiApp.Helpers
 @using Infraestructura.Entities.BotiApp
 @using System.Text.Json
 @model BotiApp.Areas.Ventas.Controllers.FiadoClienteViewModel
 @{
-    ViewData["Title"] = "Fiado — " + Model.Cliente.Nombres + " " + Model.Cliente.Apellido1;
-    var rutFormato = $"{Model.Cliente.Rut:N0}-{RutHelper.CalcularDv(Model.Cliente.Rut)}";
-    var nombreCompleto = $"{Model.Cliente.Nombres} {Model.Cliente.Apellido1} {Model.Cliente.Apellido2}".Trim();
+    ViewData["Title"] = "Fiado — " + Model.Cliente.Nombre;
     var urlRegistrarAbono = Url.Action("RegistrarAbonoAjax", "Fiado", new { area = "Ventas" })!;
 }
 
@@ -36,18 +33,6 @@
     .fc-back-btn:hover { background: #e5e7eb; color: #374151; text-decoration: none; }
     .fc-title-block { flex: 1; min-width: 0; }
     .fc-title-block h1 { font-size: 1.35rem; font-weight: 700; color: var(--color-secundario); margin: 0 0 .2rem; }
-    .fc-title-block p  { font-size: .85rem; color: #6b7280; margin: 0; }
-    .fc-rut-badge {
-        display: inline-block;
-        background: #f3f4f6;
-        color: #374151;
-        border-radius: 20px;
-        font-size: .78rem;
-        font-weight: 600;
-        padding: .15rem .7rem;
-        margin-left: .5rem;
-        vertical-align: middle;
-    }
 
     /* ── KPI row ── */
     .fc-kpi-row {
@@ -246,20 +231,13 @@
         Volver
     </a>
     <div class="fc-title-block">
-        <h1>
-            @nombreCompleto
-            <span class="fc-rut-badge">@rutFormato</span>
-        </h1>
+        <h1>@Model.Cliente.Nombre</h1>
         <p>
             @if (!string.IsNullOrWhiteSpace(Model.Cliente.Telefono))
             {
                 <span style="margin-right:.75rem">📞 @Model.Cliente.Telefono</span>
             }
             Registrado: @Model.Cliente.FechaRegistro.ToString("dd/MM/yyyy")
-            @if (!string.IsNullOrWhiteSpace(Model.Cliente.Observaciones))
-            {
-                <span style="margin-left:.75rem;color:#9ca3af">— @Model.Cliente.Observaciones</span>
-            }
         </p>
     </div>
 </div>
@@ -423,15 +401,10 @@
                 <h2>Datos del cliente</h2>
             </div>
             <div style="padding:.9rem 1.3rem;font-size:.84rem;color:var(--color-secundario);line-height:1.8">
-                <div><strong>RUT:</strong> @rutFormato</div>
-                <div><strong>Nombre:</strong> @nombreCompleto</div>
+                <div><strong>Nombre:</strong> @Model.Cliente.Nombre</div>
                 @if (!string.IsNullOrWhiteSpace(Model.Cliente.Telefono))
                 {
                     <div><strong>Teléfono:</strong> @Model.Cliente.Telefono</div>
-                }
-                @if (!string.IsNullOrWhiteSpace(Model.Cliente.Observaciones))
-                {
-                    <div><strong>Obs.:</strong> @Model.Cliente.Observaciones</div>
                 }
                 <div style="margin-top:.5rem;color:#9ca3af;font-size:.75rem">
                     Registrado el @Model.Cliente.FechaRegistro.ToString("dd/MM/yyyy")

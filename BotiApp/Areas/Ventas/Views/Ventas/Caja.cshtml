@@ -515,39 +515,13 @@
         <!-- Tab: crear -->
         <div class="fiado-tab-pane hidden" id="fiadoTabCrear">
             <div class="fiado-crear-body">
-                <div class="fiado-row2">
-                    <div class="fiado-field">
-                        <label>RUT <span style="color:#dc2626">*</span></label>
-                        <input type="number" id="fiadoNuevoRut" placeholder="ej. 12345678" min="1" />
-                    </div>
-                    <div class="fiado-field" style="justify-content:flex-end;">
-                        <label style="opacity:0">DV</label>
-                        <div style="padding:.5rem .75rem; background:#f5f0eb; border-radius:7px; font-size:.88rem; color:#a89080; font-weight:700;" id="fiadoNuevoDv">— — —</div>
-                    </div>
-                </div>
-                <div class="fiado-row2">
-                    <div class="fiado-field">
-                        <label>Nombres <span style="color:#dc2626">*</span></label>
-                        <input type="text" id="fiadoNuevoNombres" placeholder="Juan Carlos" />
-                    </div>
-                    <div class="fiado-field">
-                        <label>Apellido paterno <span style="color:#dc2626">*</span></label>
-                        <input type="text" id="fiadoNuevoApellido1" placeholder="González" />
-                    </div>
-                </div>
-                <div class="fiado-row2">
-                    <div class="fiado-field">
-                        <label>Apellido materno</label>
-                        <input type="text" id="fiadoNuevoApellido2" placeholder="Pérez" />
-                    </div>
-                    <div class="fiado-field">
-                        <label>Teléfono</label>
-                        <input type="text" id="fiadoNuevoTelefono" placeholder="+56 9 xxxx xxxx" />
-                    </div>
+                <div class="fiado-field">
+                    <label>Nombre <span style="color:#dc2626">*</span></label>
+                    <input type="text" id="fiadoNuevoNombre" placeholder="Ej: Juan González" autocomplete="off" />
                 </div>
                 <div class="fiado-field">
-                    <label>Observaciones</label>
-                    <input type="text" id="fiadoNuevoObs" placeholder="Notas opcionales…" />
+                    <label>Teléfono</label>
+                    <input type="text" id="fiadoNuevoTelefono" placeholder="+56 9 xxxx xxxx" />
                 </div>
             </div>
             <div class="fiado-modal-footer">
@@ -2100,9 +2074,8 @@
         document.getElementById('fiadoClientSelInfo').className  = 'fiado-client-sel-info';
         document.getElementById('btnConfirmarFiado').disabled    = true;
         // limpiar form crear
-        ['fiadoNuevoRut','fiadoNuevoNombres','fiadoNuevoApellido1','fiadoNuevoApellido2','fiadoNuevoTelefono','fiadoNuevoObs']
+        ['fiadoNuevoNombre','fiadoNuevoTelefono']
             .forEach(id => { var el = document.getElementById(id); if (el) el.value = ''; });
-        document.getElementById('fiadoNuevoDv').textContent = '— — —';
         selFiadoTab('buscar');
         document.getElementById('fiadoModalOverlay').style.display = 'flex';
         setTimeout(() => document.getElementById('fiadoBuscarInput')?.focus(), 80);
@@ -2127,11 +2100,7 @@
         if (res === 11) return '0'; if (res === 10) return 'K'; return String(res);
     }
 
-    // Actualizar DV en tiempo real
-    document.getElementById('fiadoNuevoRut')?.addEventListener('input', function () {
-        var rut = parseInt(this.value);
-        document.getElementById('fiadoNuevoDv').textContent = rut > 0 ? 'DV: ' + _calcDv(rut) : '— — —';
-    });
+    // Actualizar DV en tiempo real — eliminado (no se usa RUT en fiado)
 
     window.buscarClientesFiado = function () {
         clearTimeout(_fiadoBuscarTimer);
@@ -2168,7 +2137,7 @@
             div.innerHTML =
                 '<div style="flex:1;min-width:0;">' +
                     '<div class="fiado-client-nombre">' + x(c.nombre) + '</div>' +
-                    '<div class="fiado-client-rut">' + x(c.rutFormato) + '</div>' +
+                    (c.telefono ? '<div class="fiado-client-rut">' + x(c.telefono) + '</div>' : '') +
                 '</div>' +
                 '<span class="fiado-client-deuda ' + deudaClass + '">' +
                     (c.saldoAFavor > 0 ? 'Saldo: $' + Number(c.saldoAFavor).toLocaleString('es-CL') : 'Sin deuda') +
@@ -2181,7 +2150,7 @@
     function _seleccionarClienteFiado(c) {
         _fiadoClienteSel = c;
         var info = document.getElementById('fiadoClientSelInfo');
-        info.textContent = 'Seleccionado: ' + c.nombre + ' (' + c.rutFormato + ')';
+        info.textContent = 'Seleccionado: ' + c.nombre;
         info.className   = 'fiado-client-sel-info visible';
         document.getElementById('btnConfirmarFiado').disabled = false;
         // Highlight selection
@@ -2207,26 +2176,18 @@
     };
 
     window.crearYFiado = async function () {
-        var rut       = parseInt(document.getElementById('fiadoNuevoRut')?.value);
-        var nombres   = (document.getElementById('fiadoNuevoNombres')?.value ?? '').trim();
-        var apellido1 = (document.getElementById('fiadoNuevoApellido1')?.value ?? '').trim();
-        var apellido2 = (document.getElementById('fiadoNuevoApellido2')?.value ?? '').trim();
-        var telefono  = (document.getElementById('fiadoNuevoTelefono')?.value ?? '').trim();
-        var obs       = (document.getElementById('fiadoNuevoObs')?.value ?? '').trim();
+        var nombre   = (document.getElementById('fiadoNuevoNombre')?.value ?? '').trim();
+        var telefono = (document.getElementById('fiadoNuevoTelefono')?.value ?? '').trim();
 
-        if (!rut || rut <= 0)    { toast('RUT inválido.', 'error'); return; }
-        if (!nombres)            { toast('El nombre es obligatorio.', 'error'); return; }
-        if (!apellido1)          { toast('El apellido paterno es obligatorio.', 'error'); return; }
+        if (!nombre) { toast('El nombre es obligatorio.', 'error'); return; }
 
         var btn = document.getElementById('btnCrearYFiado');
         setBotonCargando(btn, true);
 
         // 1. Crear cliente
         var resCli = await post(URL_CREAR_CLIENTE, {
-            rut: rut, nombres: nombres, apellido1: apellido1,
-            apellido2: apellido2 || null, telefono: telefono || null, observaciones: obs || null
+            nombre: nombre, telefono: telefono || null
         });
-
         if (!resCli.ok && resCli.idCliente == null) {
             setBotonCargando(btn, false);
             toast(resCli.mensaje, 'error');

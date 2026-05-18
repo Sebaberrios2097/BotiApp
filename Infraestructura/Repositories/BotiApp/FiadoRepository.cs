@@ -20,15 +20,11 @@ public class FiadoRepository(BotiAppContext context) : IFiadoRepository
 
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(c =>
-                c.Nombres.Contains(q) ||
-                c.Apellido1.Contains(q) ||
-                (c.Apellido2 != null && c.Apellido2.Contains(q)) ||
-                (c.Telefono != null && c.Telefono.Contains(q)) ||
-                c.Rut.ToString().Contains(q));
+                c.Nombre.Contains(q) ||
+                (c.Telefono != null && c.Telefono.Contains(q)));
 
         return await query
-            .OrderBy(c => c.Apellido1)
-            .ThenBy(c => c.Nombres)
+            .OrderBy(c => c.Nombre)
             .ToListAsync();
     }
 
@@ -45,12 +41,7 @@ public class FiadoRepository(BotiAppContext context) : IFiadoRepository
                     .ThenInclude(u => u.IdEmpleadoNavigation)
             .FirstOrDefaultAsync(c => c.IdCliente == id);
 
-    public async Task<FiaClientes?> ObtenerClientePorRutAsync(int rut)
-        => await context.FiaClientes
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Rut == rut);
-
-    public async Task<FiaClientes> CrearClienteAsync(FiaClientes cliente)
+public async Task<FiaClientes> CrearClienteAsync(FiaClientes cliente)
     {
         cliente.FechaRegistro = DateTime.Now;
         cliente.Estado = true;
@@ -64,11 +55,8 @@ public class FiadoRepository(BotiAppContext context) : IFiadoRepository
         var existing = await context.FiaClientes.FindAsync(datos.IdCliente);
         if (existing == null) return null;
 
-        existing.Nombres      = datos.Nombres;
-        existing.Apellido1    = datos.Apellido1;
-        existing.Apellido2    = datos.Apellido2;
-        existing.Telefono     = datos.Telefono;
-        existing.Observaciones = datos.Observaciones;
+        existing.Nombre   = datos.Nombre;
+        existing.Telefono = datos.Telefono;
 
         await context.SaveChangesAsync();
         return existing;

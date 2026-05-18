@@ -15,18 +15,13 @@ END;
 IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Fia_Clientes')
 BEGIN
     CREATE TABLE Fia_Clientes (
-        Id_Cliente      INT          IDENTITY(1,1) NOT NULL,
-        Rut             INT          NOT NULL,          -- solo número, sin DV
-        Nombres         NVARCHAR(80) NOT NULL,
-        Apellido1       NVARCHAR(60) NOT NULL,
-        Apellido2       NVARCHAR(60) NULL,
-        Telefono        NVARCHAR(20) NULL,
-        Observaciones   NVARCHAR(300) NULL,
-        Saldo_A_Favor   INT          NOT NULL DEFAULT 0, -- crédito no aplicado
-        Estado          BIT          NOT NULL DEFAULT 1,
-        Fecha_Registro  DATETIME     NOT NULL DEFAULT GETDATE(),
-        CONSTRAINT PK_Fia_Clientes PRIMARY KEY (Id_Cliente),
-        CONSTRAINT UQ_Fia_Clientes_Rut UNIQUE (Rut)
+        Id_Cliente      INT           IDENTITY(1,1) NOT NULL,
+        Nombre          NVARCHAR(120) NOT NULL,
+        Telefono        NVARCHAR(20)  NULL,
+        Saldo_A_Favor   INT           NOT NULL DEFAULT 0,
+        Estado          BIT           NOT NULL DEFAULT 1,
+        Fecha_Registro  DATETIME      NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT PK_Fia_Clientes PRIMARY KEY (Id_Cliente)
     );
 END;
 

@@ -264,7 +264,6 @@ public partial class BotiAppContext : DbContext
         modelBuilder.Entity<FiaClientes>(entity =>
         {
             entity.HasKey(e => e.IdCliente).HasName("PK_Fia_Clientes");
-            entity.HasIndex(e => e.Rut).IsUnique().HasDatabaseName("UQ_Fia_Clientes_Rut");
         });
 
         modelBuilder.Entity<FiaAbonos>(entity =>

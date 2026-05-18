@@ -10,28 +10,13 @@ public partial class FiaClientes
     [Column("Id_Cliente")]
     public int IdCliente { get; set; }
 
-    [Column("Rut")]
-    public int Rut { get; set; }
-
-    [Column("Nombres")]
-    [StringLength(80)]
-    public string Nombres { get; set; } = string.Empty;
-
-    [Column("Apellido1")]
-    [StringLength(60)]
-    public string Apellido1 { get; set; } = string.Empty;
-
-    [Column("Apellido2")]
-    [StringLength(60)]
-    public string? Apellido2 { get; set; }
+    [Column("Nombre")]
+    [StringLength(120)]
+    public string Nombre { get; set; } = string.Empty;
 
     [Column("Telefono")]
     [StringLength(20)]
     public string? Telefono { get; set; }
-
-    [Column("Observaciones")]
-    [StringLength(300)]
-    public string? Observaciones { get; set; }
 
     [Column("Saldo_A_Favor")]
     public int SaldoAFavor { get; set; }

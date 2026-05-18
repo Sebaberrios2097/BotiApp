@@ -96,9 +96,7 @@ public class FiadoController(IFiadoRepository fiadoRepository, BotiAppContext co
         var result = clientes.Select(c => new
         {
             c.IdCliente,
-            c.Rut,
-            rutFormato = $"{c.Rut:N0}-{RutHelper.CalcularDv(c.Rut)}",
-            nombre = $"{c.Nombres} {c.Apellido1} {c.Apellido2}".Trim(),
+            nombre    = c.Nombre,
             c.Telefono,
             c.SaldoAFavor
         });
@@ -110,39 +108,22 @@ public class FiadoController(IFiadoRepository fiadoRepository, BotiAppContext co
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CrearClienteAjax([FromBody] CrearClienteFiadoRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Nombres) || string.IsNullOrWhiteSpace(request.Apellido1))
-            return Json(new { ok = false, mensaje = "Nombre y apellido son obligatorios." });
-
-        if (request.Rut <= 0)
-            return Json(new { ok = false, mensaje = "RUT inválido." });
-
-        var existente = await fiadoRepository.ObtenerClientePorRutAsync(request.Rut);
-        if (existente != null)
-            return Json(new
-            {
-                ok = false,
-                mensaje = $"Ya existe un cliente con RUT {request.Rut}-{RutHelper.CalcularDv(request.Rut)}.",
-                idCliente = existente.IdCliente
-            });
+        if (string.IsNullOrWhiteSpace(request.Nombre))
+            return Json(new { ok = false, mensaje = "El nombre es obligatorio." });
 
         var cliente = new FiaClientes
         {
-            Rut        = request.Rut,
-            Nombres    = request.Nombres.Trim(),
-            Apellido1  = request.Apellido1.Trim(),
-            Apellido2  = request.Apellido2?.Trim(),
-            Telefono   = request.Telefono?.Trim(),
-            Observaciones = request.Observaciones?.Trim()
+            Nombre   = request.Nombre.Trim(),
+            Telefono = request.Telefono?.Trim()
         };
 
         var creado = await fiadoRepository.CrearClienteAsync(cliente);
         return Json(new
         {
             ok = true,
-            mensaje = $"Cliente {creado.Nombres} {creado.Apellido1} registrado.",
+            mensaje   = $"Cliente {creado.Nombre} registrado.",
             idCliente = creado.IdCliente,
-            nombre    = $"{creado.Nombres} {creado.Apellido1} {creado.Apellido2}".Trim(),
-            rutFormato = $"{creado.Rut:N0}-{RutHelper.CalcularDv(creado.Rut)}"
+            nombre    = creado.Nombre
         });
     }
 }
@@ -166,6 +147,4 @@ public class FiadoClienteViewModel
 
 // ── Records de request ────────────────────────────────────────────────────────
 public record RegistrarAbonoRequest(int IdCliente, int Monto, int IdMetodoPago, string? Observaciones);
-public record CrearClienteFiadoRequest(
-    int Rut, string Nombres, string Apellido1,
-    string? Apellido2, string? Telefono, string? Observaciones);
+public record CrearClienteFiadoRequest(string Nombre, string? Telefono);
