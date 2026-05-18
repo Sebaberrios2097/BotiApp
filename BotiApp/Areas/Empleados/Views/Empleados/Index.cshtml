@@ -1,11 +1,15 @@
 @using Infraestructura.Entities.BotiApp
+@using BotiApp.Helpers
 @model IEnumerable<EmpEmpleado>
 @{
     ViewData["Title"] = "Empleados";
 
     var urlCrear        = Url.Action("CrearUsuarioAjax",   "Empleados", new { area = "Empleados" });
     var urlToggle       = Url.Action("ToggleEstadoAjax",   "Empleados", new { area = "Empleados" });
-    var urlCrearEmp     = Url.Action("CrearEmpleadoAjax", "Empleados", new { area = "Empleados" });
+    var urlCrearEmp     = Url.Action("CrearEmpleadoAjax",  "Empleados", new { area = "Empleados" });
+    var urlEditar       = Url.Action("EditarEmpleadoAjax", "Empleados", new { area = "Empleados" });
+    var urlReset        = Url.Action("ResetPasswordAjax",  "Empleados", new { area = "Empleados" });
+    var esAdmin         = ClaimHelper.EsAdmin(User);
 }
 
 <style>
@@ -119,6 +123,20 @@
 .btn-tipo-cancelar { padding:.5rem 1rem; background:transparent; color:#a89080; border:1.5px solid #e0d5cc; border-radius:8px; font-size:.86rem; font-weight:700; cursor:pointer; transition:background .15s; }
 .btn-tipo-cancelar:hover { background:#f5f0eb; }
 
+/* ══════════════════════════════════════════════════════ BOTÓN EDITAR */
+.btn-edit { display:inline-flex; align-items:center; gap:.3rem; padding:.38rem .7rem; border:1.5px solid rgba(99,102,241,.3); border-radius:7px; font-size:.78rem; font-weight:700; cursor:pointer; background:transparent; color:#6366f1; transition:background .15s; white-space:nowrap; }
+.btn-edit:hover { background:rgba(99,102,241,.08); }
+.btn-edit svg { width:13px; height:13px; fill:currentColor; }
+.td-acciones { display:flex; gap:.4rem; justify-content:flex-end; flex-wrap:wrap; align-items:center; }
+
+/* ══════════════════════════════════════════════════════ MODAL EDITAR EMPLEADO */
+.emp-reset-section { border-top:1px solid #f0ebe5; margin-top:.25rem; padding-top:.8rem; display:flex; flex-direction:column; gap:.55rem; }
+.emp-reset-title { font-size:.76rem; font-weight:700; color:#a89080; text-transform:uppercase; letter-spacing:.04em; }
+.emp-reset-result { display:flex; align-items:center; gap:.6rem; background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:8px; padding:.55rem .85rem; font-size:.88rem; color:#15803d; font-weight:700; }
+.emp-reset-result span { font-family:monospace; letter-spacing:.04em; font-size:.95rem; }
+.btn-copy-pass { background:none; border:none; cursor:pointer; color:#15803d; padding:0; display:flex; }
+.btn-copy-pass svg { width:16px; height:16px; fill:currentColor; }
+
 /* ══════════════════════════════════════════════════════ TOAST */
 .toast-wrap { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; pointer-events:none; }
 .toast-msg  { display:flex; align-items:center; gap:.6rem; padding:.75rem 1.1rem; border-radius:10px; font-size:.88rem; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.12); animation:toastIn .3s ease; }
@@ -212,6 +230,73 @@
             <button class="btn-emp-guardar" id="btnGuardarEmp" onclick="guardarEmpleado()">
                 <svg viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
                 Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ MODAL EDITAR EMPLEADO ══ -->
+<div class="emp-modal-overlay" id="modalEditarEmp" style="display:none;" onclick="if(event.target===this)cerrarModalEditar()">
+    <div class="emp-modal-box" style="width:520px;">
+        <div class="emp-modal-header">
+            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            <span>Editar empleado</span>
+            <button class="btn-mclose" onclick="cerrarModalEditar()" title="Cerrar">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+        </div>
+        <div class="emp-modal-body">
+            <input type="hidden" id="editIdEmpleado" />
+            <input type="hidden" id="editIdUsuario" />
+            <div class="emp-form-row">
+                <div class="emp-field">
+                    <label>Nombres <span style="color:#dc2626">*</span></label>
+                    <input type="text" id="editNombres" placeholder="Ej: Juan Carlos" maxlength="80" />
+                </div>
+                <div class="emp-field">
+                    <label>Primer apellido <span style="color:#dc2626">*</span></label>
+                    <input type="text" id="editApellido1" placeholder="Ej: González" maxlength="50" />
+                </div>
+            </div>
+            <div class="emp-form-row">
+                <div class="emp-field">
+                    <label>Segundo apellido</label>
+                    <input type="text" id="editApellido2" placeholder="Opcional" maxlength="50" />
+                </div>
+                <div class="emp-field">
+                    <label>Teléfono</label>
+                    <input type="text" id="editFono" placeholder="Ej: +56 9 1234 5678" maxlength="50" />
+                </div>
+            </div>
+            <div class="emp-form-row full">
+                <div class="emp-field">
+                    <label>Correo</label>
+                    <input type="email" id="editCorreo" placeholder="correo@ejemplo.com" maxlength="150" />
+                </div>
+            </div>
+            @if (esAdmin)
+            {
+            <!-- Sección reset contraseña: visible solo si el empleado tiene usuario -->
+            <div class="emp-reset-section" id="resetSection" style="display:none;">
+                <p class="emp-reset-title">Contraseña de acceso</p>
+                <div id="resetResultado" style="display:none;" class="emp-reset-result">
+                    Nueva contraseña: <span id="resetClaveGenerada"></span>
+                    <button class="btn-copy-pass" title="Copiar" onclick="copiarClave()">
+                        <svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
+                    </button>
+                </div>
+                <button class="btn-emp-cancelar" id="btnResetPass" onclick="resetPassword()" style="align-self:flex-start; color:#6366f1; border-color:rgba(99,102,241,.3);">
+                    <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:.3rem"><path d="M12 1C8.676 1 5.866 2.98 4.52 5.811L2 3v7h7L6.536 7.536A7 7 0 1 1 12 19c-2.585 0-4.879-1.41-6.138-3.5H3.598C5.043 18.14 8.29 21 12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9z"/></svg>
+                    Generar nueva contraseña
+                </button>
+            </div>
+            }
+        </div>
+        <div class="emp-modal-footer">
+            <button class="btn-emp-cancelar" onclick="cerrarModalEditar()">Cancelar</button>
+            <button class="btn-emp-guardar" id="btnGuardarEdicion" onclick="guardarEdicion()">
+                <svg viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                Guardar cambios
             </button>
         </div>
     </div>
@@ -330,36 +415,52 @@
                     </td>
 
                     <!-- Columna acciones -->
-                    <td id="td-acc-@emp.IdEmpleado" style="text-align:right;">
-                        @if (!tieneUser)
-                        {
-                            <button class="btn-crear-usuario"
-                                    onclick="abrirModalTipo(@emp.IdEmpleado, '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode($"{emp.NombresEmpleado} {emp.Apellido1}"))')"
-                                    title="Generar usuario para este empleado">
-                                <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                                Generar usuario
+                    @{
+                        var nombresJs  = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.NombresEmpleado);
+                        var ap1Js      = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Apellido1);
+                        var ap2Js      = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Apellido2 ?? "");
+                        var fonoJs     = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Fono ?? "");
+                        var correoJs   = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Correo ?? "");
+                        var idUsuarioJs = tieneUser ? u!.IdUsuario.ToString() : "0";
+                    }
+                    <td id="td-acc-@emp.IdEmpleado">
+                        <div class="td-acciones">
+                            <button class="btn-edit"
+                                    onclick="abrirModalEditar(@emp.IdEmpleado,'@nombresJs','@ap1Js','@ap2Js','@fonoJs','@correoJs',@idUsuarioJs)"
+                                    title="Editar datos del empleado">
+                                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                Editar
                             </button>
-                        }
-                        else
-                        {
-                            var tituloBtn  = activo ? "Desactivar usuario" : "Activar usuario";
-                            var labelBtn   = activo ? "Desactivar" : "Activar";
-                            var claseBtn   = activo ? "activo" : "inactivo";
-                            <button class="btn-toggle @claseBtn"
-                                    id="btn-toggle-@u!.IdUsuario"
-                                    onclick="toggleEstado(@u.IdUsuario, @emp.IdEmpleado, this)"
-                                    title="@tituloBtn">
-                                @if (activo)
-                                {
-                                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
-                                }
-                                else
-                                {
-                                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                                }
-                                @labelBtn
-                            </button>
-                        }
+                            @if (!tieneUser)
+                            {
+                                <button class="btn-crear-usuario"
+                                        onclick="abrirModalTipo(@emp.IdEmpleado, '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode($"{emp.NombresEmpleado} {emp.Apellido1}"))')"
+                                        title="Generar usuario para este empleado">
+                                    <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                                    Generar usuario
+                                </button>
+                            }
+                            else
+                            {
+                                var tituloBtn  = activo ? "Desactivar usuario" : "Activar usuario";
+                                var labelBtn   = activo ? "Desactivar" : "Activar";
+                                var claseBtn   = activo ? "activo" : "inactivo";
+                                <button class="btn-toggle @claseBtn"
+                                        id="btn-toggle-@u!.IdUsuario"
+                                        onclick="toggleEstado(@u.IdUsuario, @emp.IdEmpleado, this)"
+                                        title="@tituloBtn">
+                                    @if (activo)
+                                    {
+                                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+                                    }
+                                    else
+                                    {
+                                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                                    }
+                                    @labelBtn
+                                </button>
+                            }
+                        </div>
                     </td>
                 </tr>
             }
@@ -386,6 +487,8 @@
     const URL_CREAR     = '@Html.Raw(urlCrear)';
     const URL_TOGGLE    = '@Html.Raw(urlToggle)';
     const URL_CREAR_EMP = '@Html.Raw(urlCrearEmp)';
+    const URL_EDITAR    = '@Html.Raw(urlEditar)';
+    const URL_RESET     = '@Html.Raw(urlReset)';
 
     /* ── Utilitarios ──────────────────────────────────────────────────────── */
     function toast(msg, tipo) {
@@ -671,6 +774,110 @@
             ? `${total} empleado${total !== 1 ? 's' : ''}`
             : `${vis} de ${total} empleado${total !== 1 ? 's' : ''}`;
     }
+
+    /* ── Modal editar empleado ─────────────────────────────────────────────── */
+    window.abrirModalEditar = function (idEmpleado, nombres, apellido1, apellido2, fono, correo, idUsuario) {
+        document.getElementById('editIdEmpleado').value = idEmpleado;
+        document.getElementById('editIdUsuario').value  = idUsuario;
+        document.getElementById('editNombres').value    = nombres;
+        document.getElementById('editApellido1').value  = apellido1;
+        document.getElementById('editApellido2').value  = apellido2 || '';
+        document.getElementById('editFono').value       = fono   || '';
+        document.getElementById('editCorreo').value     = correo || '';
+
+        // Limpiar errores y resultado reset
+        ['editNombres','editApellido1'].forEach(id => document.getElementById(id).classList.remove('input-error'));
+        const resetRes = document.getElementById('resetResultado');
+        if (resetRes) resetRes.style.display = 'none';
+
+        // Mostrar sección reset solo si el empleado tiene usuario
+        const resetSec = document.getElementById('resetSection');
+        if (resetSec) resetSec.style.display = idUsuario > 0 ? '' : 'none';
+
+        document.getElementById('modalEditarEmp').style.display = 'flex';
+        document.getElementById('editNombres').focus();
+    };
+
+    window.cerrarModalEditar = function () {
+        document.getElementById('modalEditarEmp').style.display = 'none';
+    };
+
+    window.guardarEdicion = async function () {
+        const nombres   = document.getElementById('editNombres').value.trim();
+        const apellido1 = document.getElementById('editApellido1').value.trim();
+        let valido = true;
+        [['editNombres', nombres], ['editApellido1', apellido1]].forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if (!val) { el.classList.add('input-error'); valido = false; }
+            else        el.classList.remove('input-error');
+        });
+        if (!valido) return;
+
+        const idEmpleado = parseInt(document.getElementById('editIdEmpleado').value);
+        const apellido2  = document.getElementById('editApellido2').value.trim() || null;
+        const fono       = document.getElementById('editFono').value.trim()      || null;
+        const correo     = document.getElementById('editCorreo').value.trim()    || null;
+
+        const btn = document.getElementById('btnGuardarEdicion');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin-sm"></span> Guardando…';
+
+        const res = await post(URL_EDITAR, { idEmpleado, nombres, apellido1, apellido2, fono, correo });
+
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:currentColor"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg> Guardar cambios';
+
+        if (!res || !res.ok) { toast(res?.mensaje ?? 'Error al guardar.', 'error'); return; }
+
+        toast(res.mensaje, 'exito');
+        cerrarModalEditar();
+
+        // Actualizar nombre en la fila
+        const nombreCompleto = `${nombres} ${apellido1}${apellido2 ? ' ' + apellido2 : ''}`;
+        const fila = document.getElementById(`td-acc-${idEmpleado}`)?.closest('tr');
+        if (fila) {
+            fila.querySelector('.td-nombre').textContent = nombreCompleto;
+            fila.dataset.nombre = nombreCompleto.toLowerCase();
+
+            // Actualizar contacto
+            const tdContact = fila.querySelector('.td-contact');
+            if (tdContact) {
+                let html = '';
+                if (fono)   html += `<div>📞 ${esc(fono)}</div>`;
+                if (correo) html += `<div>✉ ${esc(correo)}</div>`;
+                if (!fono && !correo) html = '<span style="color:#c8bdb5">—</span>';
+                tdContact.innerHTML = html;
+            }
+        }
+        filtrar();
+    };
+
+    /* ── Reset contraseña ──────────────────────────────────────────────────── */
+    window.resetPassword = async function () {
+        const idUsuario = parseInt(document.getElementById('editIdUsuario').value);
+        if (!idUsuario) return;
+
+        const btn = document.getElementById('btnResetPass');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spin-sm"></span> Generando…';
+
+        const res = await post(URL_RESET, { idUsuario });
+
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;vertical-align:middle;margin-right:.3rem"><path d="M12 1C8.676 1 5.866 2.98 4.52 5.811L2 3v7h7L6.536 7.536A7 7 0 1 1 12 19c-2.585 0-4.879-1.41-6.138-3.5H3.598C5.043 18.14 8.29 21 12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9z"/></svg> Generar nueva contraseña';
+
+        if (!res || !res.ok) { toast(res?.mensaje ?? 'Error al resetear contraseña.', 'error'); return; }
+
+        document.getElementById('resetClaveGenerada').textContent = res.nuevaClave;
+        document.getElementById('resetResultado').style.display = 'flex';
+        toast('Contraseña reseteada correctamente.', 'exito');
+    };
+
+    window.copiarClave = function () {
+        const clave = document.getElementById('resetClaveGenerada').textContent;
+        navigator.clipboard.writeText(clave).then(() => toast('Contraseña copiada al portapapeles.', 'exito'));
+    };
+
 })();
 </script>
 }

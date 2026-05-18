@@ -11,6 +11,14 @@
     var diasData      = Model.VentasPorDiaMes;
     var metodosLabels = Model.MontosPorMetodoPago.Keys.ToArray();
     var metodosData   = Model.MontosPorMetodoPago.Values.ToArray();
+
+    // Selector cascada: año → meses disponibles
+    var mesesPorAnio = Model.PeriodosDisponibles
+        .GroupBy(p => p.Anio)
+        .OrderByDescending(g => g.Key)
+        .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.Mes).Select(p => p.Mes).ToList());
+    var periodosJson = JsonSerializer.Serialize(mesesPorAnio);
+    var aniosDisponibles = mesesPorAnio.Keys.ToList();
 }
 
 <style>
@@ -39,6 +47,7 @@
         align-items: center;
         gap: .5rem;
         flex-shrink: 0;
+        flex-wrap: wrap;
     }
     .dash-period-select label {
         font-size: .78rem;
@@ -58,6 +67,7 @@
         transition: border-color .2s;
     }
     .dash-period-select select:focus { border-color: var(--color-primario); }
+    .dash-period-sep { color: #d1d5db; font-size: .9rem; }
 
     /* ── KPI cards ── */
     .kpi-grid {
@@ -294,23 +304,27 @@
         </h1>
         <p>Bienvenido, <strong>@Model.NombreUsuario</strong> — Resumen de <strong>@mesNombre @Model.Anio</strong></p>
     </div>
-    @if (Model.PeriodosDisponibles.Count > 1)
+    @if (aniosDisponibles.Count > 0)
     {
         <div class="dash-period-select">
-            <label for="selectPeriodo">Período:</label>
-            <select id="selectPeriodo" onchange="window.spaNavigate(this.value, true)">
-                @foreach (var (a, m) in Model.PeriodosDisponibles)
+            <label for="selectAnio">Año</label>
+            <select id="selectAnio" onchange="onAnioChange()">
+                @foreach (var a in aniosDisponibles)
                 {
-                    var nombre = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m);
-                    nombre = char.ToUpper(nombre[0]) + nombre[1..];
-                    var url = $"/Home/Index?mes={m}&anio={a}";
-                    var esSel = (a == Model.Anio && m == Model.Mes);
-                    if (esSel) {
-                        <option value="@url" selected>@nombre @a</option>
-                    } else {
-                        <option value="@url">@nombre @a</option>
+                    if (a == Model.Anio)
+                    {
+                        <option value="@a" selected="selected">@a</option>
+                    }
+                    else
+                    {
+                        <option value="@a">@a</option>
                     }
                 }
+            </select>
+            <span class="dash-period-sep">/</span>
+            <label for="selectMes">Mes</label>
+            <select id="selectMes" onchange="onMesChange()">
+                @* Poblado por JS al cargar *@
             </select>
         </div>
     }
@@ -740,9 +754,46 @@
     </div>
 }
 
+@section Scripts {
+<script>
+    // ── Selector cascada Año / Mes (todos los roles) ──────────────────────────
+    var _PERIODOS  = @Html.Raw(periodosJson);
+    var _ANIO_SEL  = @Model.Anio;
+    var _MES_SEL   = @Model.Mes;
+    var _MESES_ES  = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+    function _poblarMeses(anio, mesSel) {
+        var sel   = document.getElementById('selectMes');
+        if (!sel) return;
+        var meses = _PERIODOS[anio] || [];
+        sel.innerHTML = '';
+        meses.forEach(function(m) {
+            var opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = _MESES_ES[m];
+            if (m === mesSel) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    }
+
+    function onAnioChange() {
+        var anio  = parseInt(document.getElementById('selectAnio').value);
+        var meses = _PERIODOS[anio] || [];
+        _poblarMeses(anio, null);
+        if (meses.length > 0)
+            window.spaNavigate('/Home/Index?mes=' + meses[0] + '&anio=' + anio, true);
+    }
+
+    function onMesChange() {
+        var anio = parseInt(document.getElementById('selectAnio').value);
+        var mes  = parseInt(document.getElementById('selectMes').value);
+        window.spaNavigate('/Home/Index?mes=' + mes + '&anio=' + anio, true);
+    }
+
+    _poblarMeses(_ANIO_SEL, _MES_SEL);
+</script>
 @if (ClaimHelper.EsAdmin(User))
 {
-@section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script>
         // ── Colores corporativos ──────────────────────────────────────────────

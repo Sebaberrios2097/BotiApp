@@ -60,5 +60,25 @@ namespace Infraestructura.Repositories.Sp
                 throw;
             }
         }
+
+        public async Task<int> SpEmpResetContrasena(int idUsuario, string nuevaClave)
+        {
+            try
+            {
+                var resultado = db.Database
+                    .SqlQueryRaw<int>("EXEC Sp_Emp_Reset_Contrasena {0}, {1}", idUsuario, nuevaClave)
+                    .AsEnumerable()
+                    .FirstOrDefault();
+
+                return resultado;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Mensaje: {ex.Message}");
+                Console.WriteLine($"Inner: {ex.InnerException?.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                throw;
+            }
+        }
     }
 }

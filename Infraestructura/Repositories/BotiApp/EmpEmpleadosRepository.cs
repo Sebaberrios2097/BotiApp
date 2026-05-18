@@ -34,5 +34,20 @@ namespace Infraestructura.Repositories.BotiApp
             await _db.SaveChangesAsync();
             return empleado;
         }
+
+        public async Task<EmpEmpleado?> Update(int idEmpleado, string nombres, string apellido1, string? apellido2, string? fono, string? correo)
+        {
+            var emp = await _db.EmpEmpleado.FindAsync(idEmpleado);
+            if (emp is null) return null;
+
+            emp.NombresEmpleado = nombres.Trim();
+            emp.Apellido1       = apellido1.Trim();
+            emp.Apellido2       = string.IsNullOrWhiteSpace(apellido2) ? null : apellido2.Trim();
+            emp.Fono            = string.IsNullOrWhiteSpace(fono)    ? null : fono.Trim();
+            emp.Correo          = string.IsNullOrWhiteSpace(correo)  ? null : correo.Trim();
+
+            await _db.SaveChangesAsync();
+            return emp;
+        }
     }
 }
