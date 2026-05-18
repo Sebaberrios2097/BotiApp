@@ -430,6 +430,32 @@
                 <path d="M7 10l5 5 5-5z"/>
             </svg>
         </div>
+
+        @* Card fiados — total adeudado *@
+        <a class="kpi-card warning" href="@Url.Action("Index","Fiado",new{area="Ventas"})" style="text-decoration:none">
+            <div class="kpi-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10zm-7-7h-2v2h2v-2zm-4 0H7v2h2v-2zm8 0h-2v2h2v-2z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value" id="kpi-fiado-total">$@Model.TotalFiadoGlobal.ToString("N0")</span>
+                <span class="kpi-label">Total en fiados</span>
+            </div>
+        </a>
+
+        @* Card fiados — clientes con deuda *@
+        <a class="kpi-card warning" href="@Url.Action("Index","Fiado",new{area="Ventas"})" style="text-decoration:none">
+            <div class="kpi-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value" id="kpi-fiado-activos">@Model.CantFiadosActivos</span>
+                <span class="kpi-label">Clientes con fiado activo</span>
+            </div>
+        </a>
     </div>
 
     @* Panel expandible: productos bajo stock *@
@@ -941,6 +967,8 @@
         _setText('kpi-boletas-anuladas',   d.totalBoletasAnuladasMes);
         _setText('kpi-monto-total',        _fmtPeso(d.montoTotalMes));
         _setText('kpi-bajo-stock',         d.totalProductosBajoStock);
+        if (d.totalFiadoGlobal  != null) _setText('kpi-fiado-total',   _fmtPeso(d.totalFiadoGlobal));
+        if (d.cantFiadosActivos != null) _setText('kpi-fiado-activos', d.cantFiadosActivos);
 
         // ── Admin — bajo stock panel ──────────────────────────────────────────
         _setText('bajo-stock-count', d.totalProductosBajoStock + ' producto(s)');

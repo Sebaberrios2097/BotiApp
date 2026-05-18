@@ -28,6 +28,10 @@ public partial class BotiAppContext : DbContext
 
     public virtual DbSet<EmpUsuario> EmpUsuario { get; set; }
 
+    public virtual DbSet<FiaClientes> FiaClientes { get; set; }
+
+    public virtual DbSet<FiaAbonos> FiaAbonos { get; set; }
+
     public virtual DbSet<ProMarcas> ProMarcas { get; set; }
 
     public virtual DbSet<ProOfertaProducto> ProOfertaProducto { get; set; }
@@ -250,6 +254,30 @@ public partial class BotiAppContext : DbContext
             entity.HasOne(d => d.IdCajeroNavigation).WithMany(p => p.VenBoletasCajero)
                 .HasForeignKey(d => d.IdCajero)
                 .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.IdClienteFiadoNavigation).WithMany(p => p.VenBoletas)
+                .HasForeignKey(d => d.IdClienteFiado)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Ven_Boletas_Fia_Clientes");
+        });
+
+        modelBuilder.Entity<FiaClientes>(entity =>
+        {
+            entity.HasKey(e => e.IdCliente).HasName("PK_Fia_Clientes");
+            entity.HasIndex(e => e.Rut).IsUnique().HasDatabaseName("UQ_Fia_Clientes_Rut");
+        });
+
+        modelBuilder.Entity<FiaAbonos>(entity =>
+        {
+            entity.HasKey(e => e.IdAbono).HasName("PK_Fia_Abonos");
+
+            entity.HasOne(d => d.IdClienteNavigation).WithMany(p => p.FiaAbonos)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Fia_Abonos_Cliente");
+
+            entity.HasOne(d => d.IdUsuarioNavigation).WithMany(p => p.FiaAbonos)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Fia_Abonos_Usuario");
         });
 
         modelBuilder.Entity<VenEstadosBoletas>(entity =>

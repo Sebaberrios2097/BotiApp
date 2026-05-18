@@ -14,6 +14,8 @@ public interface IVentasRepository
     Task<VenBoletas> CrearBoletaAsync(VenBoletas boleta, IEnumerable<VenBoletaDetalle> detalles);
     Task<VenBoletas?> ModificarBoletaDetalleAsync(int idBoleta, IEnumerable<VenBoletaDetalle> nuevosDetalles);
     Task<VenBoletas?> CobrarBoletaAsync(int idBoleta, int idCajero, IEnumerable<VenMetodosPagoBoleta> metodos);
+    /// <summary>Cambia una boleta Pendiente (1) a estado Fiado (4) y la asocia al cliente.</summary>
+    Task<VenBoletas?> DejarFiadoAsync(int idBoleta, int idClienteFiado, int idCajero);
     Task<bool> AnularBoletaAsync(int idBoleta, int idUsuario);
 
     // ── Catálogo ──────────────────────────────────────────────────────────────

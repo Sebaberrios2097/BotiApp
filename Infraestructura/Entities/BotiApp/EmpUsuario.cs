@@ -49,4 +49,7 @@ public partial class EmpUsuario
 
     [InverseProperty("IdCajeroNavigation")]
     public virtual ICollection<VenBoletas> VenBoletasCajero { get; set; } = new List<VenBoletas>();
+
+    [InverseProperty("IdUsuarioNavigation")]
+    public virtual ICollection<FiaAbonos> FiaAbonos { get; set; } = new List<FiaAbonos>();
 }

@@ -10,13 +10,18 @@ namespace BotiApp.Controllers
     [Authorize]
     public class HomeController : Controller
     {
-        private readonly IVentasRepository   _ventas;
+        private readonly IVentasRepository    _ventas;
         private readonly IProductosRepository _productos;
+        private readonly IFiadoRepository     _fiado;
 
-        public HomeController(IVentasRepository ventas, IProductosRepository productos)
+        public HomeController(
+            IVentasRepository ventas,
+            IProductosRepository productos,
+            IFiadoRepository fiado)
         {
             _ventas    = ventas;
             _productos = productos;
+            _fiado     = fiado;
         }
 
         // ── Dashboard ─────────────────────────────────────────────────────────
@@ -102,7 +107,10 @@ namespace BotiApp.Controllers
                                        ? $"{ve.NombresEmpleado} {ve.Apellido1}" : "—",
                     estado       = b.IdEstadoBoleta,
                     monto        = b.MontoTotal
-                }).ToArray()
+                }).ToArray(),
+                // ── Fiados ─────────────────────────────────────────────
+                totalFiadoGlobal  = vm.TotalFiadoGlobal,
+                cantFiadosActivos = vm.CantFiadosActivos
             });
         }
 
@@ -180,6 +188,13 @@ namespace BotiApp.Controllers
                 vm.CajeroBoletasAnuladas = boletas.Count(b => b.IdEstadoBoleta == 2);
                 vm.CajeroMontoGestionado = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
                 vm.CajeroUltimasBoletas  = boletas.Take(10);
+            }
+
+            // ── Fiados globales (admin y cajero) ──────────────────────────────
+            if (ClaimHelper.EsAdmin(User) || ClaimHelper.EsCajero(User))
+            {
+                vm.TotalFiadoGlobal  = await _fiado.ObtenerTotalGlobalAdeudadoAsync();
+                vm.CantFiadosActivos = await _fiado.ObtenerCantidadClientesConDeudaAsync();
             }
 
             return vm;

@@ -41,11 +41,14 @@
         })
     }));
 
-    var urlBuscar   = Url.Action("BuscarBoletaAjax",      "Ventas", new { area = "Ventas" });
-    var urlModifica = Url.Action("ModificarBoletaAjax",   "Ventas", new { area = "Ventas" });
-    var urlCobrar   = Url.Action("CobrarBoletaAjax",      "Ventas", new { area = "Ventas" });
-    var urlAnular   = Url.Action("AnularBoletaAjax",      "Ventas", new { area = "Ventas" });
-    var urlPendientes = Url.Action("BoletasPendientesAjax", "Ventas", new { area = "Ventas" });
+    var urlBuscar        = Url.Action("BuscarBoletaAjax",      "Ventas", new { area = "Ventas" });
+    var urlModifica      = Url.Action("ModificarBoletaAjax",   "Ventas", new { area = "Ventas" });
+    var urlCobrar        = Url.Action("CobrarBoletaAjax",      "Ventas", new { area = "Ventas" });
+    var urlAnular        = Url.Action("AnularBoletaAjax",      "Ventas", new { area = "Ventas" });
+    var urlPendientes    = Url.Action("BoletasPendientesAjax", "Ventas", new { area = "Ventas" });
+    var urlDejarFiado    = Url.Action("DejarFiadoAjax",        "Ventas", new { area = "Ventas" });
+    var urlBuscarCliente = Url.Action("BuscarClientesAjax",    "Fiado",  new { area = "Ventas" });
+    var urlCrearCliente  = Url.Action("CrearClienteAjax",      "Fiado",  new { area = "Ventas" });
 }
 
 <style>
@@ -352,20 +355,16 @@
 .btn-pend-refresh svg { width:13px; height:13px; fill:currentColor; }
 .btn-pend-refresh.girando svg { animation:spinR .6s linear infinite; }
 .pend-last-update { font-size:.67rem; color:#c9b8a8; }
-.pend-list { display:flex; flex-direction:column; }
-.pend-item { display:flex; align-items:center; gap:.65rem; padding:.55rem 1.15rem; border-bottom:1px solid #f7f2ef; cursor:pointer; transition:background .12s; }
-.pend-item:last-child { border-bottom:none; }
-.pend-item:hover { background:rgba(231,111,46,.05); }
-.pend-item.pend-item-nuevo { animation:pendNewRow .7s ease; }
-@@keyframes pendNewRow { from{background:rgba(231,111,46,.18)} to{background:transparent} }
-.pend-id { font-size:.85rem; font-weight:800; color:var(--color-secundario); min-width:40px; flex-shrink:0; }
-.pend-item:hover .pend-id { color:var(--color-primario); }
-.pend-info { display:flex; flex-direction:column; flex:1; min-width:0; }
-.pend-vendedor { font-size:.78rem; font-weight:600; color:var(--color-secundario); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pend-fecha { font-size:.7rem; color:#a89080; }
-.pend-right { display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; gap:.08rem; }
-.pend-monto { font-size:.82rem; font-weight:700; color:var(--color-primario); }
-.pend-prods { font-size:.67rem; color:#a89080; }
+.pend-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:.45rem; padding:.65rem .85rem; }
+.pend-card { border:1.5px solid #ede5df; border-radius:9px; padding:.5rem .6rem; cursor:pointer; transition:border-color .13s,background .13s,box-shadow .13s; display:flex; flex-direction:column; gap:.12rem; background:#faf7f5; min-width:0; }
+.pend-card:hover { border-color:var(--color-primario); background:#fff; box-shadow:0 2px 8px rgba(231,111,46,.13); }
+.pend-card.pend-card-nuevo { animation:pendNewCard .7s ease; }
+@@keyframes pendNewCard { from{background:rgba(231,111,46,.18)} to{background:#faf7f5} }
+.pend-card-num { font-size:.82rem; font-weight:800; color:var(--color-secundario); }
+.pend-card:hover .pend-card-num { color:var(--color-primario); }
+.pend-card-vendedor { font-size:.67rem; font-weight:600; color:#7a6050; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pend-card-monto { font-size:.78rem; font-weight:700; color:var(--color-primario); margin-top:auto; padding-top:.18rem; }
+.pend-card-meta { font-size:.62rem; color:#a89080; }
 .pend-empty { text-align:center; padding:1.25rem 1rem; color:#b8a898; font-size:.82rem; }
 .pend-empty svg { width:32px; height:32px; fill:#ddd0c4; display:block; margin:0 auto .45rem; }
 .pend-loading { text-align:center; padding:1.1rem; color:#b8a898; font-size:.8rem; }
@@ -376,6 +375,48 @@
 @@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
 .spin-sm { width:15px; height:15px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spinR .65s linear infinite; display:inline-block; }
 @@keyframes spinR { to { transform:rotate(360deg); } }
+
+/* ══════════════════════════════════════════════════════ BOTÓN FIADO */
+.btn-fiado { display:flex; align-items:center; gap:.4rem; padding:.6rem 1.05rem; background:rgba(99,102,241,.1); color:#4f46e5; border:1.5px solid rgba(99,102,241,.25); border-radius:8px; font-size:.87rem; font-weight:700; cursor:pointer; transition:background .15s,transform .12s; }
+.btn-fiado svg { width:15px; height:15px; fill:currentColor; }
+.btn-fiado:hover:not(:disabled) { background:rgba(99,102,241,.22); transform:translateY(-1px); }
+.btn-fiado:disabled { opacity:.5; cursor:not-allowed; }
+
+/* ══════════════════════════════════════════════════════ MODAL FIADO */
+.fiado-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:3000; display:none; align-items:center; justify-content:center; animation:fadeIn .18s ease; }
+.fiado-modal-box { background:#fff; border-radius:14px; width:520px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,.22); overflow:hidden; }
+.fiado-modal-tabs { display:flex; border-bottom:1px solid #f0ebe5; background:#faf7f5; flex-shrink:0; }
+.fiado-modal-tab { flex:1; padding:.6rem 1rem; border:none; border-bottom:2.5px solid transparent; background:transparent; font-size:.82rem; font-weight:600; color:#a89080; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.35rem; transition:color .15s,border-color .15s,background .15s; }
+.fiado-modal-tab svg { width:14px; height:14px; fill:currentColor; }
+.fiado-modal-tab:hover:not(.active) { color:var(--color-secundario); background:rgba(0,0,0,.02); }
+.fiado-modal-tab.active { color:#4f46e5; border-bottom-color:#4f46e5; background:#fff; }
+.fiado-tab-pane { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+.fiado-tab-pane.hidden { display:none !important; }
+/* Buscar cliente */
+.fiado-search-body { padding:1rem 1.15rem; display:flex; flex-direction:column; gap:.75rem; overflow-y:auto; flex:1; }
+.fiado-client-list { display:flex; flex-direction:column; gap:.3rem; }
+.fiado-client-item { display:flex; align-items:center; gap:.65rem; padding:.5rem .75rem; border:1.5px solid #ede5df; border-radius:9px; cursor:pointer; transition:border-color .12s,background .12s; }
+.fiado-client-item:hover { border-color:#4f46e5; background:#f5f4ff; }
+.fiado-client-nombre { flex:1; font-size:.86rem; font-weight:600; color:var(--color-secundario); }
+.fiado-client-rut { font-size:.72rem; color:#a89080; font-weight:600; }
+.fiado-client-deuda { font-size:.75rem; font-weight:700; color:#dc2626; flex-shrink:0; }
+.fiado-client-deuda.cero { color:#16a34a; }
+/* Crear cliente */
+.fiado-crear-body { padding:1rem 1.15rem; display:flex; flex-direction:column; gap:.65rem; overflow-y:auto; flex:1; }
+.fiado-field { display:flex; flex-direction:column; gap:.25rem; }
+.fiado-field label { font-size:.76rem; font-weight:700; color:#a89080; text-transform:uppercase; letter-spacing:.04em; }
+.fiado-field input { padding:.5rem .75rem; border:1.5px solid #e0d5cc; border-radius:7px; font-size:.87rem; color:var(--color-secundario); outline:none; transition:border-color .15s; }
+.fiado-field input:focus { border-color:#4f46e5; }
+.fiado-row2 { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
+/* Footer botones */
+.fiado-modal-footer { display:flex; align-items:center; gap:.65rem; padding:.85rem 1.15rem; border-top:1px solid #f0ebe5; flex-shrink:0; background:#fff; }
+.fiado-modal-footer .btn-fiado-confirmar { flex:1; padding:.6rem; background:#4f46e5; color:#fff; border:none; border-radius:8px; font-size:.9rem; font-weight:700; cursor:pointer; transition:background .15s; }
+.fiado-modal-footer .btn-fiado-confirmar:hover:not(:disabled) { background:#3730a3; }
+.fiado-modal-footer .btn-fiado-confirmar:disabled { opacity:.45; cursor:not-allowed; }
+.fiado-modal-footer .btn-fiado-cancel { padding:.6rem 1rem; background:#f0ebe5; color:#7a6050; border:none; border-radius:8px; font-size:.88rem; font-weight:700; cursor:pointer; transition:opacity .15s; }
+.fiado-modal-footer .btn-fiado-cancel:hover { opacity:.8; }
+.fiado-client-sel-info { background:#f5f4ff; border:1.5px solid #c7d2fe; border-radius:9px; padding:.6rem .85rem; font-size:.84rem; color:#4f46e5; font-weight:600; display:none; }
+.fiado-client-sel-info.visible { display:block; }
 </style>
 
 <!-- ══ MODAL AGREGAR PRODUCTO ══════════════════════════════════════════════ -->
@@ -431,6 +472,93 @@
 <div class="envase-overlay" id="envaseOverlay" onclick="cerrarDialogoEnvase()"></div>
 <div class="grupos-overlay" id="gruposOverlay" onclick="cerrarDialogoGrupos()"></div>
 <div class="selinst-overlay" id="selInstOverlay" onclick="cerrarSelInst()"></div>
+
+<!-- ══ MODAL FIADO ══════════════════════════════════════════════════════════ -->
+<div class="fiado-modal-overlay" id="fiadoModalOverlay" onclick="if(event.target===this) cerrarModalFiado()">
+    <div class="fiado-modal-box">
+        <div class="modal-header">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <span>Dejar en Fiado — Asignar Cliente</span>
+            <button class="btn-modal-cerrar" onclick="cerrarModalFiado()" title="Cerrar">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+        </div>
+        <div class="fiado-modal-tabs">
+            <button class="fiado-modal-tab active" id="fiadoTabBtnBuscar" onclick="selFiadoTab('buscar')">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                Buscar cliente
+            </button>
+            <button class="fiado-modal-tab" id="fiadoTabBtnCrear" onclick="selFiadoTab('crear')">
+                <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                Crear cliente
+            </button>
+        </div>
+        <!-- Tab: buscar -->
+        <div class="fiado-tab-pane" id="fiadoTabBuscar">
+            <div class="fiado-search-body">
+                <div class="modal-search">
+                    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="fiadoBuscarInput" placeholder="Nombre o RUT…" oninput="buscarClientesFiado()" autocomplete="off" />
+                </div>
+                <div class="fiado-client-sel-info" id="fiadoClientSelInfo"></div>
+                <div class="fiado-client-list" id="fiadoClientList">
+                    <div style="text-align:center;padding:1.5rem;color:#b8a898;font-size:.84rem;">Escribe para buscar un cliente</div>
+                </div>
+            </div>
+            <div class="fiado-modal-footer">
+                <button class="btn-fiado-cancel" onclick="cerrarModalFiado()">Cancelar</button>
+                <button class="btn-fiado-confirmar" id="btnConfirmarFiado" onclick="confirmarFiado()" disabled>
+                    Dejar en fiado
+                </button>
+            </div>
+        </div>
+        <!-- Tab: crear -->
+        <div class="fiado-tab-pane hidden" id="fiadoTabCrear">
+            <div class="fiado-crear-body">
+                <div class="fiado-row2">
+                    <div class="fiado-field">
+                        <label>RUT <span style="color:#dc2626">*</span></label>
+                        <input type="number" id="fiadoNuevoRut" placeholder="ej. 12345678" min="1" />
+                    </div>
+                    <div class="fiado-field" style="justify-content:flex-end;">
+                        <label style="opacity:0">DV</label>
+                        <div style="padding:.5rem .75rem; background:#f5f0eb; border-radius:7px; font-size:.88rem; color:#a89080; font-weight:700;" id="fiadoNuevoDv">— — —</div>
+                    </div>
+                </div>
+                <div class="fiado-row2">
+                    <div class="fiado-field">
+                        <label>Nombres <span style="color:#dc2626">*</span></label>
+                        <input type="text" id="fiadoNuevoNombres" placeholder="Juan Carlos" />
+                    </div>
+                    <div class="fiado-field">
+                        <label>Apellido paterno <span style="color:#dc2626">*</span></label>
+                        <input type="text" id="fiadoNuevoApellido1" placeholder="González" />
+                    </div>
+                </div>
+                <div class="fiado-row2">
+                    <div class="fiado-field">
+                        <label>Apellido materno</label>
+                        <input type="text" id="fiadoNuevoApellido2" placeholder="Pérez" />
+                    </div>
+                    <div class="fiado-field">
+                        <label>Teléfono</label>
+                        <input type="text" id="fiadoNuevoTelefono" placeholder="+56 9 xxxx xxxx" />
+                    </div>
+                </div>
+                <div class="fiado-field">
+                    <label>Observaciones</label>
+                    <input type="text" id="fiadoNuevoObs" placeholder="Notas opcionales…" />
+                </div>
+            </div>
+            <div class="fiado-modal-footer">
+                <button class="btn-fiado-cancel" onclick="cerrarModalFiado()">Cancelar</button>
+                <button class="btn-fiado-confirmar" id="btnCrearYFiado" onclick="crearYFiado()">
+                    Crear y dejar en fiado
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @Html.AntiForgeryToken()
 
 <div class="page-header-card">
@@ -528,10 +656,13 @@
                             <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
                             Agregar producto
                         </button>
-                        <button class="btn-guardar" id="btnGuardar" onclick="guardarCambios()" disabled>
-                            <svg viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-                            Guardar cambios
+                        @if (Model.PuedeCobrar)
+                        {
+                        <button class="btn-fiado" id="btnFiado" onclick="abrirModalFiado()" disabled>
+                            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                            Fiado
                         </button>
+                        }
                         <button class="btn-anular" id="btnAnular" onclick="confirmarAnular()" disabled>
                             <svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
                             Anular boleta
@@ -681,11 +812,14 @@
     const PROMOS       = @Html.Raw(promosJson);
     const TOKEN        = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
-    const URL_BUSCAR   = '@Html.Raw(urlBuscar)';
-    const URL_MODIFICA = '@Html.Raw(urlModifica)';
-    const URL_COBRAR   = '@Html.Raw(urlCobrar)';
-    const URL_ANULAR   = '@Html.Raw(urlAnular)';
-    const URL_PENDIENTES = '@Html.Raw(urlPendientes)';
+    const URL_BUSCAR      = '@Html.Raw(urlBuscar)';
+    const URL_MODIFICA    = '@Html.Raw(urlModifica)';
+    const URL_COBRAR      = '@Html.Raw(urlCobrar)';
+    const URL_ANULAR      = '@Html.Raw(urlAnular)';
+    const URL_PENDIENTES  = '@Html.Raw(urlPendientes)';
+    const URL_DEJAR_FIADO    = '@Html.Raw(urlDejarFiado)';
+    const URL_BUSCAR_CLIENTE = '@Html.Raw(urlBuscarCliente)';
+    const URL_CREAR_CLIENTE  = '@Html.Raw(urlCrearCliente)';
 
     /* ── Mapa de retornables ─────────────────────────────────────────────── */
     const RETORNABLES_MAP = {};
@@ -739,6 +873,31 @@
         btn.disabled = cargando;
         if (cargando) btn.dataset.oldHtml = btn.innerHTML;
         btn.innerHTML = cargando ? '<span class="spin-sm"></span> Procesando…' : btn.dataset.oldHtml;
+    }
+
+    /* Auto-guardar silencioso (sin spinner de botón) */
+    let _autoGuardarTimer = null;
+    async function _autoGuardar() {
+        if (!boletaActual || boletaActual.idEstado !== 1 || !detalleActual.length) return;
+        const items = detalleActual.map(d => ({
+            idProducto:       d.idProducto,
+            cantidad:         d.cantidad,
+            precioNormal:     d.precioNormal,
+            precioUnitario:   d.precioUnitario,
+            idPromocion:      d.idPromocion ?? null,
+            idOfertaProducto: d.idOferta ?? null
+        }));
+        const res = await post(URL_MODIFICA, { idBoleta: boletaActual.idBoleta, items });
+        if (!res.ok) {
+            toast(res.mensaje, 'error');
+        } else {
+            // Actualizar montoTotal sin re-renderizar toda la boleta
+            if (res.boleta) boletaActual.montoTotal = res.boleta.montoTotal;
+        }
+    }
+    function _autoGuardarDebounce() {
+        clearTimeout(_autoGuardarTimer);
+        _autoGuardarTimer = setTimeout(_autoGuardar, 600);
     }
 
     /* ════════════════════════════════════════════════════
@@ -885,8 +1044,8 @@
 
     window.confirmarAgregarModal = function () {
         if (!modalProdSel) return;
-        const p         = modalProdSel;
-        const qty       = modalQty;
+        const p   = modalProdSel;
+        const qty = modalQty;
 
         /* Retornable: mostrar diálogo de envase primero */
         if (p.retornable) {
@@ -897,7 +1056,14 @@
         }
         _agregarProductoADetalle(p, qty, false);
         renderDetalle();
-        cerrarModal();
+        _autoGuardarDebounce();
+        toast(`${x(p.nombre)} ×${qty} agregado.`, 'exito');
+        /* Multi-add: resetear selección sin cerrar el modal */
+        modalProdSel = null;
+        modalQty     = 1;
+        document.getElementById('modalQty').textContent = 1;
+        document.getElementById('btnModalAgregar').disabled = true;
+        document.querySelectorAll('.modal-prod-item').forEach(i => i.classList.remove('seleccionado'));
     };
 
     /* ── Helper: agregar un producto (o su envase) a detalleActual ───────── */
@@ -988,6 +1154,7 @@
         pendingEnvase = null;
         _agregarProductoADetalle(p, qty, !trajoEnvase);
         renderDetalle();
+        _autoGuardarDebounce();
     };
 
     /* ════════════════════════════════════════════════════
@@ -1168,6 +1335,7 @@
         });
 
         renderDetalle();
+        _autoGuardarDebounce();
         toast(`Promoción "${promo.nombre}" agregada.`, 'exito');
     }
 
@@ -1283,8 +1451,9 @@
             `<span class="bol-info-item"><span class="lbl">Estado</span><span class="val"><span class="estado-badge ${estadoClass}">${x(b.estado)}</span></span></span>`;
 
         document.getElementById('btnAbrirModal').disabled = !esEditable;
-        document.getElementById('btnGuardar').disabled    = !esEditable;
         document.getElementById('btnAnular').disabled     = !esEditable;
+        const btnFiado = document.getElementById('btnFiado');
+        if (btnFiado) btnFiado.disabled = !esEditable;
 
         document.getElementById('estadoPagada').style.display  = esPagada  ? 'block' : 'none';
         document.getElementById('estadoAnulada').style.display = esAnulada ? 'block' : 'none';
@@ -1714,6 +1883,7 @@
     function _quitarInstancia(instId) {
         detalleActual = detalleActual.filter(d => d.promoInstId !== instId);
         renderDetalle();
+        _autoGuardarDebounce();
     }
 
     function _mostrarSeleccionInst(idPromo, instIds) {
@@ -1756,6 +1926,7 @@
         cerrarSelInst();
         detalleActual = detalleActual.filter(d => d.promoInstId !== instId);
         renderDetalle();
+        _autoGuardarDebounce();
     };
 
     window.cerrarSelInst = function () {
@@ -1767,6 +1938,7 @@
         detalleActual[i].cantidad = qty;
         detalleActual[i].subtotal = qty * detalleActual[i].precioUnitario;
         renderDetalle();
+        _autoGuardarDebounce();
     };
 
     window.eliminarFila = function (i) {
@@ -1778,6 +1950,7 @@
             if (idxEnvase >= 0) detalleActual.splice(idxEnvase, 1);
         }
         renderDetalle();
+        _autoGuardarDebounce();
     };
 
     /* ════════════════════════════════════════════════════
@@ -1785,21 +1958,7 @@
     ════════════════════════════════════════════════════ */
     window.guardarCambios = async function () {
         if (!detalleActual.length) { toast('La boleta no puede quedar vacía.', 'error'); return; }
-        const btn = document.getElementById('btnGuardar');
-        setBotonCargando(btn, true);
-        const items = detalleActual.map(d => ({
-            idProducto:       d.idProducto,
-            cantidad:         d.cantidad,
-            precioNormal:     d.precioNormal,
-            precioUnitario:   d.precioUnitario,
-            idPromocion:      d.idPromocion ?? null,
-            idOfertaProducto: d.idOferta ?? null
-        }));
-        const res = await post(URL_MODIFICA, { idBoleta: boletaActual.idBoleta, items });
-        setBotonCargando(btn, false);
-        if (!res.ok) { toast(res.mensaje, 'error'); return; }
-        toast(res.mensaje, 'exito');
-        cargarBoleta(res.boleta);
+        await _autoGuardar();
     };
 
     window.confirmarAnular = function () {
@@ -1878,30 +2037,25 @@
         }
 
         var list = document.createElement('div');
-        list.className = 'pend-list';
+        list.className = 'pend-grid';
         data.forEach(b => {
-            var item = document.createElement('div');
-            item.className = 'pend-item';
-            if (hayNuevas && !document.querySelector('.pend-item[data-id="' + b.idBoleta + '"]')) {
-                item.classList.add('pend-item-nuevo');
+            var card = document.createElement('div');
+            card.className = 'pend-card';
+            if (hayNuevas && !document.querySelector('.pend-card[data-id="' + b.idBoleta + '"]')) {
+                card.classList.add('pend-card-nuevo');
             }
-            item.dataset.id = b.idBoleta;
-            item.title = 'Cargar boleta #' + b.idBoleta;
-            item.innerHTML =
-                '<span class="pend-id">#' + b.idBoleta + '</span>' +
-                '<div class="pend-info">' +
-                    '<span class="pend-vendedor">' + x(b.vendedor) + '</span>' +
-                    '<span class="pend-fecha">' + x(b.fechaEmision) + '</span>' +
-                '</div>' +
-                '<div class="pend-right">' +
-                    '<span class="pend-monto">' + fmt(b.montoTotal) + '</span>' +
-                    '<span class="pend-prods">' + b.cantProductos + ' prod.</span>' +
-                '</div>';
-            item.onclick = () => {
+            card.dataset.id = b.idBoleta;
+            card.title = 'Cargar boleta #' + b.idBoleta;
+            card.innerHTML =
+                '<span class="pend-card-num">#' + b.idBoleta + '</span>' +
+                '<span class="pend-card-vendedor">' + x(b.vendedor) + '</span>' +
+                '<span class="pend-card-monto">' + fmt(b.montoTotal) + '</span>' +
+                '<span class="pend-card-meta">' + b.cantProductos + ' prod.</span>';
+            card.onclick = () => {
                 document.getElementById('inputNBoleta').value = b.idBoleta;
                 buscarBoleta();
             };
-            list.appendChild(item);
+            list.appendChild(card);
         });
         container.innerHTML = '';
         container.appendChild(list);
@@ -1930,6 +2084,167 @@
     })();
 
     cargarBoletasPendientes(false);
+
+    /* ════════════════════════════════════════════════════
+       MODAL FIADO
+    ════════════════════════════════════════════════════ */
+    let _fiadoClienteSel = null;  // { idCliente, nombre, rutFormato, saldoAFavor }
+    let _fiadoBuscarTimer = null;
+
+    window.abrirModalFiado = function () {
+        if (!boletaActual || boletaActual.idEstado !== 1) return;
+        _fiadoClienteSel = null;
+        document.getElementById('fiadoBuscarInput').value = '';
+        document.getElementById('fiadoClientList').innerHTML =
+            '<div style="text-align:center;padding:1.5rem;color:#b8a898;font-size:.84rem;">Escribe para buscar un cliente</div>';
+        document.getElementById('fiadoClientSelInfo').className  = 'fiado-client-sel-info';
+        document.getElementById('btnConfirmarFiado').disabled    = true;
+        // limpiar form crear
+        ['fiadoNuevoRut','fiadoNuevoNombres','fiadoNuevoApellido1','fiadoNuevoApellido2','fiadoNuevoTelefono','fiadoNuevoObs']
+            .forEach(id => { var el = document.getElementById(id); if (el) el.value = ''; });
+        document.getElementById('fiadoNuevoDv').textContent = '— — —';
+        selFiadoTab('buscar');
+        document.getElementById('fiadoModalOverlay').style.display = 'flex';
+        setTimeout(() => document.getElementById('fiadoBuscarInput')?.focus(), 80);
+    };
+
+    window.cerrarModalFiado = function () {
+        document.getElementById('fiadoModalOverlay').style.display = 'none';
+    };
+
+    window.selFiadoTab = function (tab) {
+        document.getElementById('fiadoTabBtnBuscar').classList.toggle('active', tab === 'buscar');
+        document.getElementById('fiadoTabBtnCrear').classList.toggle('active', tab === 'crear');
+        document.getElementById('fiadoTabBuscar').classList.toggle('hidden', tab !== 'buscar');
+        document.getElementById('fiadoTabCrear').classList.toggle('hidden', tab !== 'crear');
+    };
+
+    // Dígito verificador Mod11
+    function _calcDv(rut) {
+        var mult = 2; var suma = 0;
+        while (rut > 0) { suma += (rut % 10) * mult; rut = Math.floor(rut / 10); mult = mult === 7 ? 2 : mult + 1; }
+        var res = 11 - (suma % 11);
+        if (res === 11) return '0'; if (res === 10) return 'K'; return String(res);
+    }
+
+    // Actualizar DV en tiempo real
+    document.getElementById('fiadoNuevoRut')?.addEventListener('input', function () {
+        var rut = parseInt(this.value);
+        document.getElementById('fiadoNuevoDv').textContent = rut > 0 ? 'DV: ' + _calcDv(rut) : '— — —';
+    });
+
+    window.buscarClientesFiado = function () {
+        clearTimeout(_fiadoBuscarTimer);
+        var q = (document.getElementById('fiadoBuscarInput')?.value ?? '').trim();
+        if (!q) {
+            document.getElementById('fiadoClientList').innerHTML =
+                '<div style="text-align:center;padding:1.5rem;color:#b8a898;font-size:.84rem;">Escribe para buscar un cliente</div>';
+            return;
+        }
+        document.getElementById('fiadoClientList').innerHTML =
+            '<div style="text-align:center;padding:1rem;color:#b8a898;font-size:.82rem;"><span class="spin-sm" style="border-color:rgba(79,70,229,.3);border-top-color:#4f46e5;"></span></div>';
+        _fiadoBuscarTimer = setTimeout(async function () {
+            var r;
+            try {
+                r = await fetch(URL_BUSCAR_CLIENTE + '?q=' + encodeURIComponent(q), { credentials: 'same-origin' });
+                if (!r.ok) throw new Error(r.status);
+                r = await r.json();
+            } catch { r = []; }
+            _renderClientesFiado(r);
+        }, 350);
+    };
+
+    function _renderClientesFiado(clientes) {
+        var list = document.getElementById('fiadoClientList');
+        if (!clientes.length) {
+            list.innerHTML = '<div style="text-align:center;padding:1.5rem;color:#b8a898;font-size:.84rem;">Sin resultados</div>';
+            return;
+        }
+        list.innerHTML = '';
+        clientes.forEach(function (c) {
+            var div = document.createElement('div');
+            div.className = 'fiado-client-item';
+            var deudaClass = c.saldoAFavor > 0 ? '' : 'cero';
+            div.innerHTML =
+                '<div style="flex:1;min-width:0;">' +
+                    '<div class="fiado-client-nombre">' + x(c.nombre) + '</div>' +
+                    '<div class="fiado-client-rut">' + x(c.rutFormato) + '</div>' +
+                '</div>' +
+                '<span class="fiado-client-deuda ' + deudaClass + '">' +
+                    (c.saldoAFavor > 0 ? 'Saldo: $' + Number(c.saldoAFavor).toLocaleString('es-CL') : 'Sin deuda') +
+                '</span>';
+            div.onclick = function () { _seleccionarClienteFiado(c); };
+            list.appendChild(div);
+        });
+    }
+
+    function _seleccionarClienteFiado(c) {
+        _fiadoClienteSel = c;
+        var info = document.getElementById('fiadoClientSelInfo');
+        info.textContent = 'Seleccionado: ' + c.nombre + ' (' + c.rutFormato + ')';
+        info.className   = 'fiado-client-sel-info visible';
+        document.getElementById('btnConfirmarFiado').disabled = false;
+        // Highlight selection
+        document.querySelectorAll('.fiado-client-item').forEach(function (el) {
+            el.style.borderColor = '';
+            el.style.background  = '';
+        });
+        event.currentTarget.style.borderColor = '#4f46e5';
+        event.currentTarget.style.background  = '#f5f4ff';
+    }
+
+    window.confirmarFiado = async function () {
+        if (!_fiadoClienteSel || !boletaActual) return;
+        var btn = document.getElementById('btnConfirmarFiado');
+        setBotonCargando(btn, true);
+        var res = await post(URL_DEJAR_FIADO, { idBoleta: boletaActual.idBoleta, idClienteFiado: _fiadoClienteSel.idCliente });
+        setBotonCargando(btn, false);
+        if (!res.ok) { toast(res.mensaje, 'error'); return; }
+        cerrarModalFiado();
+        toast(res.mensaje, 'exito');
+        cargarBoleta(res.boleta);
+        cargarBoletasPendientes();
+    };
+
+    window.crearYFiado = async function () {
+        var rut       = parseInt(document.getElementById('fiadoNuevoRut')?.value);
+        var nombres   = (document.getElementById('fiadoNuevoNombres')?.value ?? '').trim();
+        var apellido1 = (document.getElementById('fiadoNuevoApellido1')?.value ?? '').trim();
+        var apellido2 = (document.getElementById('fiadoNuevoApellido2')?.value ?? '').trim();
+        var telefono  = (document.getElementById('fiadoNuevoTelefono')?.value ?? '').trim();
+        var obs       = (document.getElementById('fiadoNuevoObs')?.value ?? '').trim();
+
+        if (!rut || rut <= 0)    { toast('RUT inválido.', 'error'); return; }
+        if (!nombres)            { toast('El nombre es obligatorio.', 'error'); return; }
+        if (!apellido1)          { toast('El apellido paterno es obligatorio.', 'error'); return; }
+
+        var btn = document.getElementById('btnCrearYFiado');
+        setBotonCargando(btn, true);
+
+        // 1. Crear cliente
+        var resCli = await post(URL_CREAR_CLIENTE, {
+            rut: rut, nombres: nombres, apellido1: apellido1,
+            apellido2: apellido2 || null, telefono: telefono || null, observaciones: obs || null
+        });
+
+        if (!resCli.ok && resCli.idCliente == null) {
+            setBotonCargando(btn, false);
+            toast(resCli.mensaje, 'error');
+            return;
+        }
+
+        var idCliente = resCli.idCliente ?? resCli.idCliente;
+        if (!idCliente) { setBotonCargando(btn, false); toast('Error al obtener el cliente.', 'error'); return; }
+
+        // 2. Dejar en fiado con el cliente recién creado (o existente)
+        var resFiado = await post(URL_DEJAR_FIADO, { idBoleta: boletaActual.idBoleta, idClienteFiado: idCliente });
+        setBotonCargando(btn, false);
+        if (!resFiado.ok) { toast(resFiado.mensaje, 'error'); return; }
+        cerrarModalFiado();
+        toast(resCli.mensaje + ' — ' + resFiado.mensaje, 'exito');
+        cargarBoleta(resFiado.boleta);
+        cargarBoletasPendientes();
+    };
 
 })();
 </script>

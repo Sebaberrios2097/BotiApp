@@ -229,9 +229,31 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         var idUsuario = ClaimHelper.GetIdUsuario(User);
         var ok = await ventasRepository.AnularBoletaAsync(request.IdBoleta, idUsuario);
         if (!ok)
-            return Json(new { ok = false, mensaje = "La boleta no existe o no está en estado Generada." });
+            return Json(new { ok = false, mensaje = "La boleta no existe o no está en estado Generada/Fiado." });
 
         return Json(new { ok = true, mensaje = $"Boleta N° {request.IdBoleta} anulada correctamente." });
+    }
+
+    // ── POST: dejar boleta como fiado ─────────────────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "AdminOCajero")]
+    public async Task<IActionResult> DejarFiadoAjax([FromBody] DejarFiadoRequest request)
+    {
+        if (request.IdClienteFiado <= 0)
+            return Json(new { ok = false, mensaje = "Debe seleccionar un cliente fiado." });
+
+        var idCajero = ClaimHelper.GetIdUsuario(User);
+        var boleta = await ventasRepository.DejarFiadoAsync(request.IdBoleta, request.IdClienteFiado, idCajero);
+        if (boleta == null)
+            return Json(new { ok = false, mensaje = "La boleta no existe o ya fue procesada." });
+
+        return Json(new
+        {
+            ok = true,
+            mensaje = $"Boleta N° {boleta.IdBoleta} registrada como fiado.",
+            boleta = MapBoletaCaja(boleta)
+        });
     }
 
     // ── GET: boletas pendientes para panel rápido en Caja ────────────────────
@@ -305,4 +327,5 @@ public record ItemBoleta(int IdProducto, int Cantidad, int PrecioNormal, int Pre
 public record BuscarBoletaRequest(int IdBoleta);
 public record ModificarBoletaRequest(int IdBoleta, List<ItemBoleta> Items);
 public record CobrarBoletaRequest(int IdBoleta, List<MetodoPagoItem> MetodosPago);
+public record DejarFiadoRequest(int IdBoleta, int IdClienteFiado);
 public record MetodoPagoItem(int IdMetodoPago, int Monto);

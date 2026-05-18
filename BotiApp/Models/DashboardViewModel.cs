@@ -49,4 +49,8 @@ public class DashboardViewModel
     public int CajeroBoletasAnuladas { get; set; }
     public long CajeroMontoGestionado{ get; set; }
     public IEnumerable<VenBoletas> CajeroUltimasBoletas { get; set; } = [];
+
+    // ── Fiados: globales (admin / cajero) ──────────────────────────────────
+    public int TotalFiadoGlobal   { get; set; }
+    public int CantFiadosActivos  { get; set; }
 }

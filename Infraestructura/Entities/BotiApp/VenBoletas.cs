@@ -41,9 +41,16 @@ public partial class VenBoletas
     [InverseProperty("VenBoletasVendedor")]
     public virtual EmpUsuario IdVendedorNavigation { get; set; } = null!;
 
+    [Column("Id_Cliente_Fiado")]
+    public int? IdClienteFiado { get; set; }
+
     [ForeignKey("IdCajero")]
     [InverseProperty("VenBoletasCajero")]
     public virtual EmpUsuario? IdCajeroNavigation { get; set; }
+
+    [ForeignKey("IdClienteFiado")]
+    [InverseProperty("VenBoletas")]
+    public virtual FiaClientes? IdClienteFiadoNavigation { get; set; }
 
     [InverseProperty("IdBoletaNavigation")]
     public virtual ICollection<VenBoletaDetalle> VenBoletaDetalle { get; set; } = new List<VenBoletaDetalle>();

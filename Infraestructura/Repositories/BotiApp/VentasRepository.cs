@@ -86,9 +86,10 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
     {
         await using var tx = await context.Database.BeginTransactionAsync();
 
+        // Acepta estado Pendiente (1) o Fiado (4)
         var boleta = await context.VenBoletas
             .Include(b => b.VenBoletaDetalle)
-            .FirstOrDefaultAsync(b => b.IdBoleta == idBoleta && b.IdEstadoBoleta == 1);
+            .FirstOrDefaultAsync(b => b.IdBoleta == idBoleta && (b.IdEstadoBoleta == 1 || b.IdEstadoBoleta == 4));
 
         if (boleta == null) return null;
 
@@ -144,13 +145,34 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         return await ObtenerBoletaParaCajaAsync(idBoleta);
     }
 
-    public async Task<bool> AnularBoletaAsync(int idBoleta, int idUsuario)
+    public async Task<VenBoletas?> DejarFiadoAsync(int idBoleta, int idClienteFiado, int idCajero)
     {
         await using var tx = await context.Database.BeginTransactionAsync();
 
         var boleta = await context.VenBoletas
-            .Include(b => b.VenBoletaDetalle)
             .FirstOrDefaultAsync(b => b.IdBoleta == idBoleta && b.IdEstadoBoleta == 1);
+
+        if (boleta == null) return null;
+
+        boleta.IdEstadoBoleta  = 4; // Fiado
+        boleta.IdClienteFiado  = idClienteFiado;
+        boleta.IdCajero        = idCajero;
+        // FechaPago queda NULL hasta cobro real
+
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        return await ObtenerBoletaParaCajaAsync(idBoleta);
+    }
+
+    public async Task<bool> AnularBoletaAsync(int idBoleta, int idUsuario)
+    {
+        await using var tx = await context.Database.BeginTransactionAsync();
+
+        // Acepta estado Pendiente (1) o Fiado (4)
+        var boleta = await context.VenBoletas
+            .Include(b => b.VenBoletaDetalle)
+            .FirstOrDefaultAsync(b => b.IdBoleta == idBoleta && (b.IdEstadoBoleta == 1 || b.IdEstadoBoleta == 4));
 
         if (boleta == null) return false;
 
