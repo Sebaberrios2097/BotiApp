@@ -12,7 +12,10 @@ public interface IFiadoRepository
     Task<FiaClientes?> ActualizarClienteAsync(FiaClientes datos);
 
     // ── Boletas fiadas ────────────────────────────────────────────────────────
+    /// <summary>Solo estado Fiado (4) — para cálculo de deuda activa.</summary>
     Task<IEnumerable<VenBoletas>> ObtenerBoletasFiadasPorClienteAsync(int idCliente);
+    /// <summary>Todas las boletas del cliente (cualquier estado) — para historial.</summary>
+    Task<IEnumerable<VenBoletas>> ObtenerBoletasHistorialAsync(int idCliente);
 
     // ── Abonos ────────────────────────────────────────────────────────────────
     /// <summary>

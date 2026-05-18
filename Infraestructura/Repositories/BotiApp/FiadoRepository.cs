@@ -16,6 +16,7 @@ public class FiadoRepository(BotiAppContext context) : IFiadoRepository
     {
         var query = context.FiaClientes
             .AsNoTracking()
+            .Include(c => c.VenBoletas)
             .Where(c => c.Estado);
 
         if (!string.IsNullOrWhiteSpace(q))
@@ -64,12 +65,23 @@ public async Task<FiaClientes> CrearClienteAsync(FiaClientes cliente)
 
     // ── Boletas fiadas ────────────────────────────────────────────────────────
 
+    /// <summary>Solo boletas con estado Fiado (4) — para cálculo de deuda activa.</summary>
     public async Task<IEnumerable<VenBoletas>> ObtenerBoletasFiadasPorClienteAsync(int idCliente)
         => await context.VenBoletas
             .AsNoTracking()
             .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdProductoNavigation)
             .Where(b => b.IdClienteFiado == idCliente && b.IdEstadoBoleta == EstadoFiado)
             .OrderBy(b => b.FechaEmision)
+            .ToListAsync();
+
+    /// <summary>Todas las boletas alguna vez fiadas al cliente (cualquier estado) — para historial.</summary>
+    public async Task<IEnumerable<VenBoletas>> ObtenerBoletasHistorialAsync(int idCliente)
+        => await context.VenBoletas
+            .AsNoTracking()
+            .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdProductoNavigation)
+            .Include(b => b.IdEstadoBoletaNavigation)
+            .Where(b => b.IdClienteFiado == idCliente)
+            .OrderByDescending(b => b.FechaEmision)
             .ToListAsync();
 
     // ── Abonos ────────────────────────────────────────────────────────────────

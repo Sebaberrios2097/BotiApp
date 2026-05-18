@@ -193,6 +193,20 @@
 
     .fc-empty { text-align: center; padding: 1.75rem 1rem; color: #9ca3af; font-size: .84rem; }
 
+    /* filtros año/mes */
+    .fc-filter-sel {
+        border: 1px solid #e5e0d8;
+        border-radius: 7px;
+        padding: .25rem .55rem;
+        font-size: .78rem;
+        color: var(--color-secundario);
+        background: #fff;
+        outline: none;
+        cursor: pointer;
+        transition: border-color .2s;
+    }
+    .fc-filter-sel:focus { border-color: var(--color-primario); }
+
     /* toast (reutiliza el global de _Layout si existe, o lo definimos aquí) */
     .fc-toast {
         position: fixed;
@@ -273,8 +287,8 @@
             </svg>
         </div>
         <div class="fc-kpi-body">
-            <span class="fc-kpi-value">@Model.BoletasFiadas.Count</span>
-            <span class="fc-kpi-label">Boletas fiadas</span>
+            <span class="fc-kpi-value">@Model.BoletasHistorial.Count(b => b.IdEstadoBoleta == 4)</span>
+            <span class="fc-kpi-label">Boletas fiadas activas</span>
         </div>
     </div>
 </div>
@@ -286,17 +300,39 @@
     <div>
         <div class="fc-card">
             <div class="fc-card-header">
-                <h2>Boletas fiadas</h2>
-                <span>@Model.BoletasFiadas.Count boleta(s)</span>
+                <h2>Historial de boletas</h2>
+                <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+                    <select class="fc-filter-sel" id="filtroAnio" onchange="filtrarBoletas()">
+                        <option value="">Todos los años</option>
+                        @foreach (var anio in Model.BoletasHistorial
+                            .Where(b => b.FechaEmision.HasValue)
+                            .Select(b => b.FechaEmision!.Value.Year)
+                            .Distinct().OrderByDescending(y => y))
+                        {
+                            <option value="@anio">@anio</option>
+                        }
+                    </select>
+                    <select class="fc-filter-sel" id="filtroMes" onchange="filtrarBoletas()">
+                        <option value="">Todos los meses</option>
+                        @{ var meses = new[]{"","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"}; }
+                        @for (int m = 1; m <= 12; m++)
+                        {
+                            <option value="@m">@meses[m]</option>
+                        }
+                    </select>
+                    <span id="fcBoletaCount" style="font-size:.75rem;color:#9ca3af;white-space:nowrap">
+                        @Model.BoletasHistorial.Count boleta(s)
+                    </span>
+                </div>
             </div>
-            @if (!Model.BoletasFiadas.Any())
+            @if (!Model.BoletasHistorial.Any())
             {
-                <div class="fc-empty">Sin boletas fiadas.</div>
+                <div class="fc-empty">Sin boletas registradas.</div>
             }
             else
             {
                 <div class="fc-table-responsive">
-                    <table class="fc-table">
+                    <table class="fc-table" id="fcBoletasTabla">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -306,11 +342,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var b in Model.BoletasFiadas.OrderByDescending(b => b.FechaEmision))
+                            @foreach (var b in Model.BoletasHistorial)
                             {
                                 var estadoClass = b.IdEstadoBoleta switch { 3 => "pagada", 4 => "fiado", 2 => "anulada", _ => "fiado" };
                                 var estadoLabel = b.IdEstadoBoleta switch { 3 => "Pagada", 4 => "Fiado", 2 => "Anulada", _ => "—" };
-                                <tr>
+                                var anio = b.FechaEmision?.Year.ToString() ?? "";
+                                var mes  = b.FechaEmision?.Month.ToString() ?? "";
+                                <tr data-anio="@anio" data-mes="@mes">
                                     <td style="color:#9ca3af">@b.IdBoleta</td>
                                     <td style="white-space:nowrap">@(b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
                                     <td><span class="fc-badge @estadoClass">@estadoLabel</span></td>
@@ -320,6 +358,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="fc-empty" id="fcBoletasVacio" style="display:none">Sin boletas para el período seleccionado.</div>
             }
         </div>
 
@@ -419,6 +458,24 @@
 (function () {
     var URL_ABONO  = '@Html.Raw(urlRegistrarAbono)';
     var ID_CLIENTE = @Model.Cliente.IdCliente;
+
+    // ── Filtro año/mes boletas ────────────────────────────────────────────────
+    window.filtrarBoletas = function () {
+        var anio = document.getElementById('filtroAnio')?.value ?? '';
+        var mes  = document.getElementById('filtroMes')?.value  ?? '';
+        var filas = document.querySelectorAll('#fcBoletasTabla tbody tr');
+        var visibles = 0;
+        filas.forEach(function (tr) {
+            var match = (!anio || tr.dataset.anio === anio) &&
+                        (!mes  || tr.dataset.mes  === mes);
+            tr.style.display = match ? '' : 'none';
+            if (match) visibles++;
+        });
+        var vacio = document.getElementById('fcBoletasVacio');
+        if (vacio) vacio.style.display = visibles === 0 ? '' : 'none';
+        var count = document.getElementById('fcBoletaCount');
+        if (count) count.textContent = visibles + ' boleta(s)';
+    };
 
     function _toast(msg, tipo) {
         var cont = document.getElementById('fcToastContainer');

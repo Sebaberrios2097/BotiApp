@@ -33,19 +33,18 @@ public class FiadoController(IFiadoRepository fiadoRepository, BotiAppContext co
         var cliente = await fiadoRepository.ObtenerClientePorIdAsync(id);
         if (cliente == null) return NotFound();
 
-        var boletasFiadas = await fiadoRepository.ObtenerBoletasFiadasPorClienteAsync(id);
-        var abonos        = await fiadoRepository.ObtenerAbonosPorClienteAsync(id);
-        var metodosPago   = await context.VenMetodosPago.AsNoTracking().ToListAsync();
-
-        var deudaTotal = boletasFiadas.Sum(b => b.MontoTotal);
+        var boletasActivas  = await fiadoRepository.ObtenerBoletasFiadasPorClienteAsync(id);
+        var historial       = await fiadoRepository.ObtenerBoletasHistorialAsync(id);
+        var abonos          = await fiadoRepository.ObtenerAbonosPorClienteAsync(id);
+        var metodosPago     = await context.VenMetodosPago.AsNoTracking().ToListAsync();
 
         var vm = new FiadoClienteViewModel
         {
-            Cliente       = cliente,
-            BoletasFiadas = boletasFiadas.ToList(),
-            Abonos        = abonos.ToList(),
-            DeudaTotal    = deudaTotal,
-            MetodosPago   = metodosPago
+            Cliente          = cliente,
+            BoletasHistorial = historial.ToList(),
+            Abonos           = abonos.ToList(),
+            DeudaTotal       = boletasActivas.Sum(b => b.MontoTotal),
+            MetodosPago      = metodosPago
         };
         return View(vm);
     }
@@ -138,11 +137,11 @@ public class FiadoIndexViewModel
 
 public class FiadoClienteViewModel
 {
-    public FiaClientes    Cliente       { get; set; } = null!;
-    public List<VenBoletas> BoletasFiadas { get; set; } = [];
-    public List<FiaAbonos>  Abonos        { get; set; } = [];
-    public int DeudaTotal                 { get; set; }
-    public List<VenMetodosPago> MetodosPago { get; set; } = [];
+    public FiaClientes          Cliente          { get; set; } = null!;
+    public List<VenBoletas>     BoletasHistorial { get; set; } = [];
+    public List<FiaAbonos>      Abonos           { get; set; } = [];
+    public int                  DeudaTotal       { get; set; }
+    public List<VenMetodosPago> MetodosPago      { get; set; } = [];
 }
 
 // ── Records de request ────────────────────────────────────────────────────────
