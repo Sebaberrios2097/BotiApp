@@ -4,7 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — BotiApp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/colores.css" />
+    <link rel="stylesheet" href="~/css/ui-system.css" />
     <style>
             *, *::before, *::after {
                 box-sizing: border-box;
@@ -18,7 +22,7 @@
                 align-items: center;
                 justify-content: center;
                 background-color: var(--color-primario);
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-family: var(--font-body);
             }
 
             .login-wrapper {
@@ -247,8 +251,16 @@
                 75%       { transform: translateX(5px); }
             }
     </style>
+    <link rel="stylesheet" href="~/css/ui-overrides.css" asp-append-version="true" />
 </head>
-<body>
+@{
+    var densityClass = ViewData["Density"]?.ToString();
+    if (string.IsNullOrWhiteSpace(densityClass))
+    {
+        densityClass = "ui-density-comfortable";
+    }
+}
+<body class="@densityClass">
     @RenderBody()
     @RenderSection("Scripts", required: false)
 </body>

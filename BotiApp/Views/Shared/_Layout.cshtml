@@ -5,7 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — BotiApp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/colores.css" />
+    <link rel="stylesheet" href="~/css/ui-system.css" />
     <style>
             *,
             *::before,
@@ -18,8 +22,8 @@
             body {
                 display: flex;
                 min-height: 100vh;
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background-color: var(--crema);
+                font-family: var(--font-body);
+                background-color: var(--surface-soft);
                 color: var(--color-secundario);
             }
 
@@ -69,6 +73,7 @@
                 font-weight: 700;
                 line-height: 1.2;
                 letter-spacing: 0.3px;
+                font-family: var(--font-heading);
             }
 
             /* ── ZONA 2: Usuario (fijo bajo la marca) ── */
@@ -392,7 +397,7 @@
 
             .page-content {
                 flex: 1;
-                padding: 2rem 1.75rem;
+                padding: var(--ui-page-padding-y) var(--ui-page-padding-x);
                 overflow-y: auto;
             }
 
@@ -482,9 +487,18 @@
                 }
             }
     </style>
+    <link rel="stylesheet" href="~/css/ui-overrides.css" asp-append-version="true" />
 </head>
 
-<body>
+@{
+    var densityClass = ViewData["Density"]?.ToString();
+    if (string.IsNullOrWhiteSpace(densityClass))
+    {
+        densityClass = "ui-density-compact";
+    }
+}
+
+<body class="@densityClass">
 
     @{
         var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";

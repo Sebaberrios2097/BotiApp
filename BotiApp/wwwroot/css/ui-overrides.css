@@ -1,0 +1,260 @@
+/* Shared overrides for consistency across Razor views */
+
+.dash-header,
+.fiado-header,
+.fc-header,
+.cat-header,
+.prm-header,
+.emp-page-header,
+.config-page-header {
+    background: var(--surface-base);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.25rem;
+}
+
+.ui-density-comfortable .dash-header,
+.ui-density-comfortable .fiado-header,
+.ui-density-comfortable .fc-header,
+.ui-density-comfortable .cat-header,
+.ui-density-comfortable .prm-header,
+.ui-density-comfortable .emp-page-header,
+.ui-density-comfortable .config-page-header {
+    padding: 1.15rem 1.35rem;
+}
+
+.ui-density-compact .dash-header,
+.ui-density-compact .fiado-header,
+.ui-density-compact .fc-header,
+.ui-density-compact .cat-header,
+.ui-density-compact .prm-header,
+.ui-density-compact .emp-page-header,
+.ui-density-compact .config-page-header {
+    padding: 0.9rem 1rem;
+}
+
+.ui-density-compact .page-header-card {
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.1rem;
+}
+
+.ui-density-comfortable .page-header-card {
+    padding: 1.35rem 1.55rem;
+    margin-bottom: 1.4rem;
+}
+
+.ui-density-compact .page-header-title {
+    font-size: 1.1rem;
+}
+
+.ui-density-comfortable .page-header-title {
+    font-size: 1.3rem;
+}
+
+.ui-density-compact .pro-toolbar,
+.ui-density-compact .cat-toolbar,
+.ui-density-compact .emp-toolbar,
+.ui-density-compact .filtros-wrap,
+.ui-density-compact .prod-panel-toolbar {
+    margin-bottom: 0.8rem;
+}
+
+.ui-density-compact .pro-search-bar,
+.ui-density-compact .cat-search input,
+.ui-density-compact .emp-search,
+.ui-density-compact .search-bar,
+.ui-density-compact .prod-search,
+.ui-density-compact .fiado-search-input,
+.ui-density-compact .fc-form-input,
+.ui-density-compact .modal-input,
+.ui-density-compact .form-group input,
+.ui-density-compact .pro-filter-select,
+.ui-density-compact .cat-select,
+.ui-density-compact .fil-estado,
+.ui-density-compact .fc-filter-sel,
+.ui-density-compact .emp-filter select {
+    min-height: var(--ui-input-height);
+}
+
+.ui-density-compact .btn-nuevo,
+.ui-density-compact .btn-add,
+.ui-density-compact .btn-login,
+.ui-density-compact .btn-generar,
+.ui-density-compact .btn-finalizar,
+.ui-density-compact .btn-guardar,
+.ui-density-compact .btn-agregar-modal,
+.ui-density-compact .btn-confirm,
+.ui-density-compact .btn-emp-guardar,
+.ui-density-compact .btn-crear-usuario {
+    min-height: var(--ui-btn-height);
+    padding-top: 0.42rem;
+    padding-bottom: 0.42rem;
+}
+
+.ui-density-comfortable .btn-nuevo,
+.ui-density-comfortable .btn-add,
+.ui-density-comfortable .btn-login,
+.ui-density-comfortable .btn-confirm,
+.ui-density-comfortable .btn-emp-guardar,
+.ui-density-comfortable .btn-crear-usuario {
+    min-height: var(--ui-btn-height);
+}
+
+.ui-density-compact .pro-table td,
+.ui-density-compact .dash-table td,
+.ui-density-compact .fiado-table td,
+.ui-density-compact .fc-table td,
+.ui-density-compact .config-table td,
+.ui-density-compact .det-table td,
+.ui-density-compact .emp-table td,
+.ui-density-compact .detalle-table td {
+    padding-top: var(--ui-table-row-padding-y);
+    padding-bottom: var(--ui-table-row-padding-y);
+}
+
+.ui-density-comfortable .pro-table td,
+.ui-density-comfortable .dash-table td,
+.ui-density-comfortable .fiado-table td,
+.ui-density-comfortable .fc-table td,
+.ui-density-comfortable .config-table td,
+.ui-density-comfortable .emp-table td {
+    padding-top: 0.76rem;
+    padding-bottom: 0.76rem;
+}
+
+.ui-density-compact .m-box,
+.ui-density-compact .modal-box,
+.ui-density-compact .emp-modal-box,
+.ui-density-compact .tipo-modal-box,
+.ui-density-compact .ticket-wrap,
+.ui-density-compact .setup-wrapper,
+.ui-density-compact .login-wrapper {
+    border-radius: 14px;
+}
+
+.ui-density-comfortable .m-box,
+.ui-density-comfortable .modal-box,
+.ui-density-comfortable .emp-modal-box,
+.ui-density-comfortable .tipo-modal-box,
+.ui-density-comfortable .setup-wrapper,
+.ui-density-comfortable .login-wrapper {
+    border-radius: 18px;
+}
+
+.ui-density-comfortable .setup-card,
+.ui-density-comfortable .login-card,
+.ui-density-comfortable .config-card {
+    padding: 2rem;
+    gap: 1.1rem;
+}
+
+.ui-density-compact .setup-card,
+.ui-density-compact .login-card,
+.ui-density-compact .config-card {
+    padding: 1.4rem;
+    gap: 0.85rem;
+}
+
+.ui-density-comfortable .setup-grid,
+.ui-density-comfortable .fc-grid,
+.ui-density-comfortable .fiado-kpi-row,
+.ui-density-comfortable .kpi-grid,
+.ui-density-comfortable .charts-grid,
+.ui-density-comfortable .config-grid {
+    gap: 1.2rem;
+}
+
+.ui-density-compact .setup-grid,
+.ui-density-compact .fc-grid,
+.ui-density-compact .fiado-kpi-row,
+.ui-density-compact .kpi-grid,
+.ui-density-compact .charts-grid,
+.ui-density-compact .config-grid {
+    gap: 0.9rem;
+}
+
+.ui-density-comfortable .setup-card h2,
+.ui-density-comfortable .login-card h2 {
+    font-size: 1.6rem;
+}
+
+.ui-density-compact .setup-card h2,
+.ui-density-compact .login-card h2 {
+    font-size: 1.3rem;
+}
+
+.ui-density-comfortable .fiado-header h1,
+.ui-density-comfortable .fc-title-block h1,
+.ui-density-comfortable .dash-header h1,
+.ui-density-comfortable .config-page-title {
+    font-size: 1.45rem;
+}
+
+.ui-density-compact .fiado-header h1,
+.ui-density-compact .fc-title-block h1,
+.ui-density-compact .dash-header h1,
+.ui-density-compact .config-page-title {
+    font-size: 1.28rem;
+}
+
+.ui-density-comfortable .modal-box,
+.ui-density-comfortable .emp-modal-body,
+.ui-density-comfortable .tipo-modal-body,
+.ui-density-comfortable .fc-abono-form {
+    padding: var(--ui-modal-padding);
+}
+
+.ui-density-compact .modal-box,
+.ui-density-compact .emp-modal-body,
+.ui-density-compact .tipo-modal-body,
+.ui-density-compact .fc-abono-form {
+    padding: var(--ui-modal-padding);
+}
+
+.ui-density-comfortable .toast-msg,
+.ui-density-comfortable .toast,
+.ui-density-comfortable .fc-toast-item {
+    border-radius: 10px;
+    font-size: 0.88rem;
+}
+
+.ui-density-compact .toast-msg,
+.ui-density-compact .toast,
+.ui-density-compact .fc-toast-item {
+    border-radius: 8px;
+    font-size: 0.8rem;
+    padding: 0.55rem 0.85rem;
+}
+
+.ui-density-compact .page-content {
+    padding: var(--ui-page-padding-y) var(--ui-page-padding-x);
+}
+
+.ui-density-comfortable .page-content {
+    padding: var(--ui-page-padding-y) var(--ui-page-padding-x);
+}
+
+.ui-density-compact .kpi-value,
+.ui-density-compact .fiado-kpi-value,
+.ui-density-compact .fc-kpi-value {
+    font-size: 1.4rem;
+}
+
+.ui-density-comfortable .kpi-value,
+.ui-density-comfortable .fiado-kpi-value,
+.ui-density-comfortable .fc-kpi-value {
+    font-size: 1.6rem;
+}
+
+@media (max-width: 768px) {
+    .ui-density-compact .page-content,
+    .ui-density-comfortable .page-content {
+        padding: 1rem;
+    }
+
+    .ui-density-comfortable .setup-grid,
+    .ui-density-comfortable .emp-form-row {
+        grid-template-columns: 1fr;
+    }
+}

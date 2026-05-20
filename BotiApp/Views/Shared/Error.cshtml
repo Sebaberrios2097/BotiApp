@@ -3,8 +3,73 @@
     ViewData["Title"] = "Error";
 }
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+<style>
+    .error-page-header {
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+        background: var(--surface-base);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: 1rem 1.2rem;
+        margin-bottom: 1rem;
+    }
+
+    .error-page-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 11px;
+        background: rgba(255, 55, 55, .12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .error-page-icon svg {
+        width: 21px;
+        height: 21px;
+        fill: var(--color-danger);
+    }
+
+    .error-page-header h1 {
+        margin: 0;
+        color: var(--color-danger);
+        font-size: 1.25rem;
+    }
+
+    .error-page-content {
+        background: var(--surface-base);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: 1rem 1.2rem;
+    }
+
+    .error-page-content h2,
+    .error-page-content h3 {
+        color: var(--color-secundario);
+    }
+
+    .error-page-content p {
+        color: var(--text-muted);
+    }
+
+    .error-page-content code {
+        background: #f4eee8;
+        border-radius: 6px;
+        padding: .2rem .4rem;
+    }
+</style>
+
+<div class="error-page-header">
+    <div class="error-page-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2 1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>
+    </div>
+    <h1>Error.</h1>
+</div>
+
+<div class="error-page-content">
+<h2>An error occurred while processing your request.</h2>
 
 @if (Model.ShowRequestId)
 {
@@ -23,3 +88,4 @@
     For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
     and restarting the app.
 </p>
+</div>

@@ -1,0 +1,117 @@
+:root {
+    --font-heading: "Sora", "Nunito Sans", "Segoe UI", sans-serif;
+    --font-body: "Nunito Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
+    --radius-xs: 6px;
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
+
+    --shadow-sm: 0 1px 3px rgba(44, 44, 44, 0.08);
+    --shadow-md: 0 2px 12px rgba(44, 44, 44, 0.1);
+    --shadow-lg: 0 10px 30px rgba(44, 44, 44, 0.2);
+
+    --ui-page-padding-x: 1.75rem;
+    --ui-page-padding-y: 1.8rem;
+    --ui-card-padding: 1.2rem;
+    --ui-card-gap: 1rem;
+    --ui-input-height: 40px;
+    --ui-btn-height: 40px;
+    --ui-table-row-padding-y: 0.66rem;
+    --ui-modal-padding: 1.4rem;
+}
+
+.ui-density-compact {
+    --ui-page-padding-x: 1.55rem;
+    --ui-page-padding-y: 1.5rem;
+    --ui-card-padding: 1rem;
+    --ui-card-gap: 0.85rem;
+    --ui-input-height: 36px;
+    --ui-btn-height: 36px;
+    --ui-table-row-padding-y: 0.56rem;
+    --ui-modal-padding: 1.1rem;
+}
+
+.ui-density-comfortable {
+    --ui-page-padding-x: 2rem;
+    --ui-page-padding-y: 2rem;
+    --ui-card-padding: 1.35rem;
+    --ui-card-gap: 1.1rem;
+    --ui-input-height: 42px;
+    --ui-btn-height: 42px;
+    --ui-table-row-padding-y: 0.72rem;
+    --ui-modal-padding: 1.5rem;
+}
+
+html {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    font-family: var(--font-body);
+    color: var(--color-secundario);
+    background-color: var(--surface-soft);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-heading);
+    letter-spacing: 0.01em;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
+a {
+    color: inherit;
+}
+
+:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 3px rgba(231, 111, 46, 0.23);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+.btn:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 3px rgba(231, 111, 46, 0.23);
+}
+
+.page-content {
+    padding: var(--ui-page-padding-y) var(--ui-page-padding-x);
+}
+
+.ui-card,
+.page-header-card,
+.table-card,
+.chart-card,
+.kpi-card,
+.config-card,
+.pro-card,
+.fiado-table-card,
+.fc-card,
+.cat-panel,
+.prod-panel,
+.resumen-panel,
+.boleta-panel,
+.cj-panel,
+.cobro-panel,
+.hist-panel,
+.login-wrapper,
+.setup-wrapper {
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}

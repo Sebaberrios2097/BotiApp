@@ -26,4 +26,12 @@
     --color-danger: var(--rojo);
     --color-texto: var(--negro);
     --color-fondo: var(--blanco);
+    --color-info: #6366f1;
+
+    /* Superficies y texto secundarios del sistema UI */
+    --surface-base: var(--blanco);
+    --surface-soft: #faf6f2;
+    --surface-border: #e8ddd4;
+    --text-muted: #7a6050;
+    --text-soft: #9a8070;
 }
