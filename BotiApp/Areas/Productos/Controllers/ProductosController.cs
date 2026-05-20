@@ -8,7 +8,10 @@ namespace BotiApp.Areas.Productos.Controllers;
 
 [Area("Productos")]
 [Authorize(Policy = "SoloAdmin")]
-public class ProductosController(IProductosRepository productosRepository) : Controller
+public class ProductosController(
+    IProductosRepository productosRepository,
+    IOfertasRepository ofertasRepository,
+    IPromocionesRepository promocionesRepository) : Controller
 {
     // ── Index ───────────────────────────────────────────────────────────────
     public async Task<IActionResult> Index()
@@ -136,15 +139,59 @@ public class ProductosController(IProductosRepository productosRepository) : Con
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleEstadoAjax(int id)
     {
+        var producto = await productosRepository.ObtenerPorIdAsync(id);
+        if (producto is null) return Json(new { ok = false, mensaje = "Producto no encontrado." });
+
+        // Si está activo y se va a desactivar, verificar si está en promociones activas
+        if (producto.Estado)
+        {
+            var promos = (await ofertasRepository.ObtenerPromosActivasPorProductoAsync(id)).ToList();
+            if (promos.Count > 0)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    requiereConfirmacion = true,
+                    mensaje = $"El producto «{producto.NombreProducto}» pertenece a {promos.Count} promoción(es) activa(s).",
+                    promociones = promos.Select(p => new { id = p.IdPromocion, nombre = p.Nombre })
+                });
+            }
+        }
+
         var ok = await productosRepository.ToggleEstadoAsync(id);
         if (!ok) return Json(new { ok = false, mensaje = "Producto no encontrado." });
+
+        var p2 = await productosRepository.ObtenerPorIdAsync(id);
+        return Json(new
+        {
+            ok = true,
+            mensaje = p2!.Estado ? "Producto activado." : "Producto desactivado.",
+            estado = p2.Estado
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmarDesactivarAjax(int id, bool desactivarPromociones)
+    {
+        var ok = await productosRepository.ToggleEstadoAsync(id);
+        if (!ok) return Json(new { ok = false, mensaje = "Producto no encontrado." });
+
+        if (desactivarPromociones)
+        {
+            var promos = await ofertasRepository.ObtenerPromosActivasPorProductoAsync(id);
+            foreach (var promo in promos)
+                await promocionesRepository.ToggleEstadoAsync(promo.IdPromocion);
+        }
 
         var p = await productosRepository.ObtenerPorIdAsync(id);
         return Json(new
         {
             ok = true,
-            mensaje = p!.Estado ? "Producto activado." : "Producto desactivado.",
-            estado = p.Estado
+            mensaje = desactivarPromociones
+                ? "Producto y sus promociones desactivados."
+                : "Producto desactivado.",
+            estado = p!.Estado
         });
     }
 

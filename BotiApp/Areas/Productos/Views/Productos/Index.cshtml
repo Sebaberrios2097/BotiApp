@@ -515,9 +515,63 @@ async function toggleEstado(id) {
     try {
         const resp = await fetch(`/Productos/Productos/ToggleEstadoAjax/${id}`, { method: 'POST', body: form });
         const data = await resp.json();
+        if (data.ok) {
+            mostrarToast(data.mensaje, 'exito');
+            actualizarToggleFila(id, data.estado);
+        } else if (data.requiereConfirmacion) {
+            mostrarDialogoDesactivar(id, data.mensaje, data.promociones);
+        } else {
+            mostrarToast(data.mensaje, 'error');
+        }
+    } catch { mostrarToast('Error al cambiar el estado.', 'error'); }
+}
+
+function mostrarDialogoDesactivar(id, mensaje, promociones) {
+    const promosHtml = promociones.map(p =>
+        `<li style="font-size:.85rem;color:#7a6050;padding:.15rem 0;">${esc(p.nombre)}</li>`
+    ).join('');
+    overlay.classList.add('open');
+    document.getElementById('modalBody').innerHTML = `
+    <div style="padding:2rem 2rem 1.75rem;max-width:460px;margin:auto;">
+      <div style="display:flex;align-items:flex-start;gap:.85rem;margin-bottom:1rem;">
+        <div style="width:48px;height:48px;border-radius:50%;background:rgba(231,111,46,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.1rem;">
+          <svg width="24" height="24" fill="var(--color-primario)" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        </div>
+        <div>
+          <h3 style="font-size:1rem;font-weight:700;color:var(--color-secundario);margin:0 0 .3rem">Producto en promociones activas</h3>
+          <p style="font-size:.85rem;color:#7a6050;margin:0">${esc(mensaje)}</p>
+        </div>
+      </div>
+      <ul style="margin:.25rem 0 1.25rem 1.25rem;padding:0;list-style:disc;">${promosHtml}</ul>
+      <p style="font-size:.85rem;color:#7a6050;margin-bottom:1.25rem;">¿Qué deseas hacer?</p>
+      <div style="display:flex;flex-direction:column;gap:.55rem;">
+        <button onclick="confirmarDesactivar(${id},false)"
+          style="padding:.65rem 1rem;background:rgba(231,111,46,.1);color:var(--color-primario);border:1.5px solid rgba(231,111,46,.3);border-radius:8px;font-weight:600;cursor:pointer;font-size:.88rem;text-align:left;">
+          Solo desactivar el producto
+        </button>
+        <button onclick="confirmarDesactivar(${id},true)"
+          style="padding:.65rem 1rem;background:#dc2626;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.88rem;text-align:left;">
+          Desactivar producto y sus promociones
+        </button>
+        <button onclick="cerrarModal()"
+          style="padding:.65rem 1rem;background:#f0ebe5;color:#7a6050;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.88rem;text-align:left;">
+          Cancelar
+        </button>
+      </div>
+    </div>`;
+}
+
+async function confirmarDesactivar(id, desactivarPromociones) {
+    cerrarModal();
+    const form = new FormData();
+    form.append('desactivarPromociones', desactivarPromociones);
+    form.append('__RequestVerificationToken', csrfToken());
+    try {
+        const resp = await fetch(`/Productos/Productos/ConfirmarDesactivarAjax/${id}`, { method: 'POST', body: form });
+        const data = await resp.json();
         if (data.ok) { mostrarToast(data.mensaje, 'exito'); actualizarToggleFila(id, data.estado); }
         else mostrarToast(data.mensaje, 'error');
-    } catch { mostrarToast('Error al cambiar el estado.', 'error'); }
+    } catch { mostrarToast('Error al desactivar el producto.', 'error'); }
 }
 
 function actualizarToggleFila(id, estado) {

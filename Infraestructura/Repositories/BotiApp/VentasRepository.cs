@@ -196,7 +196,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
     public async Task<IEnumerable<ProProductos>> ObtenerProductosDisponiblesAsync()
         => await context.ProProductos
             .AsNoTracking()
-            .Where(p => p.Estado && p.Stock > 0)
+            .Where(p => p.Estado)
             .Include(p => p.IdMarcaNavigation)
             .Include(p => p.IdTipoProductoNavigation)
             .Include(p => p.ProProductosRetornables)
@@ -223,9 +223,14 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         var hoy = DateTime.Today;
         return await context.ProPromocion
             .AsNoTracking()
-            .Where(p => p.Estado && p.FechaInicio <= hoy && (p.FechaFin == null || p.FechaFin >= hoy))
+            .Where(p => p.Estado
+                     && p.FechaInicio <= hoy
+                     && (p.FechaFin == null || p.FechaFin >= hoy)
+                     && p.ProPromocionDetalle.Any()
+                     && p.ProPromocionDetalle.All(d => d.IdProductoNavigation.Estado))
             .Include(p => p.ProPromocionGrupo)
             .Include(p => p.ProPromocionDetalle)
+                .ThenInclude(d => d.IdProductoNavigation)
             .ToListAsync();
     }
 
