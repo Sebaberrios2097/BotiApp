@@ -48,6 +48,21 @@ Para desarrollo con recarga activa:
 dotnet watch
 ```
 
+## SII simulado (boleta afecta 39)
+
+El proyecto incluye una integracion simulada para pruebas funcionales sin certificado digital.
+
+1. Ejecutar primero el esquema base y luego el script incremental:
+   ```bash
+   sqlcmd -S TU_SERVIDOR -i scripts/BotiApp_Schema.sql
+   sqlcmd -S TU_SERVIDOR -i scripts/sii_simulado_setup.sql
+   ```
+2. Flujo de prueba:
+   - Generar boleta (pendiente)
+   - Cobrar boleta en Caja
+   - El sistema intenta emision DTE simulada (tipo 39) y guarda folio/trackId/estado/xml en `Ven_Boletas`
+3. Si queda en rechazo o error simulado, en Caja se habilita `Reintentar SII`.
+
 ## Características
 
 - **Ventas**: Gestión de caja, catálogo de productos, historial de ventas, métodos de pago, boletas

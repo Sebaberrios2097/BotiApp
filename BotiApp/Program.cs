@@ -1,5 +1,6 @@
 using BotiApp.Hubs;
 using BotiApp.Middleware;
+using BotiApp.Services.Sii;
 using Infraestructura.Context;
 using Infraestructura.Entities.BotiApp;
 using Infraestructura.Extensions;
@@ -11,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
 builder.Services.AddInfraestructura(builder.Configuration);
+builder.Services.Configure<SiiEmisorOptions>(builder.Configuration.GetSection(SiiEmisorOptions.SectionName));
+builder.Services.AddScoped<ISiiBoletaService, SiiBoletaService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

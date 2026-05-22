@@ -20,6 +20,12 @@ public record BoletaResumenDto(
     int? IdCajero,
     string? Cajero,
     int MontoTotal,
+    int? TipoDteSii,
+    int? FolioSii,
+    string? EstadoSii,
+    string? TrackIdSii,
+    string FechaEnvioSii,
+    string? MensajeSii,
     IEnumerable<DetalleBoletaDto> Detalle
 );
 

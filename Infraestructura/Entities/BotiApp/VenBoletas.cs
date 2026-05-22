@@ -31,6 +31,42 @@ public partial class VenBoletas
     [Column("Fecha_Pago", TypeName = "datetime")]
     public DateTime? FechaPago { get; set; }
 
+    [Column("Tipo_Dte_Sii")]
+    public int? TipoDteSii { get; set; }
+
+    [Column("Folio_Sii")]
+    public int? FolioSii { get; set; }
+
+    [Column("Estado_Sii")]
+    [StringLength(30)]
+    public string? EstadoSii { get; set; }
+
+    [Column("TrackId_Sii")]
+    [StringLength(60)]
+    public string? TrackIdSii { get; set; }
+
+    [Column("Fecha_Envio_Sii", TypeName = "datetime")]
+    public DateTime? FechaEnvioSii { get; set; }
+
+    [Column("Monto_Neto_Sii")]
+    public int? MontoNetoSii { get; set; }
+
+    [Column("Monto_Iva_Sii")]
+    public int? MontoIvaSii { get; set; }
+
+    [Column("Monto_Exento_Sii")]
+    public int? MontoExentoSii { get; set; }
+
+    [Column("Xml_Dte_Sii")]
+    public string? XmlDteSii { get; set; }
+
+    [Column("Mensaje_Sii")]
+    [StringLength(300)]
+    public string? MensajeSii { get; set; }
+
+    [Column("Intentos_Envio_Sii")]
+    public int? IntentosEnvioSii { get; set; }
+
     public string? Observaciones { get; set; }
 
     [ForeignKey("IdEstadoBoleta")]

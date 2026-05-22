@@ -45,10 +45,22 @@
     var urlModifica      = Url.Action("ModificarBoletaAjax",   "Ventas", new { area = "Ventas" });
     var urlCobrar        = Url.Action("CobrarBoletaAjax",      "Ventas", new { area = "Ventas" });
     var urlAnular        = Url.Action("AnularBoletaAjax",      "Ventas", new { area = "Ventas" });
+    var urlReintentarSii = Url.Action("ReintentarSiiAjax",     "Ventas", new { area = "Ventas" });
     var urlPendientes    = Url.Action("BoletasPendientesAjax", "Ventas", new { area = "Ventas" });
     var urlDejarFiado    = Url.Action("DejarFiadoAjax",        "Ventas", new { area = "Ventas" });
     var urlBuscarCliente = Url.Action("BuscarClientesAjax",    "Fiado",  new { area = "Ventas" });
     var urlCrearCliente  = Url.Action("CrearClienteAjax",      "Fiado",  new { area = "Ventas" });
+
+    var emisor = Model.EmisorSii;
+    var emisorSiiJson = JsonSerializer.Serialize(new
+    {
+        rut = emisor.Rut,
+        razonSocial = emisor.RazonSocial,
+        giro = emisor.Giro,
+        direccion = emisor.Direccion,
+        comuna = emisor.Comuna,
+        ambiente = emisor.Ambiente
+    });
 }
 
 <style>
@@ -95,6 +107,12 @@
 .est-1 { background:#dbeafe; color:#1d4ed8; }
 .est-2 { background:#fee2e2; color:#dc2626; }
 .est-3 { background:#dcfce7; color:#16a34a; }
+.sii-badge { display:inline-block; padding:.15rem .55rem; border-radius:12px; font-size:.72rem; font-weight:700; }
+.sii-aceptado { background:#dcfce7; color:#166534; }
+.sii-rechazado { background:#fee2e2; color:#b91c1c; }
+.sii-error { background:#fef3c7; color:#92400e; }
+.sii-pendiente { background:#dbeafe; color:#1d4ed8; }
+.sii-noemitido { background:#f1f5f9; color:#475569; }
 
 /* ══════════════════════════════════════════════════════ TABLA DETALLE */
 .detalle-wrap { overflow-x:auto; }
@@ -417,6 +435,49 @@
 .fiado-modal-footer .btn-fiado-cancel:hover { opacity:.8; }
 .fiado-client-sel-info { background:#f5f4ff; border:1.5px solid #c7d2fe; border-radius:9px; padding:.6rem .85rem; font-size:.84rem; color:#4f46e5; font-weight:600; display:none; }
 .fiado-client-sel-info.visible { display:block; }
+
+/* ══════════════════════════════════════════════════════ PREVIEW DTE SIMULADO */
+.sii-preview-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:3500; display:none; align-items:center; justify-content:center; animation:fadeIn .2s ease; }
+.sii-preview-card { background:#fff; border-radius:14px; width:min(980px,96vw); max-height:90vh; box-shadow:0 8px 32px rgba(0,0,0,.22); display:flex; flex-direction:column; overflow:hidden; }
+.sii-preview-head { display:flex; align-items:center; gap:.55rem; padding:.85rem 1rem; background:var(--color-secundario); color:#fff; }
+.sii-preview-head svg { width:17px; height:17px; fill:var(--color-primario); }
+.sii-preview-head .ttl { font-size:.88rem; font-weight:700; flex:1; }
+.sii-preview-head .btn-close { background:none; border:none; color:#fff; opacity:.75; cursor:pointer; }
+.sii-preview-head .btn-close:hover { opacity:1; }
+.sii-preview-body { padding:.95rem 1rem; overflow:auto; display:grid; grid-template-columns:340px 1fr; gap:1rem; background:#f5f2ef; }
+@@media (max-width:920px) { .sii-preview-body { grid-template-columns:1fr; } }
+
+.sii-paper-wrap { display:flex; justify-content:center; }
+.sii-paper { width:310px; background:#fff; border:2px solid #111827; color:#111827; font-family:'Courier New', Courier, monospace; }
+.sii-paper-headbox { border-bottom:2px solid #111827; text-align:center; padding:.45rem .35rem .5rem; }
+.sii-paper-rut { font-size:.9rem; font-weight:700; letter-spacing:.02em; }
+.sii-paper-boleta { font-size:.98rem; font-weight:700; margin-top:.14rem; }
+.sii-paper-folio { font-size:.95rem; font-weight:700; margin-top:.14rem; }
+.sii-paper-sii { text-align:center; font-size:.88rem; font-weight:700; padding:.4rem .35rem .36rem; border-bottom:1.5px solid #111827; }
+.sii-paper-company { padding:.45rem .5rem .38rem; border-bottom:1px solid #111827; }
+.sii-paper-company .rs { font-size:.86rem; font-weight:700; margin-bottom:.08rem; }
+.sii-paper-company .giro, .sii-paper-company .addr { font-size:.74rem; line-height:1.2; }
+.sii-paper-emision { padding:.3rem .5rem; font-size:.74rem; border-bottom:1px solid #111827; }
+.sii-paper-table { width:100%; border-collapse:collapse; font-size:.72rem; }
+.sii-paper-table thead th { padding:.18rem .2rem; border-top:1px solid #111827; border-bottom:1px solid #111827; font-weight:700; }
+.sii-paper-table tbody td { padding:.18rem .2rem; vertical-align:top; }
+.sii-paper-table .item-name { width:58%; word-break:break-word; }
+.sii-paper-table .num { text-align:right; white-space:nowrap; }
+.sii-paper-hr { border-top:1px solid #111827; margin:.08rem .5rem; }
+.sii-paper-tax { padding:.15rem .5rem .05rem; }
+.sii-paper-tax .row { display:flex; justify-content:space-between; font-size:.74rem; margin:.1rem 0; }
+.sii-paper-tax .row span:first-child { font-weight:700; }
+.sii-paper-total { border-top:1.5px solid #111827; margin:.2rem .5rem 0; padding:.22rem 0 .16rem; display:flex; justify-content:space-between; font-size:.86rem; font-weight:700; }
+.sii-paper-barcode { margin:.5rem .5rem .18rem; height:82px; border:1px solid #111827; background:repeating-linear-gradient(90deg,#000 0,#000 1px,#fff 1px,#fff 2px,#000 2px,#000 4px,#fff 4px,#fff 5px,#000 5px,#000 7px,#fff 7px,#fff 8px); }
+.sii-paper-note { text-align:center; font-size:.62rem; line-height:1.2; padding:0 .5rem; }
+.sii-paper-warning { margin:.32rem .5rem .55rem; font-size:.66rem; font-weight:700; color:#b91c1c; background:#fff1f2; border:1px solid #fecaca; border-radius:6px; text-align:center; padding:.22rem .25rem; }
+
+.sii-xml-box { border:1.5px solid #e0d5cc; border-radius:10px; background:#fff; padding:.7rem; min-height:340px; display:flex; flex-direction:column; }
+.sii-xml-head { display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-bottom:.45rem; }
+.sii-xml-title { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:#a89080; font-weight:700; }
+.sii-xml-actions button { border:1.5px solid #e0d5cc; background:#fff; color:#7a6050; border-radius:7px; font-size:.75rem; font-weight:700; padding:.3rem .55rem; cursor:pointer; }
+.sii-xml-actions button:hover { border-color:var(--color-primario); color:var(--color-primario); }
+.sii-xml-pre { margin:0; white-space:pre-wrap; word-break:break-word; font-family:Consolas, 'Courier New', monospace; font-size:.72rem; line-height:1.32; color:#334155; overflow:auto; flex:1; }
 </style>
 
 <!-- ══ MODAL AGREGAR PRODUCTO ══════════════════════════════════════════════ -->
@@ -472,6 +533,7 @@
 <div class="envase-overlay" id="envaseOverlay" onclick="cerrarDialogoEnvase()"></div>
 <div class="grupos-overlay" id="gruposOverlay" onclick="cerrarDialogoGrupos()"></div>
 <div class="selinst-overlay" id="selInstOverlay" onclick="cerrarSelInst()"></div>
+<div class="sii-preview-overlay" id="siiPreviewOverlay" onclick="if(event.target===this) cerrarSiiPreview()"></div>
 
 <!-- ══ MODAL FIADO ══════════════════════════════════════════════════════════ -->
 <div class="fiado-modal-overlay" id="fiadoModalOverlay" onclick="if(event.target===this) cerrarModalFiado()">
@@ -630,6 +692,14 @@
                             <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
                             Agregar producto
                         </button>
+                        <button class="btn-guardar" id="btnReintentarSii" onclick="reintentarSii()" style="display:none;">
+                            <svg viewBox="0 0 24 24"><path d="M12 6V3L8 7l4 4V8c2.76 0 5 2.24 5 5a5 5 0 0 1-8.66 3.46l-1.42 1.42A7 7 0 1 0 12 6z"/></svg>
+                            Reintentar SII
+                        </button>
+                        <button class="btn-guardar" id="btnPreviewSii" onclick="abrirSiiPreview()" style="display:none;">
+                            <svg viewBox="0 0 24 24"><path d="M12 6c-5 0-9.27 3.11-11 7.5C2.73 17.89 7 21 12 21s9.27-3.11 11-7.5C21.27 9.11 17 6 12 6zm0 12a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-7.2A2.7 2.7 0 1 0 12 16a2.7 2.7 0 0 0 0-5.2z"/></svg>
+                            Ver boleta simulada
+                        </button>
                         @if (Model.PuedeCobrar)
                         {
                         <button class="btn-fiado" id="btnFiado" onclick="abrirModalFiado()" disabled>
@@ -784,12 +854,14 @@
     const METODOS_PAGO = @Html.Raw(metodosPagoJson);
     const CATALOGO     = @Html.Raw(catalogoJson);
     const PROMOS       = @Html.Raw(promosJson);
+    const EMISOR_SII   = @Html.Raw(emisorSiiJson);
     const TOKEN        = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
     const URL_BUSCAR      = '@Html.Raw(urlBuscar)';
     const URL_MODIFICA    = '@Html.Raw(urlModifica)';
     const URL_COBRAR      = '@Html.Raw(urlCobrar)';
     const URL_ANULAR      = '@Html.Raw(urlAnular)';
+    const URL_REINTENTAR_SII = '@Html.Raw(urlReintentarSii)';
     const URL_PENDIENTES  = '@Html.Raw(urlPendientes)';
     const URL_DEJAR_FIADO    = '@Html.Raw(urlDejarFiado)';
     const URL_BUSCAR_CLIENTE = '@Html.Raw(urlBuscarCliente)';
@@ -1413,21 +1485,46 @@
         const esPagada   = b.idEstado === 3;
         const esAnulada  = b.idEstado === 2;
         const esEditable = b.idEstado === 1;
+        const sii        = b.sii || {};
 
         document.getElementById('headerBoleta').textContent = `Boleta N° ${b.idBoleta}`;
 
         const estadoClass = esPagada ? 'est-3' : esAnulada ? 'est-2' : 'est-1';
+        const siiClass = _siiCssClass(sii.estado);
+        const siiText = _siiEstadoTexto(sii.estado);
+        const siiInfo = [
+            sii.tipoDte ? `Tipo DTE: ${sii.tipoDte}` : null,
+            sii.folio ? `Folio: ${sii.folio}` : null,
+            sii.trackId ? `TrackId: ${sii.trackId}` : null,
+            sii.fechaEnvio && sii.fechaEnvio !== '—' ? `Enviado: ${sii.fechaEnvio}` : null,
+            sii.mensaje ? sii.mensaje : null,
+            sii.intentos != null ? `Intentos: ${sii.intentos}` : null
+        ].filter(Boolean).join(' · ');
         document.getElementById('bolInfoHeader').innerHTML =
             `<span class="bol-info-item"><span class="lbl">N°</span><span class="val">${b.idBoleta}</span></span>` +
             `<span class="bol-info-item"><span class="lbl">Fecha</span><span class="val">${x(b.fechaEmision)}</span></span>` +
             `<span class="bol-info-item"><span class="lbl">Vendedor</span><span class="val">${x(b.vendedor)}</span></span>` +
             (b.cajero ? `<span class="bol-info-item"><span class="lbl">Cajero</span><span class="val">${x(b.cajero)}</span></span>` : '') +
-            `<span class="bol-info-item"><span class="lbl">Estado</span><span class="val"><span class="estado-badge ${estadoClass}">${x(b.estado)}</span></span></span>`;
+            `<span class="bol-info-item"><span class="lbl">Estado</span><span class="val"><span class="estado-badge ${estadoClass}">${x(b.estado)}</span></span></span>` +
+            `<span class="bol-info-item"><span class="lbl">SII</span><span class="val"><span class="sii-badge ${siiClass}">${x(siiText)}</span></span></span>` +
+            `<span class="bol-info-item"><span class="lbl">Detalle SII</span><span class="val" style="max-width:420px;white-space:normal;line-height:1.25;">${x(siiInfo || 'Sin informacion SII')}</span></span>`;
 
         document.getElementById('btnAbrirModal').disabled = !esEditable;
         document.getElementById('btnAnular').disabled     = !esEditable;
         const btnFiado = document.getElementById('btnFiado');
         if (btnFiado) btnFiado.disabled = !esEditable;
+        const btnReintentar = document.getElementById('btnReintentarSii');
+        if (btnReintentar) {
+            const mostrar = esPagada && _siiPermiteReintento(sii.estado);
+            btnReintentar.style.display = mostrar ? 'inline-flex' : 'none';
+            btnReintentar.disabled = !mostrar;
+        }
+        const btnPreview = document.getElementById('btnPreviewSii');
+        if (btnPreview) {
+            const mostrarPreview = esPagada && (sii.folio || sii.estado);
+            btnPreview.style.display = mostrarPreview ? 'inline-flex' : 'none';
+            btnPreview.disabled = !mostrarPreview;
+        }
 
         document.getElementById('estadoPagada').style.display  = esPagada  ? 'block' : 'none';
         document.getElementById('estadoAnulada').style.display = esAnulada ? 'block' : 'none';
@@ -1444,6 +1541,29 @@
         renderDetalle();
         document.getElementById('bolPlaceholder').style.display = 'none';
         document.getElementById('bolInfo').classList.add('visible');
+    }
+
+    function _siiPermiteReintento(estado) {
+        const st = (estado || '').toUpperCase();
+        return st === '' || st === 'NO_EMITIDO' || st === 'RECHAZADO' || st === 'ERROR_ENVIO' || st === 'PENDIENTE_REINTENTO';
+    }
+
+    function _siiCssClass(estado) {
+        const st = (estado || '').toUpperCase();
+        if (st === 'ACEPTADO') return 'sii-aceptado';
+        if (st === 'RECHAZADO') return 'sii-rechazado';
+        if (st === 'ERROR_ENVIO') return 'sii-error';
+        if (st === 'PENDIENTE_REINTENTO') return 'sii-pendiente';
+        return 'sii-noemitido';
+    }
+
+    function _siiEstadoTexto(estado) {
+        const st = (estado || '').toUpperCase();
+        if (st === 'ACEPTADO') return 'Aceptado';
+        if (st === 'RECHAZADO') return 'Rechazado';
+        if (st === 'ERROR_ENVIO') return 'Error envio';
+        if (st === 'PENDIENTE_REINTENTO') return 'Pendiente';
+        return 'No emitido';
     }
 
     /* ════════════════════════════════════════════════════
@@ -1643,6 +1763,200 @@
         cargarBoleta(res.boleta);
         cargarBoletasPendientes();
     };
+
+    window.reintentarSii = async function () {
+        if (!boletaActual || boletaActual.idEstado !== 3) {
+            toast('Solo puedes reintentar SII en boletas pagadas.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('btnReintentarSii');
+        if (!btn) return;
+
+        setBotonCargando(btn, true);
+        const res = await post(URL_REINTENTAR_SII, { idBoleta: boletaActual.idBoleta });
+        setBotonCargando(btn, false);
+
+        if (!res.ok) {
+            toast(res.mensaje, 'error');
+            return;
+        }
+
+        toast(res.mensaje, res.emitido ? 'exito' : 'error');
+        cargarBoleta(res.boleta);
+    };
+
+    window.abrirSiiPreview = function () {
+        if (!boletaActual) return;
+        const sii = boletaActual.sii || {};
+
+        const estadoText = _siiEstadoTexto(sii.estado);
+        const fmtNum = n => Number(n || 0).toLocaleString('es-CL');
+
+        const detallesMap = new Map();
+        (boletaActual.detalle || []).forEach(d => {
+            const precioUnitario = Number(d.precioUnitario || 0);
+            const key = `${d.nombre || ''}|${precioUnitario}`;
+            if (!detallesMap.has(key)) {
+                detallesMap.set(key, {
+                    nombre: d.nombre,
+                    cantidad: Number(d.cantidad || 0),
+                    precioUnitario,
+                    subtotal: Number(d.subtotal || 0)
+                });
+                return;
+            }
+            const it = detallesMap.get(key);
+            it.cantidad += Number(d.cantidad || 0);
+            it.subtotal += Number(d.subtotal || 0);
+        });
+        const detalles = Array.from(detallesMap.values());
+        const rowsHtml = detalles.map(d =>
+            `<tr>` +
+                `<td class="item-name">${x(d.nombre)}</td>` +
+                `<td class="num">${fmtNum(d.precioUnitario)}</td>` +
+                `<td class="num">${fmtNum(d.cantidad)}</td>` +
+                `<td class="num">${fmtNum(d.subtotal)}</td>` +
+            `</tr>`
+        ).join('') || '<tr><td class="item-name">Venta</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>';
+
+        const neto = sii.montoNeto || 0;
+        const iva = sii.montoIva || 0;
+        const exento = sii.montoExento || 0;
+        const total = boletaActual.montoTotal || 0;
+        const emisor = EMISOR_SII || {};
+        const comunaSii = String(emisor.comuna || 'NO CONFIGURADO').toUpperCase();
+        const fechaLarga = formatearFechaBoleta(boletaActual.fechaEmision);
+
+        const xml = generarXmlPreview(boletaActual, sii, { neto, iva, exento, total }, detalles);
+
+        const overlay = document.getElementById('siiPreviewOverlay');
+        overlay.innerHTML =
+            `<div class="sii-preview-card" onclick="event.stopPropagation()">` +
+                `<div class="sii-preview-head">` +
+                    `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-3 7H7v-2h3v2zm3-4H7v-2h6v2zm0 4h-2v-2h2v2z"/></svg>` +
+                    `<span class="ttl">Previsualizacion boleta electronica simulada</span>` +
+                    `<button class="btn-close" onclick="cerrarSiiPreview()">✕</button>` +
+                `</div>` +
+                `<div class="sii-preview-body">` +
+                    `<div class="sii-paper-wrap">` +
+                        `<div class="sii-paper">` +
+                            `<div class="sii-paper-headbox">` +
+                                `<div class="sii-paper-rut">R.U.T.: ${x(emisor.rut || 'NO CONFIGURADO')}</div>` +
+                                `<div class="sii-paper-boleta">BOLETA ELECTRONICA</div>` +
+                                `<div class="sii-paper-folio">N° ${sii.folio || '—'}</div>` +
+                            `</div>` +
+                            `<div class="sii-paper-sii">S.I.I. - ${x(comunaSii)}</div>` +
+                            `<div class="sii-paper-company">` +
+                                `<div class="rs">${x(emisor.razonSocial || 'NO CONFIGURADO')}</div>` +
+                                `<div class="giro">${x(emisor.giro || 'NO CONFIGURADO')}</div>` +
+                                `<div class="addr">${x(emisor.direccion || 'NO CONFIGURADO')}, ${x(emisor.comuna || 'NO CONFIGURADO')}</div>` +
+                            `</div>` +
+                            `<div class="sii-paper-emision"><strong>Emision</strong> : ${x(fechaLarga)}</div>` +
+                            `<table class="sii-paper-table">` +
+                                `<thead>` +
+                                    `<tr><th class="item-name">Item</th><th class="num">P. unitario</th><th class="num">Cant.</th><th class="num">Total item</th></tr>` +
+                                `</thead>` +
+                                `<tbody>${rowsHtml}</tbody>` +
+                            `</table>` +
+                            `<div class="sii-paper-hr"></div>` +
+                            `<div class="sii-paper-tax">` +
+                                `<div class="row"><span>Neto</span><span>${fmtNum(neto)}</span></div>` +
+                                `<div class="row"><span>IVA</span><span>${fmtNum(iva)}</span></div>` +
+                                `<div class="row"><span>Exento</span><span>${fmtNum(exento)}</span></div>` +
+                                `<div class="sii-paper-total"><span>Total $ :</span><span>${fmtNum(total)}</span></div>` +
+                            `</div>` +
+                            `<div class="sii-paper-barcode"></div>` +
+                            `<div class="sii-paper-note">` +
+                                `Timbre Electronico SII<br>` +
+                                `Estado: ${x(estadoText)}<br>` +
+                                `TrackId: ${x(sii.trackId || '—')}` +
+                            `</div>` +
+                            `<div class="sii-paper-warning">SIN VALIDEZ TRIBUTARIA - AMBIENTE ${x(String(emisor.ambiente || 'Simulado').toUpperCase())}</div>` +
+                        `</div>` +
+                    `</div>` +
+                    `<div class="sii-xml-box">` +
+                        `<div class="sii-xml-head">` +
+                            `<span class="sii-xml-title">XML DTE simulado</span>` +
+                            `<div class="sii-xml-actions">` +
+                                `<button onclick="copiarXmlSiiPreview()">Copiar XML</button>` +
+                            `</div>` +
+                        `</div>` +
+                        `<pre class="sii-xml-pre" id="siiXmlPreview">${x(xml)}</pre>` +
+                    `</div>` +
+                `</div>` +
+            `</div>`;
+        overlay.style.display = 'flex';
+    };
+
+    function generarXmlPreview(boleta, sii, montos, detalles) {
+        const fecha = (boleta.fechaEmision || '').split(' ')[0] || new Date().toISOString().slice(0, 10);
+        const lines = detalles.map((d, idx) =>
+            `    <Detalle><NroLinDet>${idx + 1}</NroLinDet><NmbItem>${escapeXml(d.nombre || '')}</NmbItem><QtyItem>${d.cantidad || 0}</QtyItem><MontoItem>${d.subtotal || 0}</MontoItem></Detalle>`
+        ).join('\n');
+
+        return [
+            '<DteSimulado version="1.0">',
+            '  <Documento>',
+            '    <Encabezado>',
+            `      <IdBoletaInterna>${boleta.idBoleta}</IdBoletaInterna>`,
+            `      <TipoDte>${sii.tipoDte || 39}</TipoDte>`,
+            `      <Folio>${sii.folio || 0}</Folio>`,
+            `      <FechaEmision>${escapeXml(fecha)}</FechaEmision>`,
+            `      <TrackId>${escapeXml(sii.trackId || '')}</TrackId>`,
+            '      <Totales>',
+            `        <MntNeto>${montos.neto || 0}</MntNeto>`,
+            `        <IVA>${montos.iva || 0}</IVA>`,
+            `        <MntExe>${montos.exento || 0}</MntExe>`,
+            `        <MntTotal>${montos.total || 0}</MntTotal>`,
+            '      </Totales>',
+            '    </Encabezado>',
+            '    <DetalleItems>',
+            lines || '    ',
+            '    </DetalleItems>',
+            '  </Documento>',
+            '</DteSimulado>'
+        ].join('\n');
+    }
+
+    function formatearFechaBoleta(fecha) {
+        if (!fecha || fecha === '—') return 'Sin fecha';
+        const m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(String(fecha));
+        if (!m) return String(fecha);
+        const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const dia = parseInt(m[1], 10);
+        const mesIdx = parseInt(m[2], 10) - 1;
+        const anio = m[3];
+        const mesNombre = meses[mesIdx] || m[2];
+        return `${dia} de ${mesNombre} del ${anio}`;
+    }
+
+    window.cerrarSiiPreview = function () {
+        const overlay = document.getElementById('siiPreviewOverlay');
+        if (!overlay) return;
+        overlay.style.display = 'none';
+    };
+
+    window.copiarXmlSiiPreview = async function () {
+        const pre = document.getElementById('siiXmlPreview');
+        if (!pre) return;
+        const texto = pre.textContent || '';
+        try {
+            await navigator.clipboard.writeText(texto);
+            toast('XML simulado copiado.', 'exito');
+        } catch {
+            toast('No se pudo copiar el XML.', 'error');
+        }
+    };
+
+    function escapeXml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+    }
 
     /* ════════════════════════════════════════════════════
        DETALLE BOLETA

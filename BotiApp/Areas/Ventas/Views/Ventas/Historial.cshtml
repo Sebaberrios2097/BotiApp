@@ -18,6 +18,12 @@
         idCajero   = b.IdCajero,
         cajero     = b.Cajero,
         total      = b.MontoTotal,
+        tipoDteSii = b.TipoDteSii,
+        folioSii   = b.FolioSii,
+        estadoSii  = b.EstadoSii,
+        trackIdSii = b.TrackIdSii,
+        fechaEnvioSii = b.FechaEnvioSii,
+        mensajeSii = b.MensajeSii,
         detalle    = b.Detalle.Select(d => new
         {
             nombre         = d.Nombre,
@@ -99,6 +105,12 @@
 .bl-estado.est-3 { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
 .bl-estado.est-4 { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
 .bl-estado.est-other { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+.bl-sii { font-size:.66rem; font-weight:700; padding:.2rem .55rem; border-radius:20px; flex-shrink:0; }
+.bl-sii.aceptado { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+.bl-sii.rechazado { background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; }
+.bl-sii.error { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+.bl-sii.pendiente { background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; }
+.bl-sii.noemitido { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
 .bl-total { font-size:.88rem; font-weight:700; color:var(--color-primario); flex-shrink:0; margin-left:auto; }
 .bl-chevron { width:18px; height:18px; fill:#c9b8a8; flex-shrink:0; transition:transform .2s; }
 .bl-card.open .bl-chevron { transform:rotate(180deg); fill:var(--color-primario); }
@@ -115,6 +127,9 @@
 .bl-det-total { display:flex; justify-content:flex-end; gap:.5rem; align-items:center; margin-top:.55rem; padding-top:.45rem; border-top:1.5px solid #f0ebe5; }
 .bl-det-total .lbl { font-size:.78rem; color:#a89080; font-weight:600; }
 .bl-det-total .val { font-size:.95rem; font-weight:700; color:var(--color-primario); }
+.bl-det-sii { display:flex; justify-content:space-between; align-items:flex-start; gap:.6rem; margin-top:.45rem; padding-top:.45rem; border-top:1px dashed #f0ebe5; }
+.bl-det-sii .lbl { font-size:.75rem; color:#a89080; font-weight:600; }
+.bl-det-sii .val { font-size:.76rem; color:#475569; text-align:right; max-width:70%; }
 .etq-promo  { font-size:.62rem; font-weight:700; background:#fef3c7; color:#d97706; border-radius:4px; padding:.1rem .35rem; vertical-align:middle; white-space:nowrap; }
 .etq-oferta { font-size:.62rem; font-weight:700; background:#ede9fe; color:#7c3aed; border-radius:4px; padding:.1rem .35rem; vertical-align:middle; white-space:nowrap; }
 .promo-gr-head td { background:#fffbeb; border-bottom:none !important; padding:.45rem .5rem !important; }
@@ -410,6 +425,16 @@
                             : b.idEstado === 3 ? 'est-3'
                             : b.idEstado === 4 ? 'est-4'
                             : 'est-other';
+            var estadoSiiClass = mapEstadoSiiClass(b.estadoSii);
+            var estadoSiiText = mapEstadoSiiText(b.estadoSii);
+            var siiResumen = b.folioSii ? ('Folio ' + b.folioSii) : estadoSiiText.replace('SII: ', '');
+            var siiDetalle = [
+                b.tipoDteSii ? ('Tipo DTE: ' + b.tipoDteSii) : null,
+                b.folioSii ? ('Folio: ' + b.folioSii) : null,
+                b.trackIdSii ? ('TrackId: ' + b.trackIdSii) : null,
+                b.fechaEnvioSii && b.fechaEnvioSii !== '—' ? ('Enviado: ' + b.fechaEnvioSii) : null,
+                b.mensajeSii ? ('Mensaje: ' + b.mensajeSii) : null
+            ].filter(Boolean).join(' · ');
             var infoHtml = ES_ADMIN
                 ? '<span class="bl-cajero"><strong>Vendedor:</strong> ' + x(b.vendedor) + '</span>' + (b.cajero ? ' <span class="bl-cajero"><strong>Cajero:</strong> ' + x(b.cajero) + '</span>' : '')
                 : ES_CAJERO
@@ -484,6 +509,7 @@
                     '<span class="bl-fecha">' + x(b.fecha) + '</span>' +
                     infoHtml +
                     '<span class="bl-estado ' + estadoClass + '">' + x(b.estado) + '</span>' +
+                    '<span class="bl-sii ' + estadoSiiClass + '">' + x('SII: ' + siiResumen) + '</span>' +
                     '<span class="bl-total">$' + fmt(b.total) + '</span>' +
                     '<svg class="bl-chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>' +
                 '</div>' +
@@ -493,6 +519,7 @@
                         '<tbody>' + detalleRows + '</tbody>' +
                     '</table>' +
                     '<div class="bl-det-total"><span class="lbl">' + totalLabel + '</span><span class="val">$' + fmt(b.total) + '</span></div>' +
+                    '<div class="bl-det-sii"><span class="lbl">SII</span><span class="val">' + x(siiDetalle || estadoSiiText) + '</span></div>' +
                     '<div style="display:flex;justify-content:flex-end;margin-top:.55rem;">' +
                         '<button class="bl-reimprimir" onclick="event.stopPropagation();reimprimir(' + b.id + ')">' +
                             '<svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>' +
@@ -502,6 +529,24 @@
                 '</div>' +
             '</div>';
         }).join('');
+    }
+
+    function mapEstadoSiiClass(estadoSii) {
+        var st = (estadoSii || '').toUpperCase();
+        if (st === 'ACEPTADO') return 'aceptado';
+        if (st === 'RECHAZADO') return 'rechazado';
+        if (st === 'ERROR_ENVIO') return 'error';
+        if (st === 'PENDIENTE_REINTENTO') return 'pendiente';
+        return 'noemitido';
+    }
+
+    function mapEstadoSiiText(estadoSii) {
+        var st = (estadoSii || '').toUpperCase();
+        if (st === 'ACEPTADO') return 'SII: Aceptado';
+        if (st === 'RECHAZADO') return 'SII: Rechazado';
+        if (st === 'ERROR_ENVIO') return 'SII: Error envio';
+        if (st === 'PENDIENTE_REINTENTO') return 'SII: Pendiente';
+        return 'SII: No emitido';
     }
 
     /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -631,6 +676,9 @@
                     '<div class="ticket-center" style="font-size:10px;">TICKET INTERNO</div>' +
                     '<hr class="ticket-hr-sol">' +
                     '<div class="ticket-row"><span class="tk-l">N° Boleta</span><span class="tk-r ticket-bold">' + b.id + '</span></div>' +
+                    (b.folioSii ? '<div class="ticket-row"><span class="tk-l">Folio SII</span><span class="tk-r">' + b.folioSii + '</span></div>' : '') +
+                    (b.trackIdSii ? '<div class="ticket-row"><span class="tk-l">TrackId</span><span class="tk-r">' + x(b.trackIdSii) + '</span></div>' : '') +
+                    '<div class="ticket-row"><span class="tk-l">Estado SII</span><span class="tk-r">' + x(mapEstadoSiiText(b.estadoSii).replace('SII: ', '')) + '</span></div>' +
                     '<div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">' + x(b.fecha) + '</span></div>' +
                     '<hr class="ticket-hr-sol">' +
                     '<div class="ticket-row ticket-bold"><span class="tk-l">ARTÍCULO</span><span class="tk-r">VALOR</span></div>' +

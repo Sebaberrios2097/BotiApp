@@ -1,17 +1,23 @@
 ﻿using BotiApp.Areas.Ventas.Models;
 using BotiApp.Helpers;
 using BotiApp.Hubs;
+using BotiApp.Services.Sii;
 using Infraestructura.Entities.BotiApp;
 using Infraestructura.Repositories.BotiApp.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 
 namespace BotiApp.Areas.Ventas.Controllers;
 
 [Area("Ventas")]
 [Authorize]
-public class VentasController(IVentasRepository ventasRepository, IHubContext<BoletaHub> boletaHub) : Controller
+public class VentasController(
+    IVentasRepository ventasRepository,
+    IHubContext<BoletaHub> boletaHub,
+    ISiiBoletaService siiBoletaService,
+    IOptions<SiiEmisorOptions> siiEmisorOptions) : Controller
 {
     // ── GET /Ventas/Ventas/Generar ────────────────────────────────────────────
     [Authorize(Policy = "AdminOVendedor")]
@@ -38,7 +44,8 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
             MetodosPago = await ventasRepository.ObtenerMetodosPagoAsync(),
             Productos = await ventasRepository.ObtenerProductosDisponiblesAsync(),
             Ofertas = await ventasRepository.ObtenerOfertasActivasAsync(),
-            Promociones = await ventasRepository.ObtenerPromocionesActivasAsync()
+            Promociones = await ventasRepository.ObtenerPromocionesActivasAsync(),
+            EmisorSii = MapEmisorSii(siiEmisorOptions.Value)
         };
         return View(vm);
     }
@@ -71,6 +78,12 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
                 ? $"{ec.NombresEmpleado} {ec.Apellido1}"
                 : null,
             b.MontoTotal,
+            b.TipoDteSii,
+            b.FolioSii,
+            b.EstadoSii,
+            b.TrackIdSii,
+            b.FechaEnvioSii?.ToString("dd/MM/yyyy HH:mm") ?? "—",
+            b.MensajeSii,
             b.VenBoletaDetalle.Select(d => new DetalleBoletaDto(
                 d.IdProductoNavigation?.NombreProducto ?? "—",
                 d.Cantidad,
@@ -212,11 +225,72 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         if (cobrada == null)
             return Json(new { ok = false, mensaje = "La boleta no existe o ya fue procesada." });
 
+        SiiBoletaServiceResult sii;
+        try
+        {
+            sii = await siiBoletaService.EmitirBoletaAfectaAsync(cobrada.IdBoleta);
+        }
+        catch
+        {
+            sii = new SiiBoletaServiceResult(
+                Ok: false,
+                EstadoSii: "ERROR_ENVIO",
+                Mensaje: "SII simulado: no fue posible emitir en este intento.",
+                Folio: null,
+                TrackId: null,
+                Intentos: 0
+            );
+        }
+
+        var completa = await ventasRepository.ObtenerBoletaParaCajaAsync(cobrada.IdBoleta);
+        var boletaResult = completa ?? cobrada;
+
+        var mensaje = $"Boleta N° {boletaResult.IdBoleta} cobrada exitosamente por ${boletaResult.MontoTotal:N0}.";
+        if (!string.IsNullOrWhiteSpace(sii.Mensaje))
+            mensaje += $" {sii.Mensaje}";
+
         return Json(new
         {
             ok = true,
-            mensaje = $"Boleta N° {cobrada.IdBoleta} cobrada exitosamente por ${cobrada.MontoTotal:N0}.",
-            boleta = MapBoletaCaja(cobrada)
+            mensaje,
+            boleta = MapBoletaCaja(boletaResult)
+        });
+    }
+
+    // ── POST: reintentar emisión SII simulada ────────────────────────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "AdminOCajero")]
+    public async Task<IActionResult> ReintentarSiiAjax([FromBody] BuscarBoletaRequest request)
+    {
+        SiiBoletaServiceResult sii;
+        try
+        {
+            sii = await siiBoletaService.EmitirBoletaAfectaAsync(request.IdBoleta, forzarReintento: true);
+        }
+        catch
+        {
+            sii = new SiiBoletaServiceResult(
+                Ok: false,
+                EstadoSii: "ERROR_ENVIO",
+                Mensaje: "SII simulado: no fue posible reintentar en este momento.",
+                Folio: null,
+                TrackId: null,
+                Intentos: 0
+            );
+        }
+
+        var boleta = await ventasRepository.ObtenerBoletaParaCajaAsync(request.IdBoleta);
+
+        if (boleta == null)
+            return Json(new { ok = false, mensaje = $"Boleta N° {request.IdBoleta} no encontrada." });
+
+        return Json(new
+        {
+            ok = true,
+            emitido = sii.Ok,
+            mensaje = sii.Mensaje,
+            boleta = MapBoletaCaja(boleta)
         });
     }
 
@@ -275,6 +349,22 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+    private static SiiEmisorDto MapEmisorSii(SiiEmisorOptions? options)
+        => new()
+        {
+            Rut = NormalizarCampo(options?.Rut),
+            RazonSocial = NormalizarCampo(options?.RazonSocial),
+            Giro = NormalizarCampo(options?.Giro),
+            Direccion = NormalizarCampo(options?.Direccion),
+            Comuna = NormalizarCampo(options?.Comuna),
+            Ambiente = NormalizarCampo(options?.Ambiente, "Simulado")
+        };
+
+    private static string NormalizarCampo(string? value, string fallback = "NO CONFIGURADO")
+        => string.IsNullOrWhiteSpace(value)
+            ? fallback
+            : value.Trim();
+
     private static object MapBoletaTicket(VenBoletas b) => new
     {
         b.IdBoleta,
@@ -284,6 +374,19 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         vendedor = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } e
                            ? $"{e.NombresEmpleado} {e.Apellido1}" : "—",
         b.MontoTotal,
+        sii = new
+        {
+            tipoDte = b.TipoDteSii,
+            folio = b.FolioSii,
+            estado = b.EstadoSii,
+            trackId = b.TrackIdSii,
+            fechaEnvio = b.FechaEnvioSii?.ToString("dd/MM/yyyy HH:mm") ?? "—",
+            montoNeto = b.MontoNetoSii,
+            montoIva = b.MontoIvaSii,
+            montoExento = b.MontoExentoSii,
+            mensaje = b.MensajeSii,
+            intentos = b.IntentosEnvioSii ?? 0
+        },
         detalle = b.VenBoletaDetalle.Select(d => new
         {
             nombre = d.IdProductoNavigation?.NombreProducto ?? "—",
@@ -304,6 +407,19 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         cajero = b.IdCajeroNavigation?.IdEmpleadoNavigation is { } ec
                            ? $"{ec.NombresEmpleado} {ec.Apellido1}" : (string?)null,
         b.MontoTotal,
+        sii = new
+        {
+            tipoDte = b.TipoDteSii,
+            folio = b.FolioSii,
+            estado = b.EstadoSii,
+            trackId = b.TrackIdSii,
+            fechaEnvio = b.FechaEnvioSii?.ToString("dd/MM/yyyy HH:mm") ?? "—",
+            montoNeto = b.MontoNetoSii,
+            montoIva = b.MontoIvaSii,
+            montoExento = b.MontoExentoSii,
+            mensaje = b.MensajeSii,
+            intentos = b.IntentosEnvioSii ?? 0
+        },
         detalle = b.VenBoletaDetalle.Select(d => new
         {
             idProducto = d.IdProducto,

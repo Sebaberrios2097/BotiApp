@@ -64,6 +64,8 @@ public partial class BotiAppContext : DbContext
 
     public virtual DbSet<VenMetodosPagoBoleta> VenMetodosPagoBoleta { get; set; }
 
+    public virtual DbSet<VenSiiFolios> VenSiiFolios { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AudProProductos>(entity =>
@@ -259,6 +261,15 @@ public partial class BotiAppContext : DbContext
                 .HasForeignKey(d => d.IdClienteFiado)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Ven_Boletas_Fia_Clientes");
+        });
+
+        modelBuilder.Entity<VenSiiFolios>(entity =>
+        {
+            entity.HasKey(e => e.IdFolioSecuencia).HasName("PK_Ven_Sii_Folios");
+
+            entity.HasIndex(e => e.TipoDte)
+                .IsUnique()
+                .HasDatabaseName("UX_Ven_Sii_Folios_Tipo_Dte");
         });
 
         modelBuilder.Entity<FiaClientes>(entity =>
