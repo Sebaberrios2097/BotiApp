@@ -219,9 +219,9 @@
 
                 <div class="form-group full">
                     <label class="form-label">Imagen</label>
-                    <div class="img-drop" onclick="document.getElementById('imgFileCrear').click()">
+                    <div class="img-drop" onclick="abrirSelectorImagenCrear()">
                         <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-                        <p>Clic para seleccionar imagen (JPG, PNG)</p>
+                        <p id="imgDropHintCrear">Clic para seleccionar imagen (JPG, PNG)</p>
                     </div>
                     <input type="file" id="imgFileCrear" name="imagenFile" accept="image/*"
                            style="display:none" onchange="prevImg(this,'imgPreviewCrear')" />
@@ -293,6 +293,25 @@
 </div>
 
 <script>
+function esDispositivoMovilCrear() {
+    const uaDataMobile = navigator.userAgentData && navigator.userAgentData.mobile;
+    const ua = navigator.userAgent || '';
+    const esMobilePorUA = /Android|iPhone|iPad|iPod|IEMobile|Windows Phone|Mobile/i.test(ua);
+    const esPantallaTactilCompacta = navigator.maxTouchPoints > 0 && window.matchMedia('(max-width: 1024px)').matches;
+    return !!(uaDataMobile || esMobilePorUA || esPantallaTactilCompacta);
+}
+
+function abrirSelectorImagenCrear() {
+    const input = document.getElementById('imgFileCrear');
+    if (!input) return;
+    if (esDispositivoMovilCrear()) {
+        input.setAttribute('capture', 'environment');
+    } else {
+        input.removeAttribute('capture');
+    }
+    input.click();
+}
+
 function prevImg(input, previewId) {
     const preview = document.getElementById(previewId);
     if (input.files?.[0]) {
@@ -301,4 +320,14 @@ function prevImg(input, previewId) {
         reader.readAsDataURL(input.files[0]);
     }
 }
+
+(function initImagenMovilCrear() {
+    const input = document.getElementById('imgFileCrear');
+    const hint = document.getElementById('imgDropHintCrear');
+    if (!input) return;
+    if (esDispositivoMovilCrear()) {
+        input.setAttribute('capture', 'environment');
+        if (hint) hint.textContent = 'Toca para tomar una foto (JPG, PNG)';
+    }
+})();
 </script>
