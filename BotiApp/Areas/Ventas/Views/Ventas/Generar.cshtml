@@ -1,4 +1,4 @@
-﻿@using System.Text.Json
+@using System.Text.Json
 @model BotiApp.Areas.Ventas.Models.GenerarVentaViewModel
 @{
     ViewData["Title"] = "Generar Venta";
@@ -18,6 +18,7 @@
         id          = p.IdProducto,
         nombre      = p.NombreProducto,
         descripcion = p.Descripción ?? "",
+        codigo      = p.Codigo ?? "",
         precio      = p.Precio,
         stock       = p.Stock,
         idTipo      = p.IdTipoProducto,
@@ -1812,10 +1813,6 @@
         const html = `
         <div class="ticket-overlay" id="ticketOverlay">
             <div class="ticket-wrap">
-                <div class="ticket-actions">
-                    <button class="btn-print" onclick="window.print()">Imprimir</button>
-                    <button class="btn-cerrar" onclick="document.getElementById('ticketOverlay').remove()">✕ Cerrar</button>
-                </div>
                 <div class="ticket ticket-cliente">
                     <div class="ticket-center ticket-bold" style="font-size:14px;">${x(NOMBRE_LOCAL)}</div>
                     <div class="ticket-center" style="font-size:10px;">TICKET INTERNO</div>
@@ -1847,6 +1844,18 @@
         // Quitar ticket anterior si existe
         document.getElementById('ticketOverlay')?.remove();
         document.body.insertAdjacentHTML('beforeend', html);
+
+        // Escuchar cuando finalice la impresión (o se cancele) para remover el elemento del DOM
+        window.addEventListener('afterprint', () => {
+            document.getElementById('ticketOverlay')?.remove();
+        }, { once: true });
+
+        // Dar un pequeño tiempo (100ms) para que el navegador procese y dibuje el nuevo HTML en el DOM
+        // antes de abrir el diálogo de impresión (evita que la hoja salga en blanco)
+        setTimeout(() => {
+            window.print();
+            toast(`Boleta N° ${idBoleta} enviada a impresión`, 'exito');
+        }, 100);
     }
 
     /* ══════════════════════════════════════════════════════════════════════
@@ -1871,6 +1880,64 @@
         setTimeout(() => t.style.opacity = '0', 3500);
         setTimeout(() => t.remove(), 3800);
     }
+
+    // ── LECTOR DE CÓDIGO DE BARRAS (SCANNER) ─────────────────────────────
+    let barcodeBuffer = '';
+    let lastKeyTime   = Date.now();
+
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') {
+            return;
+        }
+
+        if (e.key === 'Enter') {
+            if (barcodeBuffer.length > 0) {
+                const code = barcodeBuffer.trim();
+                barcodeBuffer = ''; // Limpiar buffer de inmediato
+
+                const prod = CATALOGO.find(p => p.codigo && p.codigo.trim() === code);
+                if (prod) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const txtBuscar = document.getElementById('txtBuscar');
+                    if (txtBuscar && document.activeElement === txtBuscar) {
+                        txtBuscar.value = '';
+                        aplicarFiltros();
+                    }
+
+                    toggleProducto(prod.id, prod.nombre, prod.precio, prod.stock);
+                    toast(`Escaneado: ${prod.nombre}`, 'exito');
+                } else {
+                    if (code.length >= 3) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        const txtBuscar = document.getElementById('txtBuscar');
+                        if (txtBuscar && document.activeElement === txtBuscar) {
+                            txtBuscar.value = '';
+                            aplicarFiltros();
+                        }
+                        toast(`Código "${code}" no encontrado`, 'error');
+                    }
+                }
+            }
+            return;
+        }
+
+        const currentTime = Date.now();
+        const timeDiff = currentTime - lastKeyTime;
+        lastKeyTime = currentTime;
+
+        // Si la velocidad entre teclas supera 50ms, asumimos escritura manual y reiniciamos el buffer
+        if (timeDiff > 50) {
+            barcodeBuffer = '';
+        }
+
+        if (e.key.length === 1) {
+            barcodeBuffer += e.key;
+        }
+    });
 
     renderGrid(CATALOGO);
     renderPromoGrid();
