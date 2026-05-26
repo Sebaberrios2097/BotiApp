@@ -327,8 +327,8 @@
     padding:.5rem .6rem;
     color:#000;
 }
-.ticket-hr     { border:none; border-top:1px dashed #555; margin:.25rem 0; }
-.ticket-hr-sol { border:none; border-top:1px solid #555;  margin:.25rem 0; }
+.ticket-hr     { border:none; border-top:1px dashed #000; margin:.25rem 0; }
+.ticket-hr-sol { border:none; border-top:1px solid #000;  margin:.25rem 0; }
 .ticket-row {
     display:flex;
     justify-content:space-between;
@@ -341,8 +341,8 @@
 .ticket-promo-tag { font-size:10px; font-weight:700; }
 .ticket-center { text-align:center; }
 .ticket-cut {
-    text-align:center; font-size:9px; letter-spacing:1px; color:#777;
-    border-top:1px dashed #555; border-bottom:1px dashed #555;
+    text-align:center; font-size:9px; letter-spacing:1px; color:#000;
+    border-top:1px dashed #000; border-bottom:1px dashed #000;
     padding:3px 0; margin:.6rem 0;
 }
 
@@ -352,7 +352,7 @@
     margin: 0;
 }
 @@media print {
-    html, body { margin:0 !important; padding:0 !important; background:#fff !important; }
+    html, body { margin:0 !important; padding:0 !important; background:#fff !important; color:#000 !important; }
     body > *          { display:none !important; }
     .ticket-overlay   {
         display:block !important; position:static !important;
@@ -364,12 +364,15 @@
         box-shadow:none !important; border-radius:0 !important;
         max-height:none !important; overflow:visible !important;
         width:80mm !important;
-
     }
     .ticket {
         padding:2mm !important;
+        font-weight: bold !important; /* Fuerza negrita para trazos más gruesos y legibles */
         font-size:9pt !important;
         line-height:1.35 !important;
+        -webkit-font-smoothing: none !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        text-rendering: optimizeSpeed !important;
     }
     .ticket-total { font-size:11pt !important; }
     /* Fuerza corte de papel entre boleta cliente y lista vendedor */
