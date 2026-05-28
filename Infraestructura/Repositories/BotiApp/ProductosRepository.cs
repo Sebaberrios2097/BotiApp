@@ -1,4 +1,4 @@
-﻿using Infraestructura.Context;
+using Infraestructura.Context;
 using Infraestructura.Entities.BotiApp;
 using Infraestructura.Repositories.BotiApp.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -8,12 +8,47 @@ namespace Infraestructura.Repositories.BotiApp;
 public class ProductosRepository(BotiAppContext context) : IProductosRepository
 {
     public async Task<IEnumerable<ProProductos>> ObtenerTodosAsync()
-        => await context.ProProductos
-            .Include(p => p.IdMarcaNavigation)
-            .Include(p => p.IdTipoProductoNavigation)
-            .Include(p => p.ProProductosRetornables)
+    {
+        var list = await context.ProProductos
+            .AsNoTracking()
             .OrderBy(p => p.NombreProducto)
+            .Select(p => new
+            {
+                p.IdProducto,
+                p.IdTipoProducto,
+                p.IdMarca,
+                p.NombreProducto,
+                p.Descripción,
+                p.Precio,
+                p.Stock,
+                p.Estado,
+                p.Codigo,
+                p.FechaIngreso,
+                TieneImagen = p.Imagen != null,
+                Marca = p.IdMarcaNavigation,
+                Tipo = p.IdTipoProductoNavigation,
+                Retornable = p.ProProductosRetornables
+            })
             .ToListAsync();
+
+        return list.Select(x => new ProProductos
+        {
+            IdProducto = x.IdProducto,
+            IdTipoProducto = x.IdTipoProducto,
+            IdMarca = x.IdMarca,
+            NombreProducto = x.NombreProducto,
+            Descripción = x.Descripción,
+            Precio = x.Precio,
+            Stock = x.Stock,
+            Estado = x.Estado,
+            Codigo = x.Codigo,
+            FechaIngreso = x.FechaIngreso,
+            Imagen = x.TieneImagen ? new byte[1] : null,
+            IdMarcaNavigation = x.Marca,
+            IdTipoProductoNavigation = x.Tipo,
+            ProProductosRetornables = x.Retornable
+        });
+    }
 
     public async Task<ProProductos?> ObtenerPorIdAsync(int id)
         => await context.ProProductos
@@ -74,21 +109,99 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
             .ToListAsync();
 
     public async Task<IEnumerable<ProProductos>> ObtenerUltimosIngresadosAsync(int top = 5)
-        => await context.ProProductos
-            .Include(p => p.IdMarcaNavigation)
+    {
+        var list = await context.ProProductos
+            .AsNoTracking()
             .OrderByDescending(p => p.FechaIngreso)
             .Take(top)
+            .Select(p => new
+            {
+                p.IdProducto,
+                p.IdTipoProducto,
+                p.IdMarca,
+                p.NombreProducto,
+                p.Descripción,
+                p.Precio,
+                p.Stock,
+                p.Estado,
+                p.Codigo,
+                p.FechaIngreso,
+                TieneImagen = p.Imagen != null,
+                Marca = p.IdMarcaNavigation
+            })
             .ToListAsync();
+
+        return list.Select(x => new ProProductos
+        {
+            IdProducto = x.IdProducto,
+            IdTipoProducto = x.IdTipoProducto,
+            IdMarca = x.IdMarca,
+            NombreProducto = x.NombreProducto,
+            Descripción = x.Descripción,
+            Precio = x.Precio,
+            Stock = x.Stock,
+            Estado = x.Estado,
+            Codigo = x.Codigo,
+            FechaIngreso = x.FechaIngreso,
+            Imagen = x.TieneImagen ? new byte[1] : null,
+            IdMarcaNavigation = x.Marca
+        });
+    }
 
     // ── Retornables ────────────────────────────────────────────────────────
     public async Task<IEnumerable<ProProductosRetornables>> ObtenerRetornablesAsync()
-        => await context.ProProductosRetornables
-            .Include(r => r.IdProductoNavigation)
-                .ThenInclude(p => p.IdMarcaNavigation)
-            .Include(r => r.IdProductoNavigation)
-                .ThenInclude(p => p.IdTipoProductoNavigation)
+    {
+        var list = await context.ProProductosRetornables
+            .AsNoTracking()
             .OrderBy(r => r.IdProductoNavigation.NombreProducto)
+            .Select(r => new
+            {
+                r.IdProducto,
+                r.ValorEnvase,
+                r.SoloEfectivo,
+                // ProProductos columns:
+                ProdId = r.IdProductoNavigation.IdProducto,
+                ProdNombre = r.IdProductoNavigation.NombreProducto,
+                ProdDesc = r.IdProductoNavigation.Descripción,
+                ProdPrecio = r.IdProductoNavigation.Precio,
+                ProdStock = r.IdProductoNavigation.Stock,
+                ProdEstado = r.IdProductoNavigation.Estado,
+                ProdCodigo = r.IdProductoNavigation.Codigo,
+                ProdFecha = r.IdProductoNavigation.FechaIngreso,
+                ProdTipo = r.IdProductoNavigation.IdTipoProducto,
+                ProdMarca = r.IdProductoNavigation.IdMarca,
+                TieneImagen = r.IdProductoNavigation.Imagen != null,
+                Marca = r.IdProductoNavigation.IdMarcaNavigation,
+                Tipo = r.IdProductoNavigation.IdTipoProductoNavigation
+            })
             .ToListAsync();
+
+        return list.Select(x => {
+            var prod = new ProProductos
+            {
+                IdProducto = x.ProdId,
+                NombreProducto = x.ProdNombre,
+                Descripción = x.ProdDesc,
+                Precio = x.ProdPrecio,
+                Stock = x.ProdStock,
+                Estado = x.ProdEstado,
+                Codigo = x.ProdCodigo,
+                FechaIngreso = x.ProdFecha,
+                IdTipoProducto = x.ProdTipo,
+                IdMarca = x.ProdMarca,
+                Imagen = x.TieneImagen ? new byte[1] : null,
+                IdMarcaNavigation = x.Marca,
+                IdTipoProductoNavigation = x.Tipo
+            };
+            return new ProProductosRetornables
+            {
+                IdProducto = x.IdProducto,
+                ValorEnvase = x.ValorEnvase,
+                SoloEfectivo = x.SoloEfectivo,
+                IdProductoNavigation = prod
+            };
+        });
+    }
 
     public async Task<ProProductosRetornables> AgregarRetornableAsync(ProProductosRetornables retornable)
     {

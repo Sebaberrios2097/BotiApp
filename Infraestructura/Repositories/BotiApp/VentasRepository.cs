@@ -1,4 +1,4 @@
-﻿using Infraestructura.Context;
+using Infraestructura.Context;
 using Infraestructura.Entities.BotiApp;
 using Infraestructura.Repositories.BotiApp.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -194,14 +194,48 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
     // ── Catálogo ──────────────────────────────────────────────────────────────
 
     public async Task<IEnumerable<ProProductos>> ObtenerProductosDisponiblesAsync()
-        => await context.ProProductos
+    {
+        var list = await context.ProProductos
             .AsNoTracking()
-            .Where(p => p.Estado)
-            .Include(p => p.IdMarcaNavigation)
-            .Include(p => p.IdTipoProductoNavigation)
-            .Include(p => p.ProProductosRetornables)
+            .Where(p => p.Estado && p.Stock > 0)
             .OrderBy(p => p.NombreProducto)
+            .Select(p => new
+            {
+                p.IdProducto,
+                p.IdTipoProducto,
+                p.IdMarca,
+                p.NombreProducto,
+                p.Descripción,
+                p.Precio,
+                p.Stock,
+                p.Estado,
+                p.Codigo,
+                p.FechaIngreso,
+                TieneImagen = p.Imagen != null,
+                Marca = p.IdMarcaNavigation,
+                Tipo = p.IdTipoProductoNavigation,
+                Retornable = p.ProProductosRetornables
+            })
             .ToListAsync();
+
+        return list.Select(x => new ProProductos
+        {
+            IdProducto = x.IdProducto,
+            IdTipoProducto = x.IdTipoProducto,
+            IdMarca = x.IdMarca,
+            NombreProducto = x.NombreProducto,
+            Descripción = x.Descripción,
+            Precio = x.Precio,
+            Stock = x.Stock,
+            Estado = x.Estado,
+            Codigo = x.Codigo,
+            FechaIngreso = x.FechaIngreso,
+            Imagen = x.TieneImagen ? new byte[1] : null,
+            IdMarcaNavigation = x.Marca,
+            IdTipoProductoNavigation = x.Tipo,
+            ProProductosRetornables = x.Retornable
+        });
+    }
 
     public async Task<IEnumerable<ProTiposProductos>> ObtenerTiposAsync()
         => await context.ProTiposProductos
@@ -261,8 +295,6 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
     {
         var query = context.ProProductos
             .AsNoTracking()
-            .Include(p => p.IdMarcaNavigation)
-            .Include(p => p.IdTipoProductoNavigation)
             .Where(p => p.Estado && p.Stock > 0);
 
         if (!string.IsNullOrWhiteSpace(q))
@@ -272,7 +304,43 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
                 (p.IdMarcaNavigation != null && p.IdMarcaNavigation.NombreMarca.Contains(q)) ||
                 (p.Codigo != null && p.Codigo.Contains(q)));
 
-        return await query.OrderBy(p => p.NombreProducto).Take(30).ToListAsync();
+        var list = await query
+            .OrderBy(p => p.NombreProducto)
+            .Take(30)
+            .Select(p => new
+            {
+                p.IdProducto,
+                p.IdTipoProducto,
+                p.IdMarca,
+                p.NombreProducto,
+                p.Descripción,
+                p.Precio,
+                p.Stock,
+                p.Estado,
+                p.Codigo,
+                p.FechaIngreso,
+                TieneImagen = p.Imagen != null,
+                Marca = p.IdMarcaNavigation,
+                Tipo = p.IdTipoProductoNavigation
+            })
+            .ToListAsync();
+
+        return list.Select(x => new ProProductos
+        {
+            IdProducto = x.IdProducto,
+            IdTipoProducto = x.IdTipoProducto,
+            IdMarca = x.IdMarca,
+            NombreProducto = x.NombreProducto,
+            Descripción = x.Descripción,
+            Precio = x.Precio,
+            Stock = x.Stock,
+            Estado = x.Estado,
+            Codigo = x.Codigo,
+            FechaIngreso = x.FechaIngreso,
+            Imagen = x.TieneImagen ? new byte[1] : null,
+            IdMarcaNavigation = x.Marca,
+            IdTipoProductoNavigation = x.Tipo
+        });
     }
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
