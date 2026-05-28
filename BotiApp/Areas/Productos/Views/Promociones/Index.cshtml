@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Infraestructura.Entities.BotiApp.ProPromocion>
+@model IEnumerable<Infraestructura.Entities.BotiApp.ProPromocion>
 @using BotiApp.Areas.Productos.Controllers
 @{
     ViewData["Title"] = "Promociones";
@@ -432,7 +432,6 @@
     }
 }
 
-@* ── REEMPLAZA el bloque @section Scripts existente ── *@
 @section Scripts {
 <style>
     /* Estilos adicionales para grupos */
@@ -440,6 +439,7 @@
     .grupo-add-row td { border-bottom: 1px dashed #f0ebe5 !important; }
 </style>
 <script>
+(function () {
 const csrf = () => document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
 const overlay = document.getElementById('modalOverlay');
 
@@ -845,16 +845,19 @@ function mostrarErrores(errores) {
         span.textContent = msg;
     });
 }
+
 function limpiarErrores() {
     document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
     document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
 }
+
 function filtrarCards() {
     const q = document.getElementById('buscador').value.toLowerCase();
     document.querySelectorAll('.prm-card').forEach(c => {
         c.style.display = (c.dataset.nombre + ' ' + c.dataset.desc).toLowerCase().includes(q) ? '' : 'none';
     });
 }
+
 function toast(msg, tipo) {
     const iconos = {
         exito: '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>',
@@ -868,8 +871,30 @@ function toast(msg, tipo) {
     setTimeout(() => t.style.opacity = '0', 3500);
     setTimeout(() => t.remove(), 3800);
 }
+
 function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// Export interactive functions to window
+window.abrirModal = abrirModal;
+window.cerrarModal = cerrarModal;
+window.submitCrearPromo = submitCrearPromo;
+window.toggleEstado = toggleEstado;
+window.activarEdicion = activarEdicion;
+window.toggleCard = toggleCard;
+window.mostrarFormNuevoGrupo = mostrarFormNuevoGrupo;
+window.ocultarFormNuevoGrupo = ocultarFormNuevoGrupo;
+window.crearGrupo = crearGrupo;
+window.confirmarEliminarGrupo = confirmarEliminarGrupo;
+window.ejecutarEliminarGrupo = ejecutarEliminarGrupo;
+window.confirmarQuitarProducto = confirmarQuitarProducto;
+window.ejecutarQuitarProducto = ejecutarQuitarProducto;
+window.abrirModalBuscar = abrirModalBuscar;
+window.ejecutarAgregarProducto = ejecutarAgregarProducto;
+window.filtrarCards = filtrarCards;
+window.toast = toast;
+window.esc = esc;
+})();
 </script>
 }

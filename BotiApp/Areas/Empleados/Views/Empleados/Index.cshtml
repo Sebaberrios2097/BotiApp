@@ -392,10 +392,18 @@
                 var rutFormat = $"{emp.Rut}-{dv}";
                 var nombre    = $"{emp.NombresEmpleado} {emp.Apellido1}{(emp.Apellido2 != null ? " " + emp.Apellido2 : "")}";
 
-                <tr data-nombre="@nombre.ToLower()"
+                <tr id="tr-emp-@emp.IdEmpleado"
+                    data-nombre="@nombre.ToLower()"
                     data-rut="@emp.Rut"
                     data-tieneuser="@(tieneUser ? "con" : "sin")"
-                    data-estado="@(tieneUser ? (activo ? "activo" : "inactivo") : "")">
+                    data-estado="@(tieneUser ? (activo ? "activo" : "inactivo") : "")"
+                    data-nombres="@emp.NombresEmpleado"
+                    data-apellido1="@emp.Apellido1"
+                    data-apellido2="@(emp.Apellido2 ?? "")"
+                    data-fono="@(emp.Fono ?? "")"
+                    data-correo="@(emp.Correo ?? "")"
+                    data-id-usuario="@(tieneUser ? u!.IdUsuario.ToString() : "0")"
+                    data-rut-num="@emp.Rut">
                     <td class="td-nombre">@nombre</td>
                     <td class="td-rut">@rutFormat</td>
                     <td class="td-contact">
@@ -447,19 +455,10 @@
                     </td>
 
                     <!-- Columna acciones -->
-                    @{
-                        var nombresJs   = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.NombresEmpleado);
-                        var ap1Js       = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Apellido1);
-                        var ap2Js       = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Apellido2 ?? "");
-                        var fonoJs      = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Fono ?? "");
-                        var correoJs    = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(emp.Correo ?? "");
-                        var idUsuarioJs = tieneUser ? u!.IdUsuario.ToString() : "0";
-                        // Pasa el número de RUT (sin DV) al JS; el JS recalcula y formatea
-                    }
                     <td id="td-acc-@emp.IdEmpleado">
                         <div class="td-acciones">
                             <button class="btn-edit"
-                                    onclick="abrirModalEditar(@emp.IdEmpleado,'@nombresJs','@ap1Js','@ap2Js','@fonoJs','@correoJs',@idUsuarioJs,@emp.Rut)"
+                                    onclick="abrirModalEditar(@emp.IdEmpleado)"
                                     title="Editar datos del empleado">
                                 <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                                 Editar
@@ -630,17 +629,23 @@
             ? `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>`
             : `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`;
         document.getElementById(`td-acc-${idEmpleado}`).innerHTML =
-            `<button class="btn-toggle ${clase}" id="btn-toggle-${u.idUsuario}" ` +
+            `<div class="td-acciones">` +
+            `  <button class="btn-edit" onclick="abrirModalEditar(${idEmpleado})" title="Editar datos del empleado">` +
+            `    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>` +
+            `    Editar` +
+            `  </button>` +
+            `  <button class="btn-toggle ${clase}" id="btn-toggle-${u.idUsuario}" ` +
             `onclick="toggleEstado(${u.idUsuario}, ${idEmpleado}, this)" title="${u.estado ? 'Desactivar' : 'Activar'} usuario">` +
-            `${ico} ${label}</button>`;
+            `    ${ico} ${label}` +
+            `  </button>` +
+            `</div>`;
 
         /* Actualizar data-attrs de la fila para filtros */
-        const fila = document.querySelector(`tr[data-nombre]`+
-            `[data-rut]`);
         const filaEmp = document.getElementById(`td-acc-${idEmpleado}`)?.closest('tr');
         if (filaEmp) {
             filaEmp.dataset.tieneuser = 'con';
             filaEmp.dataset.estado    = u.estado ? 'activo' : 'inactivo';
+            filaEmp.dataset.idUsuario = u.idUsuario;
         }
         filtrar();
     };
@@ -765,34 +770,53 @@
         if (empty) empty.closest('tr').remove();
 
         const nombreCompleto = esc(d.nombre);
-        const fono   = d.fono   ? esc(d.fono)   : '<span style="color:#d1c5bc">—</span>';
-        const correo = d.correo ? esc(d.correo)  : '<span style="color:#d1c5bc">—</span>';
+        const fono   = d.fono   ? esc(d.fono)   : '';
+        const correo = d.correo ? esc(d.correo)  : '';
 
         const tr = document.createElement('tr');
+        tr.id = `tr-emp-${d.idEmpleado}`;
         tr.setAttribute('data-nombre', d.nombre.toLowerCase());
-        tr.setAttribute('data-rut', d.rut ?? '');
-        tr.setAttribute('data-tieneuser', 'no');
+        tr.setAttribute('data-rut', d.rutRaw ?? '');
+        tr.setAttribute('data-tieneuser', 'sin');
         tr.setAttribute('data-estado', '');
+        tr.setAttribute('data-nombres', d.nombres || '');
+        tr.setAttribute('data-apellido1', d.apellido1 || '');
+        tr.setAttribute('data-apellido2', d.apellido2 || '');
+        tr.setAttribute('data-fono', d.fono || '');
+        tr.setAttribute('data-correo', d.correo || '');
+        tr.setAttribute('data-id-usuario', '0');
+        tr.setAttribute('data-rut-num', d.rutRaw ?? '0');
+
+        const fonoHtml   = fono   ? `<div>📞 ${fono}</div>` : '';
+        const correoHtml = correo ? `<div>✉ ${correo}</div>` : '';
+        const contactHtml = (fonoHtml || correoHtml) ? (fonoHtml + correoHtml) : '<span style="color:#c8bdb5">—</span>';
 
         tr.innerHTML = `
-            <td>
-                <div class="emp-cell-nombre">${nombreCompleto}</div>
+            <td class="td-nombre">${nombreCompleto}</td>
+            <td class="td-rut">${esc(d.rut)}</td>
+            <td class="td-contact">${contactHtml}</td>
+            <td class="td-fecha">${esc(d.fechaIngreso)}</td>
+            <td id="td-user-${d.idEmpleado}">
+                <span class="badge-sin"><span class="badge-dot"></span>Sin usuario</span>
             </td>
-            <td><span class="badge-rut">${esc(d.rut)}</span></td>
-            <td>
-                <div class="emp-contacto">${fono}</div>
-                <div class="emp-contacto">${correo}</div>
+            <td id="td-estado-${d.idEmpleado}">
+                <span style="color:#c8bdb5">—</span>
             </td>
-            <td>${esc(d.fechaIngreso)}</td>
-            <td><span class="badge-sin-usuario">Sin usuario</span></td>
-            <td><span style="color:#d1c5bc;font-size:.8rem">—</span></td>
-            <td>
-                <button class="btn-accion btn-generar"
-                    onclick="abrirModalTipo(${d.idEmpleado}, ${JSON.stringify(d.nombre)})"
-                    title="Generar usuario para este empleado">
-                    <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                    Generar usuario
-                </button>
+            <td id="td-acc-${d.idEmpleado}">
+                <div class="td-acciones">
+                    <button class="btn-edit"
+                            onclick="abrirModalEditar(${d.idEmpleado})"
+                            title="Editar datos del empleado">
+                        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        Editar
+                    </button>
+                    <button class="btn-crear-usuario"
+                            onclick="abrirModalTipo(${d.idEmpleado}, ${JSON.stringify(d.nombre)})"
+                            title="Generar usuario para este empleado">
+                        <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        Generar usuario
+                    </button>
+                </div>
             </td>`;
 
         // Insertar en orden (al final de la tbody)
@@ -869,14 +893,25 @@
     };
 
     /* ── Modal editar empleado ─────────────────────────────────────────────── */
-    window.abrirModalEditar = function (idEmpleado, nombres, apellido1, apellido2, fono, correo, idUsuario, rutNum) {
+    window.abrirModalEditar = function (idEmpleado) {
+        const tr = document.getElementById(`tr-emp-${idEmpleado}`);
+        if (!tr) return;
+
+        const nombres   = tr.dataset.nombres || '';
+        const apellido1 = tr.dataset.apellido1 || '';
+        const apellido2 = tr.dataset.apellido2 || '';
+        const fono      = tr.dataset.fono || '';
+        const correo    = tr.dataset.correo || '';
+        const idUsuario = parseInt(tr.dataset.idUsuario) || 0;
+        const rutNum    = parseInt(tr.dataset.rutNum) || 0;
+
         document.getElementById('editIdEmpleado').value = idEmpleado;
         document.getElementById('editIdUsuario').value  = idUsuario;
         document.getElementById('editNombres').value    = nombres;
         document.getElementById('editApellido1').value  = apellido1;
-        document.getElementById('editApellido2').value  = apellido2 || '';
-        document.getElementById('editFono').value       = fono   || '';
-        document.getElementById('editCorreo').value     = correo || '';
+        document.getElementById('editApellido2').value  = apellido2;
+        document.getElementById('editFono').value       = fono;
+        document.getElementById('editCorreo').value     = correo;
 
         // Poblar RUT con formato visual (recalculando DV desde el número almacenado)
         var rutEl = document.getElementById('editRut');
@@ -959,6 +994,15 @@
         if (fila) {
             fila.querySelector('.td-nombre').textContent = nombreCompleto;
             fila.dataset.nombre = nombreCompleto.toLowerCase();
+            fila.dataset.nombres = nombres;
+            fila.dataset.apellido1 = apellido1;
+            fila.dataset.apellido2 = apellido2 || '';
+            fila.dataset.fono = fono || '';
+            fila.dataset.correo = correo || '';
+            if (rutNum) {
+                fila.dataset.rutNum = rutNum;
+                fila.dataset.rut = rutNum;
+            }
 
             // Actualizar RUT si cambió
             if (res.rutFmt) {

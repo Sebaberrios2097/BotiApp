@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Infraestructura.Entities.BotiApp.ProProductos>
+@model IEnumerable<Infraestructura.Entities.BotiApp.ProProductos>
 @{
     ViewData["Title"] = "Productos";
 }
@@ -327,6 +327,9 @@
       </button>
       <button class=""btn-acc {toggleClass}"" id=""btn-toggle-{p.IdProducto}"" title=""{toggleTitle}"" onclick=""toggleEstado({p.IdProducto})"">
         {toggleIcon}
+      </button>
+      <button class=""btn-acc eliminar"" title=""Eliminar"" onclick=""confirmarEliminar({p.IdProducto}, '{nombre}')"">
+        <svg viewBox=""0 0 24 24""><path d=""M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z""/></svg>
       </button>
     </div>
   </td>
