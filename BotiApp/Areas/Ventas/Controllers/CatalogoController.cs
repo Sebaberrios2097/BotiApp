@@ -25,6 +25,7 @@ public class CatalogoController(
     }
 
     // ── GET: imagen producto ─────────────────────────────────────────────────
+    [ResponseCache(Duration = 604800, Location = ResponseCacheLocation.Any)]
     public async Task<IActionResult> Imagen(int id)
     {
         var p = await productosRepo.ObtenerPorIdAsync(id);

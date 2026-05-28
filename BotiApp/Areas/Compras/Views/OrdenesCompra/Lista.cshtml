@@ -256,6 +256,7 @@
 @section Scripts {
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 <script>
+(function () {
 // ── Filtro ────────────────────────────────────────────────────────────────────
 function filtrar() {
     const txt = document.getElementById('buscar').value.toLowerCase();
@@ -943,5 +944,33 @@ function cerrarModalPreciosVenta(e) {
     if (e && e.target !== document.getElementById('overlayPreciosVenta')) return;
     document.getElementById('overlayPreciosVenta').classList.remove('open');
 }
+
+// Export interactive handlers to window
+window.filtrar = filtrar;
+window.toggleDetalle = toggleDetalle;
+window.abrirRecibirOrden = abrirRecibirOrden;
+window.calcularPreciosVentaRecibir = calcularPreciosVentaRecibir;
+window.confirmarYRecibir = confirmarYRecibir;
+window.cerrarModalRecibir = cerrarModalRecibir;
+window.anularOrden = anularOrden;
+window.replicarOrden = replicarOrden;
+window.mostrarToast = mostrarToast;
+window.escHtml = escHtml;
+window.abrirEditarPrecios = abrirEditarPrecios;
+window.calcTotales = calcTotales;
+window.onIvaChange = onIvaChange;
+window.cerrarModalPrecios = cerrarModalPrecios;
+window.guardarPrecios = guardarPrecios;
+window.actualizarCantidadFila = actualizarCantidadFila;
+window.eliminarDetalleModal = eliminarDetalleModal;
+window.agregarDetalleModal = agregarDetalleModal;
+window.loadProductosParaAgregar = loadProductosParaAgregar;
+window.syncAddPrices = syncAddPrices;
+window.abrirPreciosVenta = abrirPreciosVenta;
+window.calcularPreciosVenta = calcularPreciosVenta;
+window.guardarPreciosVenta = guardarPreciosVenta;
+window.cerrarModalPreciosVenta = cerrarModalPreciosVenta;
+
+})();
 </script>
 }

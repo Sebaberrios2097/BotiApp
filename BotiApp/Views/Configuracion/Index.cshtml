@@ -545,6 +545,9 @@
 <!-- ── TOAST ─────────────────────────────────────────────────────────────── -->
 <div class="toast-container" id="toastContainer"></div>
 
+@* Token antiforgery oculto para AJAX *@
+<form id="af-form">@Html.AntiForgeryToken()</form>
+
 @section Scripts {
 <script>
     let modalTipo = null;
@@ -759,7 +762,4 @@
         filtrarCard(tipo, searchInput ? searchInput.value : '');
     });
 </script>
-
-@* Token antiforgery oculto para AJAX *@
-<form id="af-form">@Html.AntiForgeryToken()</form>
 }

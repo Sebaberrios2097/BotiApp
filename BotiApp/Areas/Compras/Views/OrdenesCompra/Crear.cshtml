@@ -166,6 +166,7 @@
 @Html.AntiForgeryToken()
 
 <script>
+(function () {
 let idProveedorActual = 0;
 let idCategoriaActual = null;
 let todosProductos    = [];   // cache de productos del proveedor
@@ -409,4 +410,18 @@ function setProdGrid(content) {
         <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.06 15.73 0 13 0c-1.5 0-2.81.67-3.7 1.71L8 3 6.7 1.71C5.81.67 4.5 0 3 0 .27 0-2 2.06-2 4.64c0 .48.11.92.18 1.36H-2v14h22V6z"/></svg>
         <p>Selecciona un proveedor para ver los productos</p></div>`;
 }
+
+// Export interactive handlers to window
+window.cargarProveedor = cargarProveedor;
+window.selCat = selCat;
+window.toggleSortStock = toggleSortStock;
+window.filtrarProductos = filtrarProductos;
+window.agregarProducto = agregarProducto;
+window.cambiarCantidad = cambiarCantidad;
+window.quitarItem = quitarItem;
+window.limpiarOrden = limpiarOrden;
+window.setCantidad = setCantidad;
+window.confirmarOrden = confirmarOrden;
+
+})();
 </script>

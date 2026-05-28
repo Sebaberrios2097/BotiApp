@@ -201,6 +201,8 @@
     }
 </div>
 
+@Html.AntiForgeryToken()
+
 @section Scripts {
 <script>
 // ── Filtro ──────────────────────────────────────────────────────────────────
@@ -464,5 +466,4 @@ function getToken() {
     return document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
 }
 </script>
-@Html.AntiForgeryToken()
 }

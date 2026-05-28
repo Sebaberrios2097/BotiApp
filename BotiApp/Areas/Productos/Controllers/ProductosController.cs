@@ -1,4 +1,4 @@
-﻿using Infraestructura.Entities.BotiApp;
+using Infraestructura.Entities.BotiApp;
 using Infraestructura.Repositories.BotiApp.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +18,7 @@ public class ProductosController(
         => View(await productosRepository.ObtenerTodosAsync());
 
     // ── Imagen ──────────────────────────────────────────────────────────────
+    [ResponseCache(Duration = 604800, Location = ResponseCacheLocation.Any)]
     public async Task<IActionResult> Imagen(int id)
     {
         var p = await productosRepository.ObtenerPorIdAsync(id);
