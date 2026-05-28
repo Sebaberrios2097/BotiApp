@@ -54,4 +54,31 @@ public class DashboardViewModel
     // ── Fiados: globales (admin / cajero) ──────────────────────────────────
     public int TotalFiadoGlobal   { get; set; }
     public int CantFiadosActivos  { get; set; }
+
+    // ── Nuevas propiedades para Categorías y Productos (admin) ───────────────
+    public Dictionary<string, long> VentasPorCategoria { get; set; } = [];
+    public List<ProductoVendidoViewModel> ProductosMasVendidos { get; set; } = [];
+    public List<ProductoVendidoViewModel> ProductosMenosVendidos { get; set; } = [];
+
+    // ── Nuevas propiedades para Cigarros (admin) ────────────────────────────
+    public int CantidadCigarrosVendidos { get; set; }
+    public long MontoCigarrosVendidos { get; set; }
+    public List<MetodoPagoCigarrosViewModel> MetodosPagoCigarros { get; set; } = [];
 }
+
+public class ProductoVendidoViewModel
+{
+    public int IdProducto { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string Codigo { get; set; } = string.Empty;
+    public int Cantidad { get; set; }
+    public long Monto { get; set; }
+}
+
+public class MetodoPagoCigarrosViewModel
+{
+    public string MetodoPago { get; set; } = string.Empty;
+    public long Monto { get; set; }
+    public double Porcentaje { get; set; }
+}
+

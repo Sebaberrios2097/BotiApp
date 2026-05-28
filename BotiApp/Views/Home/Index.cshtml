@@ -1,4 +1,4 @@
-﻿@model BotiApp.Models.DashboardViewModel
+@model BotiApp.Models.DashboardViewModel
 @using BotiApp.Helpers
 @using System.Text.Json
 @{
@@ -325,6 +325,23 @@
         animation: dashSpin .7s linear infinite;
     }
     @@keyframes dashSpin { to { transform: rotate(360deg); } }
+
+    /* ── Panel pagos de cigarros ── */
+    .panel-cigarros-pagos {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.07);
+        overflow: hidden;
+        margin-top: -0.5rem;
+        margin-bottom: 1.75rem;
+        max-height: 0;
+        opacity: 0;
+        transition: max-height .35s ease, opacity .25s ease;
+    }
+    .panel-cigarros-pagos.open {
+        max-height: 500px;
+        opacity: 1;
+    }
 </style>
 
 <div class="dash-loading-overlay" id="dash-overlay"><div class="dash-spinner"></div></div>
@@ -469,6 +486,35 @@
                 <span class="kpi-label">Clientes con fiado activo</span>
             </div>
         </a>
+
+        @* Card cigarros vendidos — cantidad *@
+        <div class="kpi-card info">
+            <div class="kpi-icon info">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2zm0 8H7v-2h10v2z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value" id="kpi-cigarros-cantidad">@Model.CantidadCigarrosVendidos</span>
+                <span class="kpi-label">Cigarros vendidos (uds)</span>
+            </div>
+        </div>
+
+        @* Card cigarros vendidos — monto (clickable) *@
+        <div class="kpi-card info clickable" id="card-cigarros-monto" onclick="toggleCigarrosPagos()" title="Click para ver medios de pago">
+            <div class="kpi-icon info">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                </svg>
+            </div>
+            <div class="kpi-body">
+                <span class="kpi-value" id="kpi-cigarros-monto">$@Model.MontoCigarrosVendidos.ToString("N0")</span>
+                <span class="kpi-label">Ventas de cigarros</span>
+            </div>
+            <svg class="kpi-card-chevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+                <path d="M7 10l5 5 5-5z"/>
+            </svg>
+        </div>
     </div>
 
     @* Panel expandible: productos bajo stock *@
@@ -526,6 +572,56 @@
         }
     </div>
 
+    @* Panel expandible: medios de pago de cigarros *@
+    <div class="panel-cigarros-pagos" id="panel-cigarros-pagos">
+        <div class="panel-bajo-stock-header">
+            <h2>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                     style="fill:#6366f1;vertical-align:middle;margin-right:.35rem">
+                    <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                </svg>
+                Medios de pago utilizados en categoría Cigarros
+            </h2>
+            <span id="cigarros-pagos-count">@Model.MetodosPagoCigarros.Count medio(s) de pago</span>
+        </div>
+        <div id="cigarros-pagos-body">
+            <div class="panel-bajo-stock-body">
+                <div class="table-responsive">
+                    <table class="dash-table">
+                        <thead>
+                            <tr>
+                                <th>Medio de Pago</th>
+                                <th style="text-align:right">Monto Asignado</th>
+                                <th style="text-align:center">Participación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.MetodosPagoCigarros.Any())
+                            {
+                                <tr>
+                                    <td colspan="3" class="text-center" style="color:#9ca3af;padding:1.5rem">No hay ventas registradas para esta categoría.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var m in Model.MetodosPagoCigarros)
+                                {
+                                    <tr>
+                                        <td><strong>@m.MetodoPago</strong></td>
+                                        <td style="text-align:right;font-weight:600">$@m.Monto.ToString("N0")</td>
+                                        <td style="text-align:center">
+                                            <span class="badge-estado badge-pagada">@m.Porcentaje.ToString("N1")%</span>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @* Gráficos *@
     <div class="charts-grid">
         @* Pie — Boletas por tipo *@
@@ -561,6 +657,90 @@
             <div class="chart-empty" id="chartMetodosPago-empty" @(!Model.MontosPorMetodoPago.Any() ? "" : "hidden")>Sin datos este mes.</div>
             <div class="chart-wrap" id="chartMetodosPago-wrap" style="height:220px" @(Model.MontosPorMetodoPago.Any() ? "" : "hidden")>
                 <canvas id="chartMetodosPago"></canvas>
+            </div>
+        </div>
+
+        @* Pie/Doughnut — Ventas por Categoría *@
+        <div class="chart-card">
+            <p class="chart-card-title">
+                Ventas por Categoría
+                <span class="chart-card-subtitle" id="chart-categorias-subtitle">@mesNombre @Model.Anio</span>
+            </p>
+            <div class="chart-empty" id="chartVentasCategoria-empty" @(Model.VentasPorCategoria.Any(v => v.Value > 0) ? "hidden" : "")>Sin datos este mes.</div>
+            <div class="chart-wrap" id="chartVentasCategoria-wrap" style="height:220px" @(Model.VentasPorCategoria.Any(v => v.Value > 0) ? "" : "hidden")>
+                <canvas id="chartVentasCategoria"></canvas>
+            </div>
+        </div>
+
+        @* Tops de Productos (Informativo) *@
+        <div class="chart-card" style="grid-column: span 2; min-width: 0;">
+            <p class="chart-card-title">
+                Rendimiento de Productos
+                <span class="chart-card-subtitle">Top 5 más vendidos y menos vendidos</span>
+            </p>
+            <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; height: 100%;">
+                <div style="flex: 1; min-width: 200px;">
+                    <h6 style="font-size: 0.8rem; font-weight: 700; color: var(--color-success); border-bottom: 2px solid rgba(92,179,56,0.2); padding-bottom: 0.3rem; margin-bottom: 0.6rem;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" style="fill:var(--color-success);vertical-align:middle;margin-right:0.25rem"><path d="M7 14l5-5 5 5H7z"/></svg>
+                        Más Vendidos
+                    </h6>
+                    <div id="top-mas-vendidos-list">
+                        @if (!Model.ProductosMasVendidos.Any())
+                        {
+                            <div style="color: #9ca3af; font-size: 0.8rem; padding: 0.5rem 0;">Sin datos este mes.</div>
+                        }
+                        else
+                        {
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                                <tbody>
+                                    @foreach(var item in Model.ProductosMasVendidos)
+                                    {
+                                        <tr style="border-bottom: 1px solid #f8f5f1;">
+                                            <td style="padding: 0.4rem 0; color: var(--color-secundario);">
+                                                <strong>@item.Nombre</strong>
+                                                <div style="font-size: 0.68rem; color: #9ca3af;">Cod: @item.Codigo</div>
+                                            </td>
+                                            <td style="text-align: right; padding: 0.4rem 0; font-weight: 600; color: var(--color-secundario); white-space: nowrap;">
+                                                @item.Cantidad uds.
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <h6 style="font-size: 0.8rem; font-weight: 700; color: var(--color-danger); border-bottom: 2px solid rgba(255,55,55,0.2); padding-bottom: 0.3rem; margin-bottom: 0.6rem;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" style="fill:var(--color-danger);vertical-align:middle;margin-right:0.25rem"><path d="M7 10l5 5 5-5H7z"/></svg>
+                        Menos Vendidos
+                    </h6>
+                    <div id="top-menos-vendidos-list">
+                        @if (!Model.ProductosMenosVendidos.Any())
+                        {
+                            <div style="color: #9ca3af; font-size: 0.8rem; padding: 0.5rem 0;">Sin datos este mes.</div>
+                        }
+                        else
+                        {
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                                <tbody>
+                                    @foreach(var item in Model.ProductosMenosVendidos)
+                                    {
+                                        <tr style="border-bottom: 1px solid #f8f5f1;">
+                                            <td style="padding: 0.4rem 0; color: var(--color-secundario);">
+                                                <strong>@item.Nombre</strong>
+                                                <div style="font-size: 0.68rem; color: #9ca3af;">Cod: @item.Codigo</div>
+                                            </td>
+                                            <td style="text-align: right; padding: 0.4rem 0; font-weight: 600; color: var(--color-secundario); white-space: nowrap;">
+                                                @item.Cantidad uds.
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -953,6 +1133,43 @@
             '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
     }
 
+    function _renderCigarrosPagosBody(metodos) {
+        if (!metodos || !metodos.length) {
+            return '<div class="panel-bajo-stock-body"><div class="table-responsive"><table class="dash-table">' +
+                '<thead><tr><th>Medio de Pago</th><th style="text-align:right">Monto Asignado</th><th style="text-align:center">Participación</th></tr></thead>' +
+                '<tbody><tr><td colspan="3" class="text-center" style="color:#9ca3af;padding:1.5rem">No hay ventas registradas para esta categoría.</td></tr></tbody>' +
+                '</table></div></div>';
+        }
+        var rows = metodos.map(function(m) {
+            return '<tr>' +
+                '<td><strong>' + _esc(m.metodoPago) + '</strong></td>' +
+                '<td style="text-align:right;font-weight:600">' + _fmtPeso(m.monto) + '</td>' +
+                '<td style="text-align:center"><span class="badge-estado badge-pagada">' + m.porcentaje.toFixed(1) + '%</span></td>' +
+                '</tr>';
+        }).join('');
+        return '<div class="panel-bajo-stock-body"><div class="table-responsive"><table class="dash-table">' +
+            '<thead><tr><th>Medio de Pago</th><th style="text-align:right">Monto Asignado</th><th style="text-align:center">Participación</th></tr></thead>' +
+            '<tbody>' + rows + '</tbody></table></div></div>';
+    }
+
+    function _renderTopsList(productos) {
+        if (!productos || !productos.length) {
+            return '<div style="color: #9ca3af; font-size: 0.8rem; padding: 0.5rem 0;">Sin datos este mes.</div>';
+        }
+        var rows = productos.map(function(item) {
+            return '<tr style="border-bottom: 1px solid #f8f5f1;">' +
+                '<td style="padding: 0.4rem 0; color: var(--color-secundario);">' +
+                '<strong>' + _esc(item.nombre) + '</strong>' +
+                '<div style="font-size: 0.68rem; color: #9ca3af;">Cod: ' + _esc(item.codigo) + '</div>' +
+                '</td>' +
+                '<td style="text-align: right; padding: 0.4rem 0; font-weight: 600; color: var(--color-secundario); white-space: nowrap;">' +
+                item.cantidad + ' uds.' +
+                '</td>' +
+                '</tr>';
+        }).join('');
+        return '<table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;"><tbody>' + rows + '</tbody></table>';
+    }
+
     // ── Actualización in-place del dashboard ──────────────────────────────────
     function _actualizarDashboard(d) {
         var lbl = d.mesNombre + ' ' + d.anio;
@@ -970,6 +1187,10 @@
         if (d.totalFiadoGlobal  != null) _setText('kpi-fiado-total',   _fmtPeso(d.totalFiadoGlobal));
         if (d.cantFiadosActivos != null) _setText('kpi-fiado-activos', d.cantFiadosActivos);
 
+        // Nuevos KPIs Cigarros
+        if (d.cantidadCigarrosVendidos != null) _setText('kpi-cigarros-cantidad', d.cantidadCigarrosVendidos);
+        if (d.montoCigarrosVendidos != null) _setText('kpi-cigarros-monto', _fmtPeso(d.montoCigarrosVendidos));
+
         // ── Admin — bajo stock panel ──────────────────────────────────────────
         _setText('bajo-stock-count', d.totalProductosBajoStock + ' producto(s)');
         // Cerrar panel y reconstruir contenido
@@ -979,10 +1200,29 @@
         if (panelBajoStock) panelBajoStock.classList.remove('open');
         _setHtml('bajo-stock-body', _renderBajoStockBody(d.productosBajoStock));
 
+        // ── Admin — cigarros pagos panel ──────────────────────────────────────
+        if (d.metodosPagoCigarros) {
+            _setText('cigarros-pagos-count', d.metodosPagoCigarros.length + ' medio(s) de pago');
+            var cardCig = document.getElementById('card-cigarros-monto');
+            var panelCig = document.getElementById('panel-cigarros-pagos');
+            if (cardCig) cardCig.classList.remove('active');
+            if (panelCig) panelCig.classList.remove('open');
+            _setHtml('cigarros-pagos-body', _renderCigarrosPagosBody(d.metodosPagoCigarros));
+        }
+
+        // Reconstruir Tops
+        if (d.productosMasVendidos) {
+            _setHtml('top-mas-vendidos-list', _renderTopsList(d.productosMasVendidos));
+        }
+        if (d.productosMenosVendidos) {
+            _setHtml('top-menos-vendidos-list', _renderTopsList(d.productosMenosVendidos));
+        }
+
         // ── Admin — gráficos ──────────────────────────────────────────────────
         _setText('chart-boletas-subtitle', lbl);
         _setText('chart-ventas-subtitle',  'montos pagados por día — ' + lbl);
         _setText('chart-metodos-subtitle', lbl);
+        _setText('chart-categorias-subtitle', lbl);
 
         // Pie: Boletas por tipo
         var hasBoletas = d.totalBoletasMes > 0;
@@ -1028,6 +1268,23 @@
                 bar.update();
             } else {
                 _crearChartMetodosPago(d.montosPorMetodoPagoLabels, d.montosPorMetodoPagoData);
+            }
+        }
+
+        // Doughnut: Ventas por Categoría
+        var hasCategorias = d.ventasPorCategoriaLabels && d.ventasPorCategoriaLabels.length > 0;
+        _toggleChart('chartVentasCategoria', hasCategorias);
+        if (hasCategorias) {
+            var catChart = Chart.getChart(document.getElementById('chartVentasCategoria'));
+            if (catChart) {
+                var catColors = [C_PRIMARY, C_INFO, C_SUCCESS, C_WARNING, C_DANGER,
+                                 '#0ea5e9', '#a855f7', '#f97316', '#14b8a6', '#ec4899'];
+                catChart.data.labels = d.ventasPorCategoriaLabels;
+                catChart.data.datasets[0].data = d.ventasPorCategoriaData;
+                catChart.data.datasets[0].backgroundColor = d.ventasPorCategoriaLabels.map(function(_,i){ return catColors[i % catColors.length] + 'cc'; });
+                catChart.update();
+            } else {
+                _crearChartVentasCategoria(d.ventasPorCategoriaLabels, d.ventasPorCategoriaData);
             }
         }
 
@@ -1221,10 +1478,59 @@
             );
         }
 
+        function _crearChartVentasCategoria(metLabels, metData) {
+            var ctxCat = document.getElementById('chartVentasCategoria');
+            if (!ctxCat) return;
+            var catColors = [C_PRIMARY, C_INFO, C_SUCCESS, C_WARNING, C_DANGER,
+                             '#0ea5e9', '#a855f7', '#f97316', '#14b8a6', '#ec4899'];
+            new Chart(ctxCat, {
+                type: 'doughnut',
+                data: {
+                    labels: metLabels,
+                    datasets: [{
+                        data: metData,
+                        backgroundColor: metLabels.map(function(_,i){ return catColors[i % catColors.length] + 'cc'; }),
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '62%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 14, boxWidth: 12 } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) { return ' ' + ctx.label + ': ' + _fmtPeso(ctx.parsed); }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        var ctxCat = document.getElementById('chartVentasCategoria');
+        if (ctxCat && !ctxCat.closest('[hidden]')) {
+            _crearChartVentasCategoria(
+                @Html.Raw(JsonSerializer.Serialize(Model.VentasPorCategoria.Keys.ToArray())),
+                @Html.Raw(JsonSerializer.Serialize(Model.VentasPorCategoria.Values.ToArray()))
+            );
+        }
+
         // ── Panel bajo stock ──────────────────────────────────────────────────
         function toggleBajoStock() {
             var card  = document.getElementById('card-bajo-stock');
             var panel = document.getElementById('panel-bajo-stock');
+            card.classList.toggle('active');
+            panel.classList.toggle('open');
+        }
+
+        // ── Panel pagos de cigarros ──────────────────────────────────────────
+        function toggleCigarrosPagos() {
+            var card  = document.getElementById('card-cigarros-monto');
+            var panel = document.getElementById('panel-cigarros-pagos');
             card.classList.toggle('active');
             panel.classList.toggle('open');
         }

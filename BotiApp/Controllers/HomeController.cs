@@ -64,6 +64,13 @@ namespace BotiApp.Controllers
                     .Select(d => d.ToString()).ToArray(),
                 montosPorMetodoPagoLabels = vm.MontosPorMetodoPago.Keys.ToArray(),
                 montosPorMetodoPagoData   = vm.MontosPorMetodoPago.Values.ToArray(),
+                ventasPorCategoriaLabels  = vm.VentasPorCategoria.Keys.ToArray(),
+                ventasPorCategoriaData    = vm.VentasPorCategoria.Values.ToArray(),
+                productosMasVendidos      = vm.ProductosMasVendidos.Select(p => new { nombre = p.Nombre, codigo = p.Codigo, cantidad = p.Cantidad }).ToArray(),
+                productosMenosVendidos    = vm.ProductosMenosVendidos.Select(p => new { nombre = p.Nombre, codigo = p.Codigo, cantidad = p.Cantidad }).ToArray(),
+                cantidadCigarrosVendidos  = vm.CantidadCigarrosVendidos,
+                montoCigarrosVendidos     = vm.MontoCigarrosVendidos,
+                metodosPagoCigarros       = vm.MetodosPagoCigarros.Select(m => new { metodoPago = m.MetodoPago, monto = m.Monto, porcentaje = m.Porcentaje }).ToArray(),
                 productosBajoStock = vm.ProductosBajoStock.Select(p => new
                 {
                     nombre = p.NombreProducto,
@@ -170,6 +177,100 @@ namespace BotiApp.Controllers
                     .SelectMany(b => b.VenMetodosPagoBoleta)
                     .GroupBy(m => m.IdMetodoPagoNavigation?.NombreMetodoPago ?? "Otro")
                     .ToDictionary(g => g.Key, g => (long)g.Sum(m => m.Monto));
+
+                // ── Mapeos de búsqueda rápida ──────────────────────────────────
+                var prodTipoNombreMap = productos.ToDictionary(p => p.IdProducto, p => p.IdTipoProductoNavigation?.NombreTipoProducto ?? "Otro");
+                var prodTipoIdMap = productos.ToDictionary(p => p.IdProducto, p => p.IdTipoProducto);
+                var prodNombreMap = productos.ToDictionary(p => p.IdProducto, p => p.NombreProducto);
+                var prodCodigoMap = productos.ToDictionary(p => p.IdProducto, p => p.Codigo ?? "—");
+
+                // 1. Ventas por categoría (gráfico)
+                vm.VentasPorCategoria = boletas
+                    .Where(b => b.IdEstadoBoleta == 3)
+                    .SelectMany(b => b.VenBoletaDetalle)
+                    .GroupBy(d => prodTipoNombreMap.TryGetValue(d.IdProducto, out var catName) ? catName : "Otro")
+                    .ToDictionary(g => g.Key, g => (long)g.Sum(d => d.Subtotal));
+
+                // 2. Tops de productos más y menos vendidos (5 de cada uno)
+                var salesByProduct = boletas
+                    .Where(b => b.IdEstadoBoleta == 3)
+                    .SelectMany(b => b.VenBoletaDetalle)
+                    .GroupBy(d => d.IdProducto)
+                    .ToDictionary(g => g.Key, g => g.Sum(d => d.Cantidad));
+
+                var activeProductsWithSales = productos
+                    .Where(p => p.Estado)
+                    .Select(p => new ProductoVendidoViewModel
+                    {
+                        IdProducto = p.IdProducto,
+                        Nombre = p.NombreProducto,
+                        Codigo = p.Codigo ?? "—",
+                        Cantidad = salesByProduct.GetValueOrDefault(p.IdProducto, 0),
+                        Monto = boletas
+                            .Where(b => b.IdEstadoBoleta == 3)
+                            .SelectMany(b => b.VenBoletaDetalle)
+                            .Where(d => d.IdProducto == p.IdProducto)
+                            .Sum(d => (long)d.Subtotal)
+                    })
+                    .ToList();
+
+                vm.ProductosMasVendidos = activeProductsWithSales
+                    .OrderByDescending(p => p.Cantidad)
+                    .ThenBy(p => p.Nombre)
+                    .Take(5)
+                    .ToList();
+
+                vm.ProductosMenosVendidos = activeProductsWithSales
+                    .OrderBy(p => p.Cantidad)
+                    .ThenBy(p => p.Nombre)
+                    .Take(5)
+                    .ToList();
+
+                // 3. Ventas de la categoría Cigarros (ID = -1)
+                var cigaretteDetails = boletas
+                    .Where(b => b.IdEstadoBoleta == 3)
+                    .SelectMany(b => b.VenBoletaDetalle)
+                    .Where(d => prodTipoIdMap.TryGetValue(d.IdProducto, out var catId) && catId == -1)
+                    .ToList();
+
+                vm.CantidadCigarrosVendidos = cigaretteDetails.Sum(d => d.Cantidad);
+                vm.MontoCigarrosVendidos = cigaretteDetails.Sum(d => (long)d.Subtotal);
+
+                // 4. Métodos de pago para la categoría Cigarros
+                var pagosCigarros = new Dictionary<string, long>();
+                foreach (var b in boletas.Where(b => b.IdEstadoBoleta == 3))
+                {
+                    var cigDetalles = b.VenBoletaDetalle
+                        .Where(d => prodTipoIdMap.TryGetValue(d.IdProducto, out var catId) && catId == -1)
+                        .ToList();
+                    if (!cigDetalles.Any()) continue;
+
+                    long montoCigarrosEnBoleta = cigDetalles.Sum(d => (long)d.Subtotal);
+                    double totalBoleta = b.MontoTotal;
+                    if (totalBoleta <= 0) continue;
+
+                    foreach (var mp in b.VenMetodosPagoBoleta)
+                    {
+                        var nombreMetodo = mp.IdMetodoPagoNavigation?.NombreMetodoPago ?? "Otro";
+                        double ratio = mp.Monto / totalBoleta;
+                        long montoAsignado = (long)Math.Round(montoCigarrosEnBoleta * ratio);
+
+                        if (pagosCigarros.ContainsKey(nombreMetodo))
+                            pagosCigarros[nombreMetodo] += montoAsignado;
+                        else
+                            pagosCigarros[nombreMetodo] = montoAsignado;
+                    }
+                }
+
+                long totalMontoCigarros = pagosCigarros.Values.Sum();
+                vm.MetodosPagoCigarros = pagosCigarros.Select(kvp => new MetodoPagoCigarrosViewModel
+                {
+                    MetodoPago = kvp.Key,
+                    Monto = kvp.Value,
+                    Porcentaje = totalMontoCigarros > 0 ? (kvp.Value * 100.0 / totalMontoCigarros) : 0.0
+                })
+                .OrderByDescending(x => x.Monto)
+                .ToList();
             }
             else if (ClaimHelper.EsVendedor(User))
             {
