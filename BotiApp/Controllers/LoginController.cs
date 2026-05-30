@@ -1,9 +1,10 @@
-﻿using BotiApp.Helpers;
+using BotiApp.Helpers;
 using BotiApp.Models;
 using Infraestructura.Repositories.BotiApp.Interfaces;
 using Infraestructura.Repositories.Sp.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BotiApp.Controllers
@@ -26,7 +27,13 @@ namespace BotiApp.Controllers
         // GET: /Login/Login
         public IActionResult Login()
         {
-            return View();
+            var model = new LoginViewModel();
+            if (Request.Cookies.TryGetValue("RecordarUsuario", out string? usuarioGuardado))
+            {
+                model.Usuario = usuarioGuardado ?? string.Empty;
+                model.Recordar = true;
+            }
+            return View(model);
         }
 
         // POST: /Login/Login
@@ -55,6 +62,23 @@ namespace BotiApp.Controllers
                     CookieAuthenticationDefaults.AuthenticationScheme,
                     principal,
                     authProperties);
+
+                // Manejo de la cookie para recordar el nombre de usuario
+                if (model.Recordar)
+                {
+                    var cookieOptions = new CookieOptions
+                    {
+                        Expires = DateTimeOffset.UtcNow.AddDays(30),
+                        HttpOnly = true,
+                        Secure = true,
+                        SameSite = SameSiteMode.Strict
+                    };
+                    Response.Cookies.Append("RecordarUsuario", model.Usuario, cookieOptions);
+                }
+                else
+                {
+                    Response.Cookies.Delete("RecordarUsuario");
+                }
 
                 return RedirectToAction("Index", "Home");
             }
