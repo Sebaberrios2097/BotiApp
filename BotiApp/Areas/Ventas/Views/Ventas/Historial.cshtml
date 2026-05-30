@@ -495,7 +495,7 @@
 
             return '<div class="bl-card" id="blc-' + b.id + '">' +
                 '<div class="bl-card-top" onclick="toggleDetalle(' + b.id + ')">' +
-                    '<span class="bl-num">N° ' + (b.correlativoDiario ?? b.id) + '</span>' +
+                    '<span class="bl-num">' + (b.correlativoDiario ? 'Ticket #' + b.correlativoDiario + ' <small style="font-weight:400;color:#9ca3af;font-size:.7rem">(ID: ' + b.id + ')</small>' : 'ID ' + b.id) + '</span>' +
                     '<span class="bl-fecha">' + x(b.fecha) + '</span>' +
                     infoHtml +
                     '<span class="bl-estado ' + estadoClass + '">' + x(b.estado) + '</span>' +

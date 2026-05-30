@@ -150,7 +150,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         return Json(new
         {
             ok = true,
-            mensaje = $"Boleta N° {creada.CorrelativoDiario ?? creada.IdBoleta} generada por ${creada.MontoTotal:N0}.",
+            mensaje = $"Boleta N° {creada.CorrelativoDiario ?? creada.IdBoleta}{(creada.CorrelativoDiario != null ? $" (ID: {creada.IdBoleta})" : "")} generada por ${creada.MontoTotal:N0}.",
             boleta = MapBoletaCaja(completa!)
         });
     }
@@ -232,7 +232,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         return Json(new
         {
             ok = true,
-            mensaje = $"Boleta N° {cobrada.CorrelativoDiario ?? cobrada.IdBoleta} cobrada exitosamente por ${cobrada.MontoTotal:N0}.",
+            mensaje = $"Boleta N° {cobrada.CorrelativoDiario ?? cobrada.IdBoleta}{(cobrada.CorrelativoDiario != null ? $" (ID: {cobrada.IdBoleta})" : "")} cobrada exitosamente por ${cobrada.MontoTotal:N0}.",
             boleta = MapBoletaCaja(cobrada)
         });
     }
@@ -268,7 +268,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         return Json(new
         {
             ok = true,
-            mensaje = $"Boleta N° {boleta.CorrelativoDiario ?? boleta.IdBoleta} registrada como fiado.",
+            mensaje = $"Boleta N° {boleta.CorrelativoDiario ?? boleta.IdBoleta}{(boleta.CorrelativoDiario != null ? $" (ID: {boleta.IdBoleta})" : "")} registrada como fiado.",
             boleta = MapBoletaCaja(boleta)
         });
     }
