@@ -1,4 +1,4 @@
-﻿using Infraestructura.Entities.BotiApp;
+using Infraestructura.Entities.BotiApp;
 
 namespace Infraestructura.Repositories.BotiApp.Interfaces;
 
@@ -11,6 +11,7 @@ public interface IVentasRepository
     Task<IEnumerable<VenBoletas>> ObtenerBoletasPendientesAsync(int top = 20);
     Task<VenBoletas?> ObtenerPorIdAsync(int id);
     Task<VenBoletas?> ObtenerBoletaParaCajaAsync(int id);
+    Task<VenBoletas?> ObtenerBoletaPorCorrelativoDiarioAsync(int correlativo, DateTime fecha);
     Task<VenBoletas> CrearBoletaAsync(VenBoletas boleta, IEnumerable<VenBoletaDetalle> detalles);
     Task<VenBoletas?> ModificarBoletaDetalleAsync(int idBoleta, IEnumerable<VenBoletaDetalle> nuevosDetalles);
     Task<VenBoletas?> CobrarBoletaAsync(int idBoleta, int idCajero, IEnumerable<VenMetodosPagoBoleta> metodos);

@@ -59,9 +59,33 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.IdBoleta == id);
 
+    public async Task<VenBoletas?> ObtenerBoletaPorCorrelativoDiarioAsync(int correlativo, DateTime fecha)
+    {
+        var inicioPeriodo = fecha.Hour >= 8
+            ? fecha.Date.AddHours(8)
+            : fecha.Date.AddDays(-1).AddHours(8);
+        var finPeriodo = inicioPeriodo.AddDays(1);
+
+        return await BoletasConIncludes()
+            .FirstOrDefaultAsync(b => b.CorrelativoDiario == correlativo
+                                      && b.FechaEmision >= inicioPeriodo
+                                      && b.FechaEmision < finPeriodo);
+    }
+
     public async Task<VenBoletas> CrearBoletaAsync(VenBoletas boleta, IEnumerable<VenBoletaDetalle> detalles)
     {
         await using var tx = await context.Database.BeginTransactionAsync();
+
+        var fecha = boleta.FechaEmision ?? DateTime.Now;
+        var inicioPeriodo = fecha.Hour >= 8
+            ? fecha.Date.AddHours(8)
+            : fecha.Date.AddDays(-1).AddHours(8);
+        var finPeriodo = inicioPeriodo.AddDays(1);
+
+        var count = await context.VenBoletas
+            .CountAsync(b => b.FechaEmision >= inicioPeriodo && b.FechaEmision < finPeriodo);
+
+        boleta.CorrelativoDiario = count + 1;
 
         context.VenBoletas.Add(boleta);
         await context.SaveChangesAsync();
@@ -71,9 +95,12 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             item.IdBoleta = boleta.IdBoleta;
             context.VenBoletaDetalle.Add(item);
 
-            var producto = await context.ProProductos.FindAsync(item.IdProducto);
-            if (producto is not null)
-                producto.Stock -= item.Cantidad;
+            if (item.IdProducto != 0)
+            {
+                var producto = await context.ProProductos.FindAsync(item.IdProducto);
+                if (producto is not null)
+                    producto.Stock -= item.Cantidad;
+            }
         }
 
         await context.SaveChangesAsync();
@@ -96,8 +123,11 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         // Restaurar stock de ítems anteriores
         foreach (var old in boleta.VenBoletaDetalle)
         {
-            var prod = await context.ProProductos.FindAsync(old.IdProducto);
-            if (prod != null) prod.Stock += old.Cantidad;
+            if (old.IdProducto != 0)
+            {
+                var prod = await context.ProProductos.FindAsync(old.IdProducto);
+                if (prod != null) prod.Stock += old.Cantidad;
+            }
         }
 
         context.VenBoletaDetalle.RemoveRange(boleta.VenBoletaDetalle);
@@ -109,8 +139,11 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         {
             item.IdBoleta = idBoleta;
             context.VenBoletaDetalle.Add(item);
-            var prod = await context.ProProductos.FindAsync(item.IdProducto);
-            if (prod != null) prod.Stock -= item.Cantidad;
+            if (item.IdProducto != 0)
+            {
+                var prod = await context.ProProductos.FindAsync(item.IdProducto);
+                if (prod != null) prod.Stock -= item.Cantidad;
+            }
         }
 
         boleta.MontoTotal = lista.Sum(d => d.Subtotal);
@@ -179,8 +212,11 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         // Restaurar stock
         foreach (var d in boleta.VenBoletaDetalle)
         {
-            var prod = await context.ProProductos.FindAsync(d.IdProducto);
-            if (prod != null) prod.Stock += d.Cantidad;
+            if (d.IdProducto != 0)
+            {
+                var prod = await context.ProProductos.FindAsync(d.IdProducto);
+                if (prod != null) prod.Stock += d.Cantidad;
+            }
         }
 
         boleta.IdEstadoBoleta = 2; // Anulada
@@ -197,7 +233,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
     {
         var list = await context.ProProductos
             .AsNoTracking()
-            .Where(p => p.Estado && p.Stock > 0)
+            .Where(p => p.Estado && p.Stock > 0 && p.IdProducto != 0)
             .OrderBy(p => p.NombreProducto)
             .Select(p => new
             {

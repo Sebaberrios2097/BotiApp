@@ -12,6 +12,7 @@ public class HistorialVentasViewModel
 
 public record BoletaResumenDto(
     int IdBoleta,
+    int? CorrelativoDiario,
     string FechaEmision,
     string Estado,
     int IdEstado,

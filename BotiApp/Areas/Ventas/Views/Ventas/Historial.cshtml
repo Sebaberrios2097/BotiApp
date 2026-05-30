@@ -6,6 +6,7 @@
     var boletasJson = JsonSerializer.Serialize(Model.Boletas.Select(b => new
     {
         id         = b.IdBoleta,
+        correlativoDiario = b.CorrelativoDiario,
         fecha      = b.FechaEmision,
         anio       = b.FechaEmision != "—" && b.FechaEmision.Length >= 10
                          ? (int?)int.Parse(b.FechaEmision.Substring(6, 4)) : null,
@@ -342,6 +343,7 @@
             var okMes      = mesSel    === 0 || b.mes       === mesSel;
             var okQ = q === ''
                 || String(b.id).includes(q)
+                || String(b.correlativoDiario ?? '').includes(q)
                 || b.vendedor.toLowerCase().includes(q)
                 || b.fecha.toLowerCase().includes(q);
             return okVendedor && okEstado && okAnio && okMes && okQ;
@@ -493,7 +495,7 @@
 
             return '<div class="bl-card" id="blc-' + b.id + '">' +
                 '<div class="bl-card-top" onclick="toggleDetalle(' + b.id + ')">' +
-                    '<span class="bl-num">N° ' + b.id + '</span>' +
+                    '<span class="bl-num">N° ' + (b.correlativoDiario ?? b.id) + '</span>' +
                     '<span class="bl-fecha">' + x(b.fecha) + '</span>' +
                     infoHtml +
                     '<span class="bl-estado ' + estadoClass + '">' + x(b.estado) + '</span>' +
@@ -647,7 +649,7 @@
         if (tipo === 'cliente') {
             html += '<div class="ticket ticket-cliente">' +
                 '<div class="ticket-title ticket-bold">' + x(NOMBRE_LOCAL) + '</div>' +
-                '<div class="ticket-subtitle ticket-bold" style="margin-top:2px;">TICKET N° ' + b.id + '</div>' +
+                '<div class="ticket-subtitle ticket-bold" style="margin-top:2px;">TICKET N° ' + (b.correlativoDiario ?? b.id) + '</div>' +
                 '<div class="ticket-sub-label">TICKET INTERNO</div>' +
                 '<hr class="ticket-hr-sol">' +
                 '<div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">' + x(b.fecha) + '</span></div>' +
@@ -660,7 +662,7 @@
         } else if (tipo === 'vendedor') {
             html += '<div class="ticket ticket-vendedor">' +
                 '<div class="ticket-title ticket-bold">LISTA DE DESPACHO</div>' +
-                '<div class="ticket-subtitle ticket-bold" style="margin-top:2px;">TICKET N° ' + b.id + '</div>' +
+                '<div class="ticket-subtitle ticket-bold" style="margin-top:2px;">TICKET N° ' + (b.correlativoDiario ?? b.id) + '</div>' +
                 '<div class="ticket-sub-label">COPIA VENDEDOR</div>' +
                 '<hr class="ticket-hr-sol">' +
                 '<div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">' + x(b.fecha) + '</span></div>' +

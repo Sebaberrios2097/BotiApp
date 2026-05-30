@@ -1608,11 +1608,17 @@
         const esAnulada  = b.idEstado === 2;
         const esEditable = b.idEstado === 1;
 
-        document.getElementById('headerBoleta').textContent = `Boleta N° ${b.idBoleta}`;
+        document.getElementById('headerBoleta').textContent = b.correlativoDiario 
+            ? `Ticket N° ${b.correlativoDiario} (ID: ${b.idBoleta})` 
+            : `Boleta ID: ${b.idBoleta}`;
 
         const estadoClass = esPagada ? 'est-3' : esAnulada ? 'est-2' : 'est-1';
         document.getElementById('bolInfoHeader').innerHTML =
-            `<span class="bol-info-item"><span class="lbl">N°</span><span class="val">${b.idBoleta}</span></span>` +
+            (b.correlativoDiario 
+                ? `<span class="bol-info-item"><span class="lbl">Ticket N°</span><span class="val">${b.correlativoDiario}</span></span>` +
+                  `<span class="bol-info-item"><span class="lbl">ID Único</span><span class="val">${b.idBoleta}</span></span>`
+                : `<span class="bol-info-item"><span class="lbl">ID Único</span><span class="val">${b.idBoleta}</span></span>`
+            ) +
             `<span class="bol-info-item"><span class="lbl">Fecha</span><span class="val">${x(b.fechaEmision)}</span></span>` +
             `<span class="bol-info-item"><span class="lbl">Vendedor</span><span class="val">${x(b.vendedor)}</span></span>` +
             (b.cajero ? `<span class="bol-info-item"><span class="lbl">Cajero</span><span class="val">${x(b.cajero)}</span></span>` : '') +
@@ -2286,9 +2292,14 @@
                 card.classList.add('pend-card-nuevo');
             }
             card.dataset.id = b.idBoleta;
-            card.title = 'Cargar boleta #' + b.idBoleta;
+            card.title = b.correlativoDiario 
+                ? 'Cargar ticket #' + b.correlativoDiario + ' (ID: ' + b.idBoleta + ')' 
+                : 'Cargar boleta #' + b.idBoleta;
+            var numHtml = b.correlativoDiario 
+                ? '#' + b.correlativoDiario + ' <small style="font-size:.65rem;font-weight:600;color:#c9b8a8;">(ID: ' + b.idBoleta + ')</small>' 
+                : '#' + b.idBoleta;
             card.innerHTML =
-                '<span class="pend-card-num">#' + b.idBoleta + '</span>' +
+                '<span class="pend-card-num">' + numHtml + '</span>' +
                 '<span class="pend-card-vendedor">' + x(b.vendedor) + '</span>' +
                 '<span class="pend-card-monto">' + fmt(b.montoTotal) + '</span>' +
                 '<span class="pend-card-meta">' + b.cantProductos + ' prod.</span>';

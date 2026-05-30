@@ -15,7 +15,7 @@ public class ProductosController(
 {
     // ── Index ───────────────────────────────────────────────────────────────
     public async Task<IActionResult> Index()
-        => View(await productosRepository.ObtenerTodosAsync());
+        => View((await productosRepository.ObtenerTodosAsync()).Where(p => p.IdProducto != 0));
 
     // ── Imagen ──────────────────────────────────────────────────────────────
     [ResponseCache(Duration = 604800, Location = ResponseCacheLocation.Any)]
@@ -205,7 +205,7 @@ public class ProductosController(
         var productos = await productosRepository.ObtenerTodosAsync();
         var idsRetornables = retornables.Select(r => r.IdProducto).ToHashSet();
         ViewBag.ProductosDisponibles = productos
-            .Where(p => !idsRetornables.Contains(p.IdProducto) && p.Estado)
+            .Where(p => p.IdProducto != 0 && !idsRetornables.Contains(p.IdProducto) && p.Estado)
             .OrderBy(p => p.NombreProducto)
             .ToList();
         return PartialView("_TabRetornables", retornables);
