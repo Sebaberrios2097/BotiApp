@@ -321,10 +321,10 @@
 
 /* El ticket propiamente (fuente monoespaciada, estilo impresora POS) */
 .ticket {
-    font-family:'Courier New', Courier, monospace;
-    font-size:11px;
-    line-height:1.25;       /* antes: 1.4 */
-    padding:.5rem .6rem;
+    font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace;
+    font-size:13px;
+    line-height:1.35;
+    padding: 0 .6rem .5rem .6rem;
     color:#000;
 }
 .ticket-hr     { border:none; border-top:1px dashed #000; margin:.25rem 0; }
@@ -336,12 +336,19 @@
 }
 .ticket-row .tk-l { flex:1; min-width:0; overflow:hidden; text-overflow:clip; }
 .ticket-row .tk-r { flex-shrink:0; padding-left:.5rem; text-align:right; }
-.ticket-total  { font-size:14px; font-weight:700; }
+.ticket-total  { font-size:16px; font-weight:700; }
 .ticket-desc   { color:#000; }
-.ticket-promo-tag { font-size:10px; font-weight:700; }
+.ticket-promo-tag { font-size:12px; font-weight:700; }
 .ticket-center { text-align:center; }
+.ticket-bold { font-weight:700; }
+.ticket-title { font-size:16px; font-weight:700; text-align:center; }
+.ticket-subtitle { font-size:14px; font-weight:700; text-align:center; }
+.ticket-sub-label { font-size:12px; text-align:center; }
+.ticket-small { font-size:12px; }
+.ticket-strike { text-decoration:line-through; font-size:11px; }
+.ticket-bottle-charge { color:#e76f2e; font-size:12px; }
 .ticket-cut {
-    text-align:center; font-size:9px; letter-spacing:1px; color:#000;
+    text-align:center; font-size:11px; letter-spacing:1px; color:#000;
     border-top:1px dashed #000; border-bottom:1px dashed #000;
     padding:3px 0; margin:.6rem 0;
 }
@@ -366,15 +373,21 @@
         width:80mm !important;
     }
     .ticket {
-        padding:2mm !important;
+        padding: 0 2mm !important;
         font-weight: bold !important; /* Fuerza negrita para trazos más gruesos y legibles */
-        font-size:9pt !important;
-        line-height:1.35 !important;
+        font-size:11pt !important;
+        line-height:1.4 !important;
         -webkit-font-smoothing: none !important;
         -moz-osx-font-smoothing: grayscale !important;
         text-rendering: optimizeSpeed !important;
     }
-    .ticket-total { font-size:11pt !important; }
+    .ticket-total { font-size:14pt !important; }
+    .ticket-title { font-size:14pt !important; }
+    .ticket-subtitle { font-size:12pt !important; }
+    .ticket-sub-label { font-size:10pt !important; }
+    .ticket-small { font-size:10pt !important; }
+    .ticket-strike { font-size:9pt !important; }
+    .ticket-bottle-charge { font-size:10pt !important; }
     /* Fuerza corte de papel entre boleta cliente y lista vendedor */
     .ticket-cliente { break-after: page !important; }
     .ticket-cut     { display:none !important; }
@@ -1733,7 +1746,7 @@
             });
             if (g.ahorroTotal > 0) {
                 lineas += `
-            <div class="ticket-row ticket-desc" style="padding-left:.8rem;font-size:10px;">
+            <div class="ticket-row ticket-desc ticket-small" style="padding-left:.8rem;">
                 <span class="tk-l">Ahorro promo</span>
                 <span class="tk-r">-$${fmt(g.ahorroTotal)}</span>
             </div>`;
@@ -1749,7 +1762,7 @@
             const tieneOferta = OFERTAS_MAP[id] != null;
             const precioFinal = tieneOferta ? OFERTAS_MAP[id] : it.precio;
             const precioHtml  = tieneOferta
-                ? `<span style="text-decoration:line-through;font-size:9px;">$${fmt(it.precio)}</span> $${fmt(precioFinal)}`
+                ? `<span class="ticket-strike">$${fmt(it.precio)}</span> $${fmt(precioFinal)}`
                 : `$${fmt(precioFinal)}`;
             lineas += `
             <div class="ticket-row">
@@ -1782,7 +1795,7 @@
                 const montoEnvase = env.valorEnvase * it.cantidad;
                 totalEnvasesTicket += montoEnvase;
                 const efLabel = env.soloEfectivo ? ' ⚠ SOLO EFECTIVO' : '';
-                lineas += `<div class="ticket-row" style="color:#e76f2e;font-size:10px;"><span class="tk-l">Envase: ${x(it.nombre)}${efLabel}</span><span class="tk-r">+$${fmt(montoEnvase)}</span></div>`;
+                lineas += `<div class="ticket-row ticket-bottle-charge"><span class="tk-l">Envase: ${x(it.nombre)}${efLabel}</span><span class="tk-r">+$${fmt(montoEnvase)}</span></div>`;
             });
         }
 
@@ -1817,28 +1830,27 @@
         <div class="ticket-overlay" id="ticketOverlay">
             <div class="ticket-wrap">
                 <div class="ticket ticket-cliente">
-                    <div class="ticket-center ticket-bold" style="font-size:14px;">${x(NOMBRE_LOCAL)}</div>
-                    <div class="ticket-center" style="font-size:10px;">TICKET INTERNO</div>
+                    <div class="ticket-title ticket-bold">${x(NOMBRE_LOCAL)}</div>
+                    <div class="ticket-subtitle ticket-bold" style="margin-top:2px;">TICKET N° ${idBoleta}</div>
+                    <div class="ticket-sub-label">TICKET INTERNO</div>
                     <hr class="ticket-hr-sol">
-                    <div class="ticket-row"><span class="tk-l">N° Boleta</span><span class="tk-r ticket-bold">${idBoleta}</span></div>
-                    @* <div class="ticket-row"><span class="tk-l">Cajero</span><span class="tk-r">${x(cajero)}</span></div> *@
                     <div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">${fechaEmision}</span></div>
                     <hr class="ticket-hr-sol">
                     <div class="ticket-row ticket-bold"><span class="tk-l">ARTÍCULO</span><span class="tk-r">VALOR</span></div>
                     ${lineas}
                     <hr class="ticket-hr">
-                    <div class="ticket-center" style="margin-top:.5rem;font-size:10px;">¡Gracias por su compra!</div>
+                    <div class="ticket-sub-label" style="margin-top:.5rem;">¡Gracias por su compra!</div>
                 </div>
                 <div class="ticket-cut">✂ &nbsp; CORTAR &nbsp; ✂</div>
                 <div class="ticket ticket-vendedor">
-                    <div class="ticket-center ticket-bold" style="font-size:13px;">LISTA DE DESPACHO</div>
-                    <div class="ticket-center" style="font-size:10px;">COPIA VENDEDOR</div>
+                    <div class="ticket-title ticket-bold">LISTA DE DESPACHO</div>
+                    <div class="ticket-subtitle ticket-bold" style="margin-top:2px;">TICKET N° ${idBoleta}</div>
+                    <div class="ticket-sub-label">COPIA VENDEDOR</div>
                     <hr class="ticket-hr-sol">
-                    <div class="ticket-row"><span class="tk-l">N° Boleta</span><span class="tk-r ticket-bold">${idBoleta}</span></div>
                     <div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">${fechaEmision}</span></div>
                     <hr class="ticket-hr-sol">
-                    <div class="ticket-row ticket-bold"><span class="tk-l">PRODUCTO</span><span class="tk-r">CANT.</span></div>
-                    ${lineasVendedor}
+                    <div class="ticket-row ticket-bold"><span class="tk-l">ARTÍCULO</span><span class="tk-r">VALOR</span></div>
+                    ${lineas}
                     <hr class="ticket-hr">
                 </div>
             </div>

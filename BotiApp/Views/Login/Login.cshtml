@@ -1,4 +1,4 @@
-﻿@model BotiApp.Models.LoginViewModel
+@model BotiApp.Models.LoginViewModel
 @{
     Layout = "~/Views/Shared/_LayoutLogin.cshtml";
     ViewData["Title"] = "Iniciar sesión";
@@ -54,7 +54,7 @@
 
                 <div class="form-options">
                     <label>
-                        <input type="checkbox" name="Recordar" @(Model?.Recordar == true ? "checked" : "") />
+                        <input type="checkbox" name="Recordar" value="true" @(Model?.Recordar == true ? "checked" : "") />
                         Recordarme
                     </label>
                     <a asp-controller="Login" asp-action="CambiarContrasena">Cambiar contraseña</a>

@@ -1,4 +1,4 @@
-﻿using BotiApp.Areas.Ventas.Models;
+using BotiApp.Areas.Ventas.Models;
 using BotiApp.Helpers;
 using BotiApp.Hubs;
 using Infraestructura.Entities.BotiApp;
@@ -106,17 +106,16 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
     // ── POST: crear boleta (vendedor) ─────────────────────────────────────────
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "AdminOVendedor")]
+    [Authorize(Policy = "TodosRoles")]
     public async Task<IActionResult> CrearBoletaAjax([FromBody] CrearBoletaRequest request)
     {
-        if (request?.Items is not { Count: > 0 })
-            return Json(new { ok = false, mensaje = "Debe agregar al menos un producto." });
+        var itemsList = request?.Items ?? new List<ItemBoleta>();
 
         var idVendedor = ClaimHelper.GetIdUsuario(User);
         if (idVendedor == 0)
             return Json(new { ok = false, mensaje = "No se pudo identificar el usuario." });
 
-        var detalles = request.Items.Select(i => new VenBoletaDetalle
+        var detalles = itemsList.Select(i => new VenBoletaDetalle
         {
             IdProducto = i.IdProducto,
             Cantidad = i.Cantidad,
@@ -145,7 +144,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         {
             ok = true,
             mensaje = $"Boleta N° {creada.IdBoleta} generada por ${creada.MontoTotal:N0}.",
-            boleta = MapBoletaTicket(completa!)
+            boleta = MapBoletaCaja(completa!)
         });
     }
 
