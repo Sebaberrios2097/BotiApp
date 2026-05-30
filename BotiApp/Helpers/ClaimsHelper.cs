@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Claims;
 
@@ -25,13 +25,13 @@ namespace BotiApp.Helpers
             return new ClaimsPrincipal(identity);
         }
 
-        // Configura la cookie: persistente 7 días si "recordar", 8 horas de lo contrario.
+        // Configura la cookie: persistente 30 días si "recordar", 8 horas de lo contrario.
         public static AuthenticationProperties BuildAuthProperties(bool recordar) =>
             new()
             {
                 IsPersistent = recordar,
                 ExpiresUtc   = recordar
-                    ? DateTimeOffset.UtcNow.AddDays(7)
+                    ? DateTimeOffset.UtcNow.AddDays(30)
                     : DateTimeOffset.UtcNow.AddHours(8)
             };
 

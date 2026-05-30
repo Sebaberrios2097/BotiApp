@@ -70,8 +70,8 @@ namespace BotiApp.Controllers
                     {
                         Expires = DateTimeOffset.UtcNow.AddDays(30),
                         HttpOnly = true,
-                        Secure = true,
-                        SameSite = SameSiteMode.Strict
+                        Secure = Request.IsHttps,
+                        SameSite = SameSiteMode.Lax
                     };
                     Response.Cookies.Append("RecordarUsuario", model.Usuario, cookieOptions);
                 }

@@ -54,7 +54,7 @@
 
                 <div class="form-options">
                     <label>
-                        <input type="checkbox" name="Recordar" value="true" @(Model?.Recordar == true ? "checked" : "") />
+                        <input type="checkbox" asp-for="Recordar" />
                         Recordarme
                     </label>
                     <a asp-controller="Login" asp-action="CambiarContrasena">Cambiar contraseña</a>
