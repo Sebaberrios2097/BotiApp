@@ -115,15 +115,21 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         if (idVendedor == 0)
             return Json(new { ok = false, mensaje = "No se pudo identificar el usuario." });
 
-        var detalles = itemsList.Select(i => new VenBoletaDetalle
-        {
-            IdProducto = i.IdProducto,
-            Cantidad = i.Cantidad,
-            PrecioNormal = i.PrecioNormal,
-            PrecioUnitario = i.PrecioUnitario,
-            Subtotal = i.Subtotal ?? i.Cantidad * i.PrecioUnitario,
-            IdPromocion = i.IdPromocion,
-            IdOfertaProducto = i.IdOfertaProducto
+        var detalles = itemsList.Select(i => {
+            var isOtros = i.IdProducto == 0;
+            var cantidad = isOtros ? 1 : i.Cantidad;
+            var precioNormal = isOtros ? i.PrecioUnitario : i.PrecioNormal;
+            var subtotal = isOtros ? i.PrecioUnitario : (i.Subtotal ?? i.Cantidad * i.PrecioUnitario);
+            return new VenBoletaDetalle
+            {
+                IdProducto = i.IdProducto,
+                Cantidad = cantidad,
+                PrecioNormal = precioNormal,
+                PrecioUnitario = i.PrecioUnitario,
+                Subtotal = subtotal,
+                IdPromocion = isOtros ? null : i.IdPromocion,
+                IdOfertaProducto = isOtros ? null : i.IdOfertaProducto
+            };
         }).ToList();
 
         var boleta = new VenBoletas
@@ -170,15 +176,21 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         if (request?.Items is not { Count: > 0 })
             return Json(new { ok = false, mensaje = "Debe haber al menos un producto." });
 
-        var detalles = request.Items.Select(i => new VenBoletaDetalle
-        {
-            IdProducto = i.IdProducto,
-            Cantidad = i.Cantidad,
-            PrecioNormal = i.PrecioNormal,
-            PrecioUnitario = i.PrecioUnitario,
-            Subtotal = i.Subtotal ?? i.Cantidad * i.PrecioUnitario,
-            IdPromocion = i.IdPromocion,
-            IdOfertaProducto = i.IdOfertaProducto
+        var detalles = request.Items.Select(i => {
+            var isOtros = i.IdProducto == 0;
+            var cantidad = isOtros ? 1 : i.Cantidad;
+            var precioNormal = isOtros ? i.PrecioUnitario : i.PrecioNormal;
+            var subtotal = isOtros ? i.PrecioUnitario : (i.Subtotal ?? i.Cantidad * i.PrecioUnitario);
+            return new VenBoletaDetalle
+            {
+                IdProducto = i.IdProducto,
+                Cantidad = cantidad,
+                PrecioNormal = precioNormal,
+                PrecioUnitario = i.PrecioUnitario,
+                Subtotal = subtotal,
+                IdPromocion = isOtros ? null : i.IdPromocion,
+                IdOfertaProducto = isOtros ? null : i.IdOfertaProducto
+            };
         });
 
         var actualizada = await ventasRepository.ModificarBoletaDetalleAsync(request.IdBoleta, detalles);

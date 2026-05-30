@@ -112,8 +112,13 @@
 .td-badge-oferta { background:#ede9fe; color:#7c3aed; }
 .td-precio-normal    { text-decoration:line-through; color:#a89080; font-size:.75rem; }
 .td-precio-descuento { color:#7c3aed; font-weight:700; }
-.qty-input { width:55px; padding:.25rem .35rem; border:1.5px solid #e0d5cc; border-radius:6px; text-align:center; font-size:.85rem; font-weight:700; color:var(--color-secundario); }
-.qty-input:focus { border-color:var(--color-primario); outline:none; }
+.qty-table-ctrl { display: inline-flex; align-items: center; gap: 3px; background: #faf7f5; border: 1.5px solid #e0d5cc; border-radius: 6px; padding: 2px; }
+.qty-table-ctrl button { width: 20px; height: 20px; border: none; border-radius: 4px; background: #e8ddd4; color: var(--color-secundario); cursor: pointer; font-size: .85rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: background .1s; }
+.qty-table-ctrl button:hover { background: #d4c4b7; }
+.qty-table-ctrl input { width: 32px; height: 20px; border: none; background: transparent; text-align: center; font-size: .85rem; font-weight: 700; color: var(--color-secundario); outline: none; }
+.qty-table-ctrl input::-webkit-outer-spin-button,
+.qty-table-ctrl input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.qty-table-ctrl input[type=number] { -moz-appearance: textfield; }
 .btn-row-del { width:26px; height:26px; border:none; border-radius:5px; background:rgba(239,68,68,.1); color:#dc2626; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .12s; }
 .btn-row-del:hover { background:rgba(239,68,68,.22); }
 .btn-row-del svg { width:13px; height:13px; fill:currentColor; }
@@ -390,6 +395,10 @@
 .btn-fiado:hover:not(:disabled) { background:rgba(99,102,241,.22); transform:translateY(-1px); }
 .btn-fiado:disabled { opacity:.5; cursor:not-allowed; }
 
+.btn-metodo-pago:hover:not(.active):not(:disabled) { background:#ede5df !important; border-color:#c9b8a8 !important; }
+.btn-metodo-pago.active { background:var(--color-primario) !important; color:#fff !important; border-color:var(--color-primario) !important; box-shadow:0 2px 6px rgba(231,111,46,.25); }
+.btn-metodo-pago:disabled { opacity:.55; cursor:not-allowed; }
+
 /* ══════════════════════════════════════════════════════ MODAL FIADO */
 .fiado-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:3000; display:none; align-items:center; justify-content:center; animation:fadeIn .18s ease; }
 .fiado-modal-box { background:#fff; border-radius:14px; width:520px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,.22); overflow:hidden; }
@@ -630,21 +639,13 @@
                         </table>
                     </div>
 
-                    <!-- Campo "Otros" (productos no en sistema) -->
-                    <div id="otrosSection" style="margin-top: 1rem; margin-bottom: 1rem; padding: 0.75rem 1rem; background: #faf7f5; border: 1.5px dashed #e0d5cc; border-radius: 9px; display: none;">
-                        <div style="font-size:.78rem; font-weight:700; color:#a89080; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.45rem;">Otros (productos no en sistema)</div>
-                        <div style="display:flex; gap:.45rem; align-items:center; max-width: 280px;">
-                            <span style="font-size:1rem; font-weight:700; color:var(--color-secundario);">$</span>
-                            <input type="number" id="inputOtrosMonto" class="cobro-monto-input" style="flex:1; width:100%; text-align:left;" placeholder="Monto adicional" min="0" onchange="actualizarOtrosMonto()" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}" disabled />
-                        </div>
-                    </div>
-
                     <!-- Acciones -->
                     <div class="bol-actions" id="bolActions">
                         <button class="btn-agregar-modal" id="btnAbrirModal" onclick="abrirModal()" disabled>
                             <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
                             Agregar producto
                         </button>
+
                         @if (Model.PuedeCobrar)
                         {
                         <button class="btn-fiado" id="btnFiado" onclick="abrirModalFiado()" disabled>
@@ -704,13 +705,13 @@
                     <!-- Método principal: selecciona y ya queda listo para cobrar -->
                     <div>
                         <div style="font-size:.78rem; font-weight:700; color:#a89080; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.45rem;">Método de pago</div>
-                        <div class="cobro-metodo-principal">
-                            <select class="cobro-select" id="selMetodoPrincipal" onchange="seleccionarMetodoPrincipal()">
-                                @foreach (var m in Model.MetodosPago)
-                                {
-                                    <option value="@m.IdMetodoPago" data-nombre="@m.NombreMetodoPago">@m.NombreMetodoPago</option>
-                                }
-                            </select>
+                        <div class="cobro-metodos-buttons" style="display:flex; gap:.35rem; width:100%;">
+                            @foreach (var m in Model.MetodosPago)
+                            {
+                                <button type="button" class="btn-metodo-pago" data-id="@m.IdMetodoPago" data-nombre="@m.NombreMetodoPago" onclick="seleccionarMetodoPrincipalBtn(this)" disabled style="flex:1; padding:.55rem .25rem; font-size:.75rem; font-weight:700; border-radius:8px; border:1.5px solid #e0d5cc; background:#faf7f5; color:var(--color-secundario); cursor:pointer; transition:all .15s; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    @m.NombreMetodoPago
+                                </button>
+                            }
                         </div>
                     </div>
 
@@ -740,6 +741,15 @@
 
                     <!-- Resumen -->
                     <div class="cobro-resumen">
+                        <!-- Campo "Otros" (productos no en sistema) -->
+                        <div style="margin-bottom: 0.6rem; padding: 0.5rem 0.75rem; background: #faf7f5; border: 1.5px dashed #e0d5cc; border-radius: 9px;">
+                            <div style="font-size:.74rem; font-weight:700; color:#a89080; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.35rem;">Otros (productos no en sistema)</div>
+                            <div style="display:flex; gap:.45rem; align-items:center;">
+                                <span style="font-size:0.9rem; font-weight:700; color:var(--color-secundario);">$</span>
+                                <input type="number" id="inputOtrosMonto" class="cobro-monto-input" style="flex:1; width:100%; text-align:left; height: 28px; font-size: 0.85rem;" placeholder="Monto adicional" min="0" onchange="actualizarOtrosMonto()" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}" disabled />
+                            </div>
+                        </div>
+
                         <div class="cobro-res-row gran">
                             <span class="lbl">Total boleta</span>
                             <span class="val" id="resTotalBoleta">$0</span>
@@ -826,6 +836,7 @@
     let pendingEnvase    = null;  // producto retornable pendiente de confirmación
     let _promoInstCounter = 0;   // Unique ID per promo instance added to detalleActual
     let modalSelectedProds = new Map();
+    let activeMetodoPagoId = null;
 
     /* ── Utilitarios ─────────────────────────────────────────────────────── */
     function fmt(n)  { return '$' + Number(n).toLocaleString('es-CL'); }
@@ -911,7 +922,7 @@
         if (!inputOtros) return;
 
         const montoOtros = Math.max(0, parseInt(inputOtros.value) || 0);
-        const idx = detalleActual.findIndex(d => d.idProducto === 89 && !d.idPromocion);
+        const idx = detalleActual.findIndex(d => d.idProducto === 0 && !d.idPromocion);
 
         if (montoOtros > 0) {
             if (idx >= 0) {
@@ -920,7 +931,7 @@
                 detalleActual[idx].subtotal = montoOtros;
             } else {
                 detalleActual.push({
-                    idProducto: 89,
+                    idProducto: 0,
                     nombre: 'Otros',
                     cantidad: 1,
                     precioNormal: montoOtros,
@@ -1029,7 +1040,7 @@
             return;
         }
         items.forEach(p => {
-            if (p.id === 89) return; // Omitir el producto "Otros"
+            if (p.id === 0) return; // Omitir el producto "Otros"
             const tieneOferta = !!p.ofertaId;
             const precio      = tieneOferta ? p.ofertaPrecio : p.precio;
             const qty         = modalSelectedProds.get(p.id) || 0;
@@ -1611,6 +1622,14 @@
         document.getElementById('btnAnular').disabled     = !esEditable;
         const btnFiado = document.getElementById('btnFiado');
         if (btnFiado) btnFiado.disabled = !esEditable;
+        const buttons = document.querySelectorAll('.btn-metodo-pago');
+        buttons.forEach(btn => btn.disabled = !esEditable);
+        const inputOtros = document.getElementById('inputOtrosMonto');
+        if (inputOtros) {
+            const itemOtros = detalleActual.find(d => d.idProducto === 0 && !d.idPromocion);
+            inputOtros.value = itemOtros ? itemOtros.subtotal : '';
+            inputOtros.disabled = !esEditable;
+        }
 
         document.getElementById('estadoPagada').style.display  = esPagada  ? 'block' : 'none';
         document.getElementById('estadoAnulada').style.display = esAnulada ? 'block' : 'none';
@@ -1627,17 +1646,6 @@
         }
 
         renderDetalle();
-
-        const otrosSec = document.getElementById('otrosSection');
-        if (otrosSec) {
-            otrosSec.style.display = esEditable ? 'block' : 'none';
-            const inputOtros = document.getElementById('inputOtrosMonto');
-            if (inputOtros) {
-                const itemOtros = detalleActual.find(d => d.idProducto === 89 && !d.idPromocion);
-                inputOtros.value = itemOtros ? itemOtros.subtotal : '';
-                inputOtros.disabled = !esEditable;
-            }
-        }
 
         document.getElementById('bolPlaceholder').style.display = 'none';
         document.getElementById('bolInfo').classList.add('visible');
@@ -1660,15 +1668,41 @@
         adicionalVisible = false;
         document.getElementById('cobroAdicionalSection').style.display = 'none';
         document.getElementById('btnToggleAdicional').textContent = '+ Agregar otro método de pago';
-        /* Colocar el total en el método principal automáticamente */
-        seleccionarMetodoPrincipal(montoTotal);
+        
+        /* Seleccionar por defecto el primer método */
+        if (!activeMetodoPagoId && METODOS_PAGO.length > 0) {
+            activeMetodoPagoId = METODOS_PAGO[0].id;
+        }
+        
+        seleccionarMetodoPrincipal(activeMetodoPagoId, montoTotal);
     }
 
-    window.seleccionarMetodoPrincipal = function (montoForzado) {
-        const sel    = document.getElementById('selMetodoPrincipal');
-        const id     = parseInt(sel.value);
-        const nombre = sel.selectedOptions[0].dataset.nombre;
-        const efec   = METODOS_PAGO.find(m => m.id === id)?.esEfectivo ?? false;
+    window.seleccionarMetodoPrincipalBtn = function (btn) {
+        if (!boletaActual || boletaActual.idEstado !== 1) return;
+        const id = parseInt(btn.dataset.id);
+        seleccionarMetodoPrincipal(id);
+    };
+
+    window.seleccionarMetodoPrincipal = function (id, montoForzado) {
+        if (!id) return;
+        activeMetodoPagoId = id;
+
+        // Update active class on buttons
+        const buttons = document.querySelectorAll('.btn-metodo-pago');
+        buttons.forEach(btn => {
+            const btnId = parseInt(btn.dataset.id);
+            if (btnId === id) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        const targetMetodo = METODOS_PAGO.find(m => m.id === id);
+        if (!targetMetodo) return;
+
+        const nombre = targetMetodo.nombre;
+        const efec   = targetMetodo.esEfectivo;
 
         // Quitar entradas bloqueadas previas para recalcular
         metodosCobro = metodosCobro.filter(m => !m.bloqueado);
@@ -1962,6 +1996,13 @@
         });
 
         /* ── 3. Renderizar ítems standalone ───────────────────────────────── */
+        standalone.sort((a, b) => {
+            const isAOtros = a.d.idProducto === 0;
+            const isBOtros = b.d.idProducto === 0;
+            if (isAOtros && !isBOtros) return 1;
+            if (!isAOtros && isBOtros) return -1;
+            return 0;
+        });
         standalone.forEach(({ d, i, esEnvase }) => {
             total += d.subtotal;
             const tr = document.createElement('tr');
@@ -1983,12 +2024,24 @@
                 const precioHtml = tieneDesc
                     ? `<span class="td-precio-normal">${fmt(d.precioNormal)}</span><br><span class="td-precio-descuento">${fmt(d.precioUnitario)}</span>`
                     : fmt(d.precioUnitario);
+                
+                let qtyHtml = '';
+                if (d.idProducto === 0) {
+                    qtyHtml = `${d.cantidad}`;
+                } else {
+                    qtyHtml = esEdit
+                        ? `<div class="qty-table-ctrl">
+                               <button onclick="changeRowQty(${i}, -1)">-</button>
+                               <input type="number" value="${d.cantidad}" min="1" onchange="cambiarCantidad(${i}, this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">
+                               <button onclick="changeRowQty(${i}, 1)">+</button>
+                           </div>`
+                        : d.cantidad;
+                }
+
                 tr.innerHTML =
                     `<td class="td-nombre">${x(d.nombre)}${d.tieneOferta ? `<span class="td-badge td-badge-oferta">Oferta</span>` : ''}</td>` +
                     `<td>${precioHtml}</td>` +
-                    `<td>${esEdit
-                        ? `<input type="number" class="qty-input" value="${d.cantidad}" min="1" onchange="cambiarCantidad(${i}, this.value)">`
-                        : d.cantidad}</td>` +
+                    `<td>${qtyHtml}</td>` +
                     `<td>${fmt(d.subtotal)}</td>` +
                     `<td>${esEdit
                         ? `<button class="btn-row-del" onclick="eliminarFila(${i})" title="Eliminar"><svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>`
@@ -2003,6 +2056,7 @@
         if (alertaEl) alertaEl.style.display = haySoloEfectivo ? 'flex' : 'none';
 
         if (PUEDE_COBRAR && boletaActual && boletaActual.idEstado === 1) {
+            boletaActual.montoTotal = total;
             document.getElementById('resTotalBoleta').textContent = fmt(total);
             const princ = metodosCobro.find(m => m.esPrincipal);
             if (princ) {
@@ -2114,19 +2168,27 @@
         _autoGuardarDebounce();
     };
 
+    window.changeRowQty = function (i, delta) {
+        if (!boletaActual || boletaActual.idEstado !== 1) return;
+        const currentQty = detalleActual[i].cantidad;
+        const newQty = Math.max(1, currentQty + delta);
+        detalleActual[i].cantidad = newQty;
+        detalleActual[i].subtotal = newQty * detalleActual[i].precioUnitario;
+        renderDetalle();
+        _autoGuardarDebounce();
+    };
+
     window.eliminarFila = function (i) {
         const idProd = detalleActual[i]?.idProducto;
         detalleActual.splice(i, 1);
+        if (idProd === 0) {
+            const inputOtros = document.getElementById('inputOtrosMonto');
+            if (inputOtros) inputOtros.value = '';
+        }
         // Si había una fila de envase para el mismo producto, eliminarla también
         if (idProd != null) {
             const idxEnvase = detalleActual.findIndex(d => d.esEnvase && d.idProducto === idProd);
             if (idxEnvase >= 0) detalleActual.splice(idxEnvase, 1);
-
-            // Si el producto eliminado es el virtual "Otros" (89), limpiar el input
-            if (idProd === 89) {
-                const inputOtros = document.getElementById('inputOtrosMonto');
-                if (inputOtros) inputOtros.value = '';
-            }
         }
         renderDetalle();
         _autoGuardarDebounce();

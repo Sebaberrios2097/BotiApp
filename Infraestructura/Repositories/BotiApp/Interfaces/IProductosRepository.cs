@@ -1,4 +1,4 @@
-﻿using Infraestructura.Entities.BotiApp;
+using Infraestructura.Entities.BotiApp;
 
 namespace Infraestructura.Repositories.BotiApp.Interfaces;
 
@@ -18,4 +18,7 @@ public interface IProductosRepository
     Task<IEnumerable<ProProductosRetornables>> ObtenerRetornablesAsync();
     Task<ProProductosRetornables> AgregarRetornableAsync(ProProductosRetornables retornable);
     Task<bool> EliminarRetornableAsync(int idProducto);
+    // Creación de Marca / Tipo
+    Task<ProMarcas> CrearMarcaAsync(ProMarcas marca);
+    Task<ProTiposProductos> CrearTipoProductoAsync(ProTiposProductos tipo);
 }

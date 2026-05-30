@@ -257,6 +257,44 @@ public class ProductosController(
         });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CrearMarcaAjax(string nombre)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+            return Json(new { ok = false, mensaje = "El nombre de la marca es requerido." });
+
+        var marca = new ProMarcas { NombreMarca = nombre.Trim(), Estado = true };
+        try
+        {
+            var creada = await productosRepository.CrearMarcaAsync(marca);
+            return Json(new { ok = true, id = creada.IdMarca, nombre = creada.NombreMarca });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { ok = false, mensaje = "Error al crear la marca: " + ex.Message });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CrearTipoProductoAjax(string nombre)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+            return Json(new { ok = false, mensaje = "El nombre del tipo de producto es requerido." });
+
+        var tipo = new ProTiposProductos { NombreTipoProducto = nombre.Trim() };
+        try
+        {
+            var creado = await productosRepository.CrearTipoProductoAsync(tipo);
+            return Json(new { ok = true, id = creado.IdTipoProducto, nombre = creado.NombreTipoProducto });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { ok = false, mensaje = "Error al crear el tipo de producto: " + ex.Message });
+        }
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private async Task CargarSelectListsAsync(int idMarca = 0, int idTipo = 0)

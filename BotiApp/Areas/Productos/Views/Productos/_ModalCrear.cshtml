@@ -133,6 +133,148 @@
         .form-grid { grid-template-columns:1fr; }
         .form-group.full { grid-column:1; }
     }
+
+    /* ── Selectores Buscadores Buscables ── */
+    .searchable-select-wrapper {
+        display: flex;
+        gap: 0.45rem;
+        align-items: center;
+        position: relative;
+        width: 100%;
+    }
+    .select-search-trigger {
+        flex: 1;
+        min-width: 0;
+        padding: .55rem .8rem;
+        border: 1.5px solid #e0d5cc;
+        border-radius: 8px;
+        font-size: .88rem;
+        color: var(--color-secundario);
+        background: #faf7f5;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: border-color .2s, box-shadow .2s;
+        user-select: none;
+        height: 38px;
+    }
+    .select-search-trigger:hover {
+        border-color: #c9b8a8;
+    }
+    .searchable-select-wrapper.open .select-search-trigger {
+        border-color: var(--color-primario);
+        box-shadow: 0 0 0 3px rgba(231,111,46,.13);
+        background: #fff;
+    }
+    .trigger-arrow {
+        width: 18px;
+        height: 18px;
+        fill: #a89080;
+        transition: transform 0.2s;
+        flex-shrink: 0;
+    }
+    .searchable-select-wrapper.open .trigger-arrow {
+        transform: rotate(180deg);
+    }
+    .trigger-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .btn-add-select {
+        flex-shrink: 0;
+        width: 38px;
+        height: 38px;
+        border: 1.5px solid #e0d5cc;
+        border-radius: 8px;
+        background: #faf7f5;
+        color: var(--color-primario);
+        font-size: 1.3rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .15s, border-color .15s, transform .1s;
+    }
+    .btn-add-select:hover {
+        background: #f0ebe5;
+        border-color: #c9b8a8;
+    }
+    .btn-add-select:active {
+        transform: scale(0.95);
+    }
+    .select-dropdown-panel {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        width: calc(100% - 43px); /* 38px + 5px gap = 43px */
+        background: #fff;
+        border: 1px solid #ede5df;
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(44,29,13,.12);
+        z-index: 1000;
+        overflow: hidden;
+        animation: selectSlideDown .15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .searchable-select-wrapper.open .select-dropdown-panel {
+        display: block;
+    }
+    .panel-search-wrap {
+        padding: 0.5rem;
+        border-bottom: 1px solid #f0ebe5;
+        background: #faf7f5;
+    }
+    .panel-search-input {
+        width: 100%;
+        padding: 0.4rem 0.6rem;
+        border: 1.5px solid #e0d5cc;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        outline: none;
+        color: var(--color-secundario);
+        background: #fff;
+        transition: border-color 0.2s;
+    }
+    .panel-search-input:focus {
+        border-color: var(--color-primario);
+    }
+    .panel-options-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 180px;
+        overflow-y: auto;
+    }
+    .panel-option-item {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.84rem;
+        color: var(--color-secundario);
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .panel-option-item:hover {
+        background: #faf7f5;
+    }
+    .panel-option-item.selected {
+        background: rgba(231,111,46,0.08);
+        color: var(--color-primario);
+        font-weight: 600;
+    }
+    .panel-option-item.no-results {
+        color: #a89080;
+        font-style: italic;
+        cursor: default;
+        background: transparent !important;
+        text-align: center;
+        padding: 0.8rem;
+    }
+    @@keyframes selectSlideDown {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 
 <!-- Header -->
@@ -186,17 +328,43 @@
 
                 <div class="form-group">
                     <label class="form-label" asp-for="IdTipoProducto">Tipo <span class="req">*</span></label>
-                    <select asp-for="IdTipoProducto" asp-items="ViewBag.Tipos" class="form-control">
-                        <option value="">— Selecciona —</option>
-                    </select>
+                    <div class="searchable-select-wrapper" id="wrapperTipoProducto">
+                        <select asp-for="IdTipoProducto" asp-items="ViewBag.Tipos" class="form-control actual-select" style="display:none;">
+                            <option value="">— Selecciona —</option>
+                        </select>
+                        <div class="select-search-trigger" onclick="toggleDropdown('wrapperTipoProducto')">
+                            <span class="trigger-text">— Selecciona —</span>
+                            <svg class="trigger-arrow" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+                        </div>
+                        <button type="button" class="btn-add-select" onclick="abrirCrearOption('Tipo', 'wrapperTipoProducto')" title="Crear nuevo tipo">+</button>
+                        <div class="select-dropdown-panel">
+                            <div class="panel-search-wrap">
+                                <input type="text" class="panel-search-input" placeholder="Buscar tipo..." oninput="filtrarOpciones('wrapperTipoProducto')" onkeydown="handleSearchKey(event, 'wrapperTipoProducto')" />
+                            </div>
+                            <ul class="panel-options-list"></ul>
+                        </div>
+                    </div>
                     <span asp-validation-for="IdTipoProducto" class="field-error"></span>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" asp-for="IdMarca">Marca <span class="req">*</span></label>
-                    <select asp-for="IdMarca" asp-items="ViewBag.Marcas" class="form-control">
-                        <option value="">— Selecciona —</option>
-                    </select>
+                    <div class="searchable-select-wrapper" id="wrapperMarca">
+                        <select asp-for="IdMarca" asp-items="ViewBag.Marcas" class="form-control actual-select" style="display:none;">
+                            <option value="">— Selecciona —</option>
+                        </select>
+                        <div class="select-search-trigger" onclick="toggleDropdown('wrapperMarca')">
+                            <span class="trigger-text">— Selecciona —</span>
+                            <svg class="trigger-arrow" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+                        </div>
+                        <button type="button" class="btn-add-select" onclick="abrirCrearOption('Marca', 'wrapperMarca')" title="Crear nueva marca">+</button>
+                        <div class="select-dropdown-panel">
+                            <div class="panel-search-wrap">
+                                <input type="text" class="panel-search-input" placeholder="Buscar marca..." oninput="filtrarOpciones('wrapperMarca')" onkeydown="handleSearchKey(event, 'wrapperMarca')" />
+                            </div>
+                            <ul class="panel-options-list"></ul>
+                        </div>
+                    </div>
                     <span asp-validation-for="IdMarca" class="field-error"></span>
                 </div>
 
@@ -292,7 +460,222 @@
     <button type="button" class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+/* ── Lógica de Selectores Buscables ── */
+function syncSearchableSelect(wrapperId) {
+    const wrapper = document.getElementById(wrapperId);
+    if (!wrapper) return;
+    const select = wrapper.querySelector('.actual-select');
+    const triggerText = wrapper.querySelector('.trigger-text');
+    const optionsList = wrapper.querySelector('.panel-options-list');
+    
+    optionsList.innerHTML = '';
+    
+    const selectedVal = select.value;
+    let selectedText = '— Selecciona —';
+    
+    Array.from(select.options).forEach(opt => {
+        if (opt.value === "") {
+            if (selectedVal === "") selectedText = opt.text;
+            return;
+        }
+        
+        const isSelected = opt.value === selectedVal;
+        if (isSelected) {
+            selectedText = opt.text;
+        }
+        
+        const li = document.createElement('li');
+        li.className = 'panel-option-item' + (isSelected ? ' selected' : '');
+        li.dataset.value = opt.value;
+        li.textContent = opt.text;
+        
+        li.addEventListener('click', (e) => {
+            e.stopPropagation();
+            select.value = opt.value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            triggerText.textContent = opt.text;
+            closeDropdown(wrapperId);
+            syncSearchableSelect(wrapperId);
+        });
+        
+        optionsList.appendChild(li);
+    });
+    
+    triggerText.textContent = selectedText;
+}
+
+function initSearchableSelect(wrapperId) {
+    const wrapper = document.getElementById(wrapperId);
+    if (!wrapper) return;
+    
+    syncSearchableSelect(wrapperId);
+    
+    const searchInput = wrapper.querySelector('.panel-search-input');
+    searchInput.addEventListener('click', (e) => e.stopPropagation());
+}
+
+function toggleDropdown(wrapperId) {
+    const wrapper = document.getElementById(wrapperId);
+    if (!wrapper) return;
+    
+    const isOpen = wrapper.classList.contains('open');
+    
+    document.querySelectorAll('.searchable-select-wrapper').forEach(w => {
+        w.classList.remove('open');
+    });
+    
+    if (!isOpen) {
+        wrapper.classList.add('open');
+        const searchInput = wrapper.querySelector('.panel-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            filtrarOpciones(wrapperId);
+            setTimeout(() => searchInput.focus(), 50);
+        }
+    }
+}
+
+function closeDropdown(wrapperId) {
+    const wrapper = document.getElementById(wrapperId);
+    if (wrapper) {
+        wrapper.classList.remove('open');
+    }
+}
+
+function filtrarOpciones(wrapperId) {
+    const wrapper = document.getElementById(wrapperId);
+    if (!wrapper) return;
+    const searchInput = wrapper.querySelector('.panel-search-input');
+    const filter = searchInput.value.toLowerCase().trim();
+    const items = wrapper.querySelectorAll('.panel-option-item');
+    const optionsList = wrapper.querySelector('.panel-options-list');
+    
+    const existingNoRes = optionsList.querySelector('.no-results');
+    if (existingNoRes) existingNoRes.remove();
+    
+    let visibleCount = 0;
+    items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        if (text.includes(filter)) {
+            item.style.display = '';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    if (visibleCount === 0) {
+        const noRes = document.createElement('li');
+        noRes.className = 'panel-option-item no-results';
+        noRes.textContent = 'Sin resultados';
+        optionsList.appendChild(noRes);
+    }
+}
+
+function handleSearchKey(event, wrapperId) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        const wrapper = document.getElementById(wrapperId);
+        if (!wrapper) return;
+        const visibleOption = wrapper.querySelector('.panel-option-item:not([style*="display: none"]):not(.no-results)');
+        if (visibleOption) {
+            visibleOption.click();
+        }
+    }
+}
+
+async function abrirCrearOption(tipo, wrapperId) {
+    closeDropdown(wrapperId);
+
+    const title = tipo === 'Tipo' ? 'Nuevo Tipo de Producto' : 'Nueva Marca';
+    const inputPlaceholder = tipo === 'Tipo' ? 'Ej: Lácteos' : 'Ej: Coca-Cola';
+    const apiURL = tipo === 'Tipo' ? '/Productos/Productos/CrearTipoProductoAjax' : '/Productos/Productos/CrearMarcaAjax';
+
+    const { value: nombre } = await Swal.fire({
+        title: title,
+        input: 'text',
+        inputLabel: 'Nombre del nuevo registro',
+        inputPlaceholder: inputPlaceholder,
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Guardar',
+        confirmButtonColor: 'var(--color-primario)',
+        inputValidator: (value) => {
+            if (!value || !value.trim()) {
+                return 'El nombre es obligatorio';
+            }
+            if (value.trim().length > 100) {
+                return 'El nombre no puede superar los 100 caracteres';
+            }
+        }
+    });
+
+    if (nombre) {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        const formData = new FormData();
+        formData.append('nombre', nombre);
+        formData.append('__RequestVerificationToken', token);
+
+        try {
+            const resp = await fetch(apiURL, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                const wrapper = document.getElementById(wrapperId);
+                const select = wrapper.querySelector('.actual-select');
+                
+                const opt = document.createElement('option');
+                opt.value = data.id;
+                opt.textContent = data.nombre;
+                select.appendChild(opt);
+                
+                select.value = data.id;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                syncSearchableSelect(wrapperId);
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Creado!',
+                    text: `${tipo === 'Tipo' ? 'Tipo' : 'Marca'} «${data.nombre}» creado con éxito.`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.mensaje || 'No se pudo crear el registro.'
+                });
+            }
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error de red al intentar crear el registro.'
+            });
+        }
+    }
+}
+
+// Cerrar dropdown al hacer click afuera
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.searchable-select-wrapper')) {
+        document.querySelectorAll('.searchable-select-wrapper').forEach(w => {
+            w.classList.remove('open');
+        });
+    }
+});
+
+// Inicializar buscadores al cargar el modal
+setTimeout(() => {
+    initSearchableSelect('wrapperTipoProducto');
+    initSearchableSelect('wrapperMarca');
+}, 50);
+
 function esDispositivoMovilCrear() {
     const uaDataMobile = navigator.userAgentData && navigator.userAgentData.mobile;
     const ua = navigator.userAgent || '';

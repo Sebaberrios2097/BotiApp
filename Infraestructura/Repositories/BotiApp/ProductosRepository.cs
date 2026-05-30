@@ -219,4 +219,19 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
         await context.SaveChangesAsync();
         return true;
     }
+
+    public async Task<ProMarcas> CrearMarcaAsync(ProMarcas marca)
+    {
+        marca.Estado = true;
+        context.ProMarcas.Add(marca);
+        await context.SaveChangesAsync();
+        return marca;
+    }
+
+    public async Task<ProTiposProductos> CrearTipoProductoAsync(ProTiposProductos tipo)
+    {
+        context.ProTiposProductos.Add(tipo);
+        await context.SaveChangesAsync();
+        return tipo;
+    }
 }
