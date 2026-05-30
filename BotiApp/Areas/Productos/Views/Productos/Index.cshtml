@@ -481,8 +481,18 @@ function cerrarModal() {
     overlay.classList.remove('open');
     setTimeout(() => { document.getElementById('modalBody').innerHTML = ''; }, 250);
 }
-overlay.addEventListener('click', e => { if (e.target === overlay) cerrarModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+        if (document.getElementById('modalBody')?.querySelector('form') !== null) return;
+        cerrarModal();
+    }
+});
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        if (document.getElementById('modalBody')?.querySelector('form') !== null) return;
+        cerrarModal();
+    }
+});
 
 // ── Escáner de código de barras (productos) ───────────────────────────────
 var _prdScanReaders = {};
