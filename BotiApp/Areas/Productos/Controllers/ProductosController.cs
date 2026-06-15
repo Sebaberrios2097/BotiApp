@@ -314,6 +314,7 @@ public class ProductosController(
     {
         p.IdProducto,
         p.NombreProducto,
+        codigo = p.Codigo ?? "",
         descripcion = p.Descripción ?? "",
         nombreTipo = p.IdTipoProductoNavigation?.NombreTipoProducto ?? "—",
         nombreMarca = p.IdMarcaNavigation?.NombreMarca ?? "—",
