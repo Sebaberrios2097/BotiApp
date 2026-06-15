@@ -217,7 +217,7 @@
     <div class="pro-toolbar">
         <div class="pro-search-bar">
             <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-            <input type="text" id="buscador" placeholder="Buscar por nombre, marca o tipo…" oninput="filtrarYPaginar()" />
+            <input type="text" id="buscador" placeholder="Buscar por nombre, código, marca o tipo…" oninput="filtrarYPaginar()" />
         </div>
         <select class="pro-filter-select" id="filtroEstado" onchange="filtrarYPaginar()">
             <option value="">Todos los estados</option>
@@ -292,6 +292,7 @@
         var imgHtml = imgSrc is not null
             ? $@"<img class=""prod-img"" src=""{imgSrc}"" alt=""{p.NombreProducto}"" />"
             : @"<div class=""prod-img-ph""><svg viewBox=""0 0 24 24""><path d=""M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z""/></svg></div>";
+        var codigo = string.IsNullOrWhiteSpace(p.Codigo) ? "" : $@"<br/><small style=""color:#7a6050;font-size:.78rem;font-family:monospace;"">Cód: {p.Codigo}</small>";
         var desc = string.IsNullOrWhiteSpace(p.Descripción) ? "" : $@"<br/><small style=""color:#a89080;font-size:.78rem;"">{p.Descripción}</small>";
         var badgeClass = p.Estado ? "activo" : "inactivo";
         var badgeText  = p.Estado ? "Activo" : "Inactivo";
@@ -308,7 +309,7 @@
         return $@"
 <tr id=""fila-{p.IdProducto}"" data-id=""{p.IdProducto}"" data-estado=""{(p.Estado ? "activo" : "inactivo")}"">
   <td>{imgHtml}</td>
-  <td><span style=""font-weight:600"">{p.NombreProducto}</span>{retBadge}{desc}</td>
+  <td><span style=""font-weight:600"">{p.NombreProducto}</span>{retBadge}{codigo}{desc}</td>
   <td>{p.IdTipoProductoNavigation?.NombreTipoProducto ?? "—"}</td>
   <td>{p.IdMarcaNavigation?.NombreMarca ?? "—"}</td>
   <td class=""td-precio"">${p.Precio:N0}</td>
@@ -714,6 +715,7 @@ function buildFila(p) {
     const imgHtml = p.tieneImagen
         ? `<img class="prod-img" src="/Productos/Productos/Imagen/${p.idProducto}?t=${Date.now()}" alt="${esc(p.nombreProducto)}">`
         : `<div class="prod-img-ph"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></div>`;
+    const codigo = p.codigo ? `<br><small style="color:#7a6050;font-size:.78rem;font-family:monospace;">Cód: ${esc(p.codigo)}</small>` : '';
     const desc  = p.descripcion ? `<br><small style="color:#a89080;font-size:.78rem;">${esc(p.descripcion)}</small>` : '';
     const badge = p.estado ? '<span class="badge-estado activo">Activo</span>' : '<span class="badge-estado inactivo">Inactivo</span>';
     const stock = `<span class="td-stock ${p.stock <= 5 ? 'bajo' : 'ok'}">${p.stock}</span>`;
@@ -727,7 +729,7 @@ function buildFila(p) {
     return `
 <tr id="fila-${p.idProducto}" data-id="${p.idProducto}" data-estado="${estadoData}">
   <td>${imgHtml}</td>
-  <td><span style="font-weight:600">${esc(p.nombreProducto)}</span>${desc}</td>
+  <td><span style="font-weight:600">${esc(p.nombreProducto)}</span>${codigo}${desc}</td>
   <td>${esc(p.nombreTipo)}</td>
   <td>${esc(p.nombreMarca)}</td>
   <td class="td-precio">$${Number(p.precio).toLocaleString('es-CL')}</td>
