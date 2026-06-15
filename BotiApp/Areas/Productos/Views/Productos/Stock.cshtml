@@ -1,0 +1,1089 @@
+@{
+    ViewData["Title"] = "Control de Stock";
+    var marcas = ViewBag.Marcas as IEnumerable<SelectListItem>;
+    var tipos = ViewBag.Tipos as IEnumerable<SelectListItem>;
+}
+
+<style>
+    .stock-header-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 12px rgba(44,29,13,.08);
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .stock-header-left {
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+    }
+    .stock-header-icon {
+        width: 46px;
+        height: 46px;
+        background: rgba(99,102,241,.12);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .stock-header-icon svg {
+        width: 24px;
+        height: 24px;
+        fill: #6366f1;
+    }
+    .stock-header-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--color-secundario);
+        margin: 0;
+    }
+    .stock-header-sub {
+        font-size: .82rem;
+        color: #9a8070;
+        margin: .1rem 0 0;
+    }
+
+    /* ── FAB ── */
+    .fab-scan {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--color-primario);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 18px rgba(231,111,46,.45);
+        z-index: 100;
+        transition: background .2s, transform .15s;
+    }
+    .fab-scan svg {
+        width: 26px;
+        height: 26px;
+        fill: #fff;
+    }
+    .fab-scan:hover {
+        background: #cf5f22;
+        transform: scale(1.07);
+    }
+    .fab-scan.scanning {
+        background: #dc2626;
+        animation: pulseScan 1.2s ease-in-out infinite;
+    }
+    @@keyframes pulseScan {
+        0%,
+        100% {
+            box-shadow: 0 4px 18px rgba(220,38,38,.45);
+        }
+        50% {
+            box-shadow: 0 4px 32px rgba(220,38,38,.7);
+        }
+    }
+
+    /* ── Search bar ── */
+    .stock-search-wrap {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        margin-bottom: 1.5rem;
+        background: #fff;
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 2px 12px rgba(44,29,13,.07);
+    }
+    .stock-search-icon {
+        width: 20px;
+        height: 20px;
+        fill: var(--color-primario);
+        opacity: .7;
+        flex-shrink: 0;
+    }
+    .stock-search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 1.05rem;
+        color: var(--color-secundario);
+        background: transparent;
+        font-family: var(--font-body);
+    }
+    .stock-search-input::placeholder {
+        color: #c9b8a8;
+    }
+    .btn-scan {
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        padding: .55rem 1rem;
+        background: rgba(99,102,241,.1);
+        color: #6366f1;
+        border: 1.5px solid rgba(99,102,241,.25);
+        border-radius: 8px;
+        font-size: .88rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .2s, border-color .2s;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .btn-scan svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+    }
+    .btn-scan:hover {
+        background: rgba(99,102,241,.18);
+        border-color: rgba(99,102,241,.45);
+    }
+    .btn-scan.scanning {
+        background: #dc2626;
+        color: #fff;
+        border-color: #dc2626;
+    }
+    .btn-clear {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #f0ebe5;
+        border: none;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background .15s;
+    }
+    .btn-clear svg {
+        width: 16px;
+        height: 16px;
+        fill: #7a6050;
+    }
+    .btn-clear:hover {
+        background: #e5dbcf;
+    }
+
+    /* ── Scanner video ── */
+    .scanner-video-wrap {
+        display: none;
+        margin-bottom: 1.5rem;
+        background: #000;
+        border-radius: 14px;
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 2px 12px rgba(44,29,13,.12);
+    }
+    .scanner-video-wrap video {
+        width: 100%;
+        max-height: 320px;
+        object-fit: cover;
+        display: block;
+    }
+    .scanner-overlay-line {
+        position: absolute;
+        left: 10%;
+        right: 10%;
+        top: 50%;
+        height: 2px;
+        background: rgba(231,111,46,.8);
+        box-shadow: 0 0 8px rgba(231,111,46,.6);
+        transform: translateY(-50%);
+        animation: scanLine 1.5s ease-in-out infinite;
+    }
+    @@keyframes scanLine {
+        0%,
+        100% {
+            opacity: .6;
+        }
+        50% {
+            opacity: 1;
+        }
+    }
+
+    /* ── Results info ── */
+    .stock-results-info {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        margin-bottom: 1rem;
+        font-size: .85rem;
+        color: #9a8070;
+    }
+    .stock-results-info strong {
+        color: var(--color-secundario);
+    }
+
+    /* ── Product cards grid ── */
+    .stock-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .stock-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 12px rgba(44,29,13,.07);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .stock-card-body {
+        display: flex;
+        gap: 1rem;
+        padding: 1.25rem;
+        flex: 1;
+    }
+    .stock-card-img {
+        width: 90px;
+        height: 90px;
+        border-radius: 10px;
+        object-fit: cover;
+        border: 1.5px solid #e8ddd4;
+        background: #f5f0eb;
+        flex-shrink: 0;
+    }
+    .stock-card-img-ph {
+        width: 90px;
+        height: 90px;
+        border-radius: 10px;
+        background: #f5f0eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1.5px solid #e8ddd4;
+        flex-shrink: 0;
+    }
+    .stock-card-img-ph svg {
+        width: 36px;
+        height: 36px;
+        fill: #c9b8a8;
+    }
+    .stock-card-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: .35rem;
+    }
+    .stock-card-name {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--color-secundario);
+        line-height: 1.25;
+    }
+    .stock-card-code {
+        font-size: .82rem;
+        font-family: 'Consolas', 'Courier New', monospace;
+        color: #6366f1;
+        background: rgba(99,102,241,.06);
+        padding: .15rem .5rem;
+        border-radius: 4px;
+        display: inline-block;
+        align-self: flex-start;
+        margin-top: .1rem;
+    }
+    .stock-card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem .75rem;
+        font-size: .8rem;
+        color: #7a6050;
+        margin-top: .15rem;
+    }
+    .stock-card-meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+    }
+    .stock-card-meta .meta-label {
+        font-weight: 600;
+        color: #9a8070;
+    }
+    .stock-card-desc {
+        font-size: .82rem;
+        color: #9a8070;
+        line-height: 1.35;
+        margin-top: .2rem;
+    }
+    .stock-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: .8rem 1.25rem;
+        background: #faf7f5;
+        border-top: 1px solid #f0ebe5;
+        gap: .75rem;
+    }
+    .stock-card-stats {
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+    }
+    .stock-card-price {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--color-primario);
+    }
+    .stock-card-stock {
+        font-size: .92rem;
+        font-weight: 700;
+    }
+    .stock-card-stock.bajo {
+        color: #dc2626;
+    }
+    .stock-card-stock.ok {
+        color: #16a34a;
+    }
+    .badge-estado {
+        display: inline-flex;
+        align-items: center;
+        padding: .2rem .6rem;
+        border-radius: 20px;
+        font-size: .75rem;
+        font-weight: 600;
+    }
+    .badge-estado.activo {
+        background: rgba(34,197,94,.12);
+        color: #16a34a;
+    }
+    .badge-estado.inactivo {
+        background: rgba(239,68,68,.10);
+        color: #dc2626;
+    }
+    .btn-edit-card {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        padding: .5rem 1rem;
+        background: var(--color-primario);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: .85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+        white-space: nowrap;
+    }
+    .btn-edit-card svg {
+        width: 15px;
+        height: 15px;
+        fill: currentColor;
+    }
+    .btn-edit-card:hover {
+        background: #cf5f22;
+    }
+
+    /* ── Edit mode inside card ── */
+    .stock-card-edit-fields {
+        display: flex;
+        flex-direction: column;
+        gap: .55rem;
+    }
+    .stock-edit-row {
+        display: flex;
+        gap: .6rem;
+        align-items: center;
+    }
+    .stock-edit-row label {
+        font-size: .8rem;
+        font-weight: 600;
+        color: #7a6050;
+        min-width: 80px;
+        text-align: right;
+        flex-shrink: 0;
+    }
+    .stock-edit-row input,
+    .stock-edit-row select {
+        flex: 1;
+        padding: .45rem .6rem;
+        border: 1.5px solid #e8ddd4;
+        border-radius: 6px;
+        font-size: .85rem;
+        color: var(--color-secundario);
+        background: #fff;
+        outline: none;
+        font-family: var(--font-body);
+        transition: border-color .15s;
+    }
+    .stock-edit-row input:focus,
+    .stock-edit-row select:focus {
+        border-color: var(--color-primario);
+    }
+    .stock-edit-row input[type=number] {
+        max-width: 130px;
+        flex: 0 0 auto;
+    }
+    .stock-edit-actions {
+        display: flex;
+        gap: .5rem;
+        margin-top: .4rem;
+    }
+    .btn-save-card {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .5rem 1rem;
+        background: #16a34a;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: .84rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+    }
+    .btn-save-card svg {
+        width: 14px;
+        height: 14px;
+        fill: currentColor;
+    }
+    .btn-save-card:hover {
+        background: #15803d;
+    }
+    .btn-cancel-card {
+        padding: .5rem 1rem;
+        background: #f0ebe5;
+        color: var(--color-secundario);
+        border: none;
+        border-radius: 8px;
+        font-size: .84rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+    }
+    .btn-cancel-card:hover {
+        background: #e5dbcf;
+    }
+    .stock-card-saving {
+        opacity: .6;
+        pointer-events: none;
+    }
+
+    /* ── Empty state / Loading ── */
+    .stock-empty {
+        text-align: center;
+        padding: 4rem 1rem;
+        color: #a89080;
+    }
+    .stock-empty svg {
+        width: 64px;
+        height: 64px;
+        fill: #ddd0c4;
+        margin-bottom: 1rem;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .stock-empty h3 {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #7a6050;
+        margin-bottom: .25rem;
+    }
+    .stock-empty p {
+        font-size: .85rem;
+        color: #9a8070;
+    }
+
+    .stock-loading {
+        display: none;
+        text-align: center;
+        padding: 2rem 1rem;
+    }
+    .stock-loading.visible {
+        display: block;
+    }
+    .stock-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #f0ebe5;
+        border-top-color: var(--color-primario);
+        border-radius: 50%;
+        animation: spin .7s linear infinite;
+        margin: 0 auto .85rem;
+    }
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .stock-loading-text {
+        font-size: .88rem;
+        color: #9a8070;
+    }
+
+    /* ── Toast ── */
+    .toast-wrap {
+        position: fixed;
+        top: 1.25rem;
+        right: 1.25rem;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        pointer-events: none;
+    }
+    .toast-msg {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        padding: .75rem 1.1rem;
+        border-radius: 10px;
+        font-size: .88rem;
+        font-weight: 600;
+        box-shadow: 0 4px 16px rgba(0,0,0,.12);
+        animation: toastIn .3s ease;
+    }
+    .toast-msg svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+        flex-shrink: 0;
+    }
+    .toast-msg.exito {
+        background: #f0fdf4;
+        color: #16a34a;
+        border-left: 4px solid #16a34a;
+    }
+    .toast-msg.error {
+        background: #fef2f2;
+        color: #dc2626;
+        border-left: 4px solid #dc2626;
+    }
+    @@keyframes toastIn {
+        from {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .stock-grid {
+            grid-template-columns: 1fr;
+        }
+        .stock-card-body {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .stock-card-code {
+            align-self: center;
+        }
+        .stock-card-meta {
+            justify-content: center;
+        }
+        .stock-card-footer {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .stock-card-stats {
+            justify-content: center;
+        }
+        .btn-edit-card {
+            justify-content: center;
+        }
+        .stock-edit-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .stock-edit-row label {
+            text-align: left;
+            min-width: auto;
+        }
+        .stock-edit-row input[type=number] {
+            max-width: none;
+        }
+        .stock-edit-actions {
+            flex-direction: column;
+        }
+        .stock-search-wrap {
+            flex-wrap: wrap;
+        }
+        .stock-search-input {
+            font-size: 16px;
+            min-width: 0;
+        }
+        .btn-scan {
+            flex: 1;
+            justify-content: center;
+        }
+        .fab-scan {
+            bottom: 1.25rem;
+            right: 1.25rem;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .stock-card-img,
+        .stock-card-img-ph {
+            width: 72px;
+            height: 72px;
+        }
+        .stock-card-name {
+            font-size: .95rem;
+        }
+    }
+</style>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+@Html.AntiForgeryToken()
+
+<div class="stock-header-card">
+    <div class="stock-header-left">
+        <div class="stock-header-icon">
+            <svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9 1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+        </div>
+        <div>
+            <h1 class="stock-header-title">Control de Stock</h1>
+            <p class="stock-header-sub">Escanea o busca productos por código para revisar y modificar inventario</p>
+        </div>
+    </div>
+</div>
+
+<div class="stock-search-wrap">
+    <svg class="stock-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    <input type="text" id="stockSearchInput" class="stock-search-input" placeholder="Escanea un código o ingrésalo manualmente…" autocomplete="off" />
+    <button class="btn-clear" id="btnClear" title="Limpiar búsqueda" onclick="limpiarBusqueda()" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+    </button>
+    <button class="btn-scan" id="btnScan" onclick="toggleScanner()" title="Escanear con cámara">
+        <svg viewBox="0 0 24 24"><path d="M15 12h2v5h-2v-5zm-4 0h2v5h-2v-5zm-4 0h2v5H7v-5zM9 2H7v3H2v2h5V2zm6 0h2v5h5V5h-3V2h-2v-5zm-1 18c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2v-1h10v1zm8-3H5c-1.1 0-2 .9-2 2v1h14v-1c0-1.1-.9-2-2-2zm0-10h-2v3h2V7z"/></svg>
+        Escanear
+    </button>
+</div>
+
+<div class="scanner-video-wrap" id="scannerVideoWrap">
+    <video id="scannerVideo" autoplay playsinline muted></video>
+    <div class="scanner-overlay-line"></div>
+</div>
+
+<div class="stock-results-info" id="stockResultsInfo" style="display:none">
+    <span id="stockResultsCount"></span>
+</div>
+
+<div class="stock-loading" id="stockLoading">
+    <div class="stock-spinner"></div>
+    <p class="stock-loading-text">Buscando producto…</p>
+</div>
+
+<div class="stock-grid" id="stockGrid">
+    <div class="stock-empty" id="stockEmpty">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <h3>Busca un producto</h3>
+        <p>Ingresa un código de barras manualmente o usa el escáner</p>
+    </div>
+</div>
+
+<button class="fab-scan" id="fabScan" onclick="toggleScanner()" title="Escanear con cámara">
+    <svg viewBox="0 0 24 24"><path d="M15 12h2v5h-2v-5zm-4 0h2v5h-2v-5zm-4 0h2v5H7v-5zM9 2H7v3H2v2h5V2zm6 0h2v5h5V5h-3V2h-2v-5zm-1 18c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2v-1h10v1zm8-3H5c-1.1 0-2 .9-2 2v1h14v-1c0-1.1-.9-2-2-2zm0-10h-2v3h2V7z"/></svg>
+</button>
+
+@{
+    var marcasJson = marcas != null
+        ? System.Text.Json.JsonSerializer.Serialize(marcas.Select(m => new { value = m.Value, text = m.Text }))
+        : "[]";
+    var tiposJson = tipos != null
+        ? System.Text.Json.JsonSerializer.Serialize(tipos.Select(t => new { value = t.Value, text = t.Text }))
+        : "[]";
+}
+
+@section Scripts {
+<script>
+    var _scanReader = null;
+    var _searchTimeout = null;
+    var _productosCache = [];
+    var _marcas = @Html.Raw(marcasJson);
+    var _tipos = @Html.Raw(tiposJson);
+    var _editandoId = null;
+
+    var csrfToken = function() {
+        return document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
+    };
+
+    // ── Búsqueda ───────────────────────────────────────────────────────────────
+
+    var stockInput = document.getElementById('stockSearchInput');
+    var btnClear = document.getElementById('btnClear');
+
+    stockInput.addEventListener('input', function() {
+        btnClear.style.display = this.value ? '' : 'none';
+        clearTimeout(_searchTimeout);
+        _searchTimeout = setTimeout(buscarProductos, 400);
+    });
+
+    stockInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            clearTimeout(_searchTimeout);
+            buscarProductos();
+        }
+    });
+
+    function limpiarBusqueda() {
+        stockInput.value = '';
+        btnClear.style.display = 'none';
+        _productosCache = [];
+        renderGrid([]);
+        mostrarEstadoInicial();
+    }
+
+    async function buscarProductos() {
+        var codigo = stockInput.value.trim();
+        if (!codigo) {
+            _productosCache = [];
+            renderGrid([]);
+            mostrarEstadoInicial();
+            return;
+        }
+
+        var loading = document.getElementById('stockLoading');
+        var grid = document.getElementById('stockGrid');
+        var empty = document.getElementById('stockEmpty');
+        var info = document.getElementById('stockResultsInfo');
+
+        grid.innerHTML = '';
+        if (empty) empty.style.display = 'none';
+        if (info) info.style.display = 'none';
+        if (loading) loading.classList.add('visible');
+
+        try {
+            var resp = await fetch('/Productos/Productos/BuscarPorCodigo?codigo=' + encodeURIComponent(codigo));
+            if (!resp.ok) throw new Error();
+            var data = await resp.json();
+            _productosCache = data;
+            renderGrid(data);
+        } catch (e) {
+            renderGrid([]);
+            if (!stockInput.value.trim()) mostrarEstadoInicial();
+            mostrarToast('Error al buscar productos.', 'error');
+        }
+    }
+
+    function mostrarEstadoInicial() {
+        var grid = document.getElementById('stockGrid');
+        var empty = document.getElementById('stockEmpty');
+        var loading = document.getElementById('stockLoading');
+        var info = document.getElementById('stockResultsInfo');
+
+        if (loading) loading.classList.remove('visible');
+        if (info) info.style.display = 'none';
+        grid.innerHTML = '';
+        if (empty) { empty.style.display = ''; grid.appendChild(empty); }
+    }
+
+    function renderGrid(productos) {
+        var grid = document.getElementById('stockGrid');
+        var empty = document.getElementById('stockEmpty');
+        var loading = document.getElementById('stockLoading');
+        var info = document.getElementById('stockResultsInfo');
+        var countEl = document.getElementById('stockResultsCount');
+
+        if (loading) loading.classList.remove('visible');
+
+        if (!productos || productos.length === 0) {
+            grid.innerHTML = '';
+            if (empty) empty.style.display = '';
+            if (info) info.style.display = 'none';
+            grid.appendChild(empty);
+        } else {
+            if (empty) empty.remove();
+            if (info) {
+                info.style.display = '';
+                countEl.innerHTML = '<strong>' + productos.length + '</strong> producto' +
+                    (productos.length !== 1 ? 's' : '') + ' encontrado' + (productos.length !== 1 ? 's' : '');
+            }
+            grid.innerHTML = productos.map(function(p) { return buildCard(p); }).join('');
+        }
+    }
+
+    // ── Card builder ────────────────────────────────────────────────────────────
+
+    function buildCard(p) {
+        var imgHtml = p.tieneImagen
+            ? '<img class="stock-card-img" src="/Productos/Productos/Imagen/' + p.idProducto +
+            '?t=' + Date.now() + '" alt="' + esc(p.nombreProducto) + '" />'
+            : '<div class="stock-card-img-ph"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></div>';
+
+        var codigoHtml = p.codigo ? '<div class="stock-card-code">' + esc(p.codigo) + '</div>' : '';
+        var descHtml = p.descripcion ? '<div class="stock-card-desc">' + esc(p.descripcion) + '</div>' : '';
+        var badgeHtml = p.estado
+            ? '<span class="badge-estado activo">Activo</span>'
+            : '<span class="badge-estado inactivo">Inactivo</span>';
+        var stockClass = p.stock <= 5 ? 'bajo' : 'ok';
+        var precioFormateado = '$' + Number(p.precio).toLocaleString('es-CL');
+
+        return '' +
+            '<div class="stock-card" id="stockCard-' + p.idProducto + '" data-producto=\'' +
+            JSON.stringify(escAttr(p)) + '\'>' +
+            '<div class="stock-card-body">' +
+            imgHtml +
+            '<div class="stock-card-info" id="stockCardInfo-' + p.idProducto + '">' +
+            '<div class="stock-card-name">' + esc(p.nombreProducto) + '</div>' +
+            codigoHtml +
+            '<div class="stock-card-meta">' +
+            '<span><span class="meta-label">Tipo:</span> ' + esc(p.nombreTipo) + '</span>' +
+            '<span><span class="meta-label">Marca:</span> ' + esc(p.nombreMarca) + '</span>' +
+            '</div>' +
+            descHtml +
+            '</div>' +
+            '</div>' +
+            '<div class="stock-card-footer" id="stockCardFooter-' + p.idProducto + '">' +
+            '<div class="stock-card-stats">' +
+            '<span class="stock-card-price">' + precioFormateado + '</span>' +
+            '<span class="stock-card-stock ' + stockClass + '">Stock: ' + p.stock + '</span>' +
+            badgeHtml +
+            '</div>' +
+            '<button class="btn-edit-card" onclick="activarEdicion(' + p.idProducto + ')">' +
+            '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>' +
+            'Editar' +
+            '</button>' +
+            '</div>' +
+            '</div>';
+    }
+
+    // ── Inline editing ──────────────────────────────────────────────────────────
+
+    function activarEdicion(id) {
+        if (_editandoId && _editandoId !== id) cancelarEdicion(_editandoId);
+
+        var producto = _productosCache.find(function(p) { return p.idProducto === id; });
+        if (!producto) return;
+
+        _editandoId = id;
+        var infoDiv = document.getElementById('stockCardInfo-' + id);
+        var footerDiv = document.getElementById('stockCardFooter-' + id);
+
+        var marcasOptions = _marcas.map(function(m) {
+            var sel = parseInt(m.value) === producto.idMarca ? ' selected' : '';
+            return '<option value="' + m.value + '"' + sel + '>' + esc(m.text) + '</option>';
+        }).join('');
+
+        var tiposOptions = _tipos.map(function(t) {
+            var sel = parseInt(t.value) === producto.idTipoProducto ? ' selected' : '';
+            return '<option value="' + t.value + '"' + sel + '>' + esc(t.text) + '</option>';
+        }).join('');
+
+        infoDiv.innerHTML = '' +
+            '<div class="stock-card-edit-fields">' +
+            '<div class="stock-edit-row"><label>Nombre:</label><input type="text" id="editNombre-' + id +
+            '" value="' + escAttr(producto.nombreProducto) + '" /></div>' +
+            '<div class="stock-edit-row"><label>Código:</label><input type="text" id="editCodigo-' + id + '" value="' +
+            escAttr(producto.codigo || '') + '" /></div>' +
+            '<div class="stock-edit-row"><label>Descripción:</label><input type="text" id="editDesc-' + id + '" value="' +
+            escAttr(producto.descripcion || '') + '" /></div>' +
+            '<div class="stock-edit-row"><label>Tipo:</label><select id="editTipo-' + id + '">' + tiposOptions +
+            '</select></div>' +
+            '<div class="stock-edit-row"><label>Marca:</label><select id="editMarca-' + id + '">' + marcasOptions +
+            '</select></div>' +
+            '<div class="stock-edit-row"><label>Precio ($):</label><input type="number" min="0" step="1" id="editPrecio-' +
+            id + '" value="' + producto.precio + '" /></div>' +
+            '<div class="stock-edit-row"><label>Stock:</label><input type="number" min="0" step="1" id="editStock-' + id +
+            '" value="' + producto.stock + '" /></div>' +
+            '</div>';
+
+        footerDiv.innerHTML = '' +
+            '<div class="stock-edit-actions">' +
+            '<button class="btn-save-card" onclick="guardarEdicion(' + id + ')">' +
+            '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>' +
+            'Guardar cambios</button>' +
+            '<button class="btn-cancel-card" onclick="cancelarEdicion(' + id + ')">Cancelar</button>' +
+            '</div>';
+    }
+
+    function cancelarEdicion(id) {
+        if (_editandoId !== id) return;
+        _editandoId = null;
+
+        var producto = _productosCache.find(function(p) { return p.idProducto === id; });
+        if (!producto) return;
+
+        var infoDiv = document.getElementById('stockCardInfo-' + id);
+        var footerDiv = document.getElementById('stockCardFooter-' + id);
+
+        var codigoHtml = producto.codigo ? '<div class="stock-card-code">' + esc(producto.codigo) + '</div>' : '';
+        var descHtml = producto.descripcion ? '<div class="stock-card-desc">' + esc(producto.descripcion) + '</div>' : '';
+        var badgeHtml = producto.estado
+            ? '<span class="badge-estado activo">Activo</span>'
+            : '<span class="badge-estado inactivo">Inactivo</span>';
+        var stockClass = producto.stock <= 5 ? 'bajo' : 'ok';
+
+        infoDiv.innerHTML = '' +
+            '<div class="stock-card-name">' + esc(producto.nombreProducto) + '</div>' +
+            codigoHtml +
+            '<div class="stock-card-meta">' +
+            '<span><span class="meta-label">Tipo:</span> ' + esc(producto.nombreTipo) + '</span>' +
+            '<span><span class="meta-label">Marca:</span> ' + esc(producto.nombreMarca) + '</span>' +
+            '</div>' +
+            descHtml;
+
+        footerDiv.innerHTML = '' +
+            '<div class="stock-card-stats">' +
+            '<span class="stock-card-price">$' + Number(producto.precio).toLocaleString('es-CL') + '</span>' +
+            '<span class="stock-card-stock ' + stockClass + '">Stock: ' + producto.stock + '</span>' +
+            badgeHtml +
+            '</div>' +
+            '<button class="btn-edit-card" onclick="activarEdicion(' + id + ')">' +
+            '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>' +
+            'Editar' +
+            '</button>';
+    }
+
+    async function guardarEdicion(id) {
+        var card = document.getElementById('stockCard-' + id);
+        if (!card) return;
+        card.classList.add('stock-card-saving');
+
+        var form = new FormData();
+        form.append('__RequestVerificationToken', csrfToken());
+        form.append('idProducto', id);
+        form.append('nombreProducto', document.getElementById('editNombre-' + id)?.value ?? '');
+        form.append('codigo', document.getElementById('editCodigo-' + id)?.value ?? '');
+        form.append('descripción', document.getElementById('editDesc-' + id)?.value ?? '');
+        form.append('idTipoProducto', parseInt(document.getElementById('editTipo-' + id)?.value) || 0);
+        form.append('idMarca', parseInt(document.getElementById('editMarca-' + id)?.value) || 0);
+        form.append('precio', parseInt(document.getElementById('editPrecio-' + id)?.value) || 0);
+        form.append('stock', parseInt(document.getElementById('editStock-' + id)?.value) || 0);
+        form.append('estado', _productosCache.find(function(p) { return p.idProducto === id; })?.estado ? 'true' :
+            'false');
+
+        try {
+            var resp = await fetch('/Productos/Productos/EditarAjax/' + id, {
+                method: 'POST',
+                body: form
+            });
+            var data = await resp.json();
+            card.classList.remove('stock-card-saving');
+
+            if (data.ok) {
+                mostrarToast(data.mensaje, 'exito');
+                _editandoId = null;
+                var idx = _productosCache.findIndex(function(p) { return p.idProducto === id; });
+                if (idx !== -1 && data.producto) {
+                    _productosCache[idx] = data.producto;
+                }
+                renderGrid(_productosCache);
+            } else {
+                mostrarToast(data.mensaje || 'Error al guardar.', 'error');
+            }
+        } catch (e) {
+            card.classList.remove('stock-card-saving');
+            mostrarToast('Error de conexión.', 'error');
+        }
+    }
+
+    // ── Scanner ─────────────────────────────────────────────────────────────────
+
+    function toggleScanner() {
+        var wrap = document.getElementById('scannerVideoWrap');
+        if (wrap && wrap.style.display === 'block') {
+            detenerScanner();
+        } else {
+            iniciarScanner();
+        }
+    }
+
+    function cargarZxing(cb) {
+        if (window.ZXing) { cb(); return; }
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@@zxing/library@@0.21.3/umd/index.min.js';
+        s.onload = cb;
+        s.onerror = function() { mostrarToast('No se pudo cargar el escáner.', 'error'); };
+        document.head.appendChild(s);
+    }
+
+    function iniciarScanner() {
+        cargarZxing(async function() {
+            var wrap = document.getElementById('scannerVideoWrap');
+            var video = document.getElementById('scannerVideo');
+            var btnScan = document.getElementById('btnScan');
+            var fab = document.getElementById('fabScan');
+
+            if (!wrap || !video) return;
+
+            wrap.style.display = 'block';
+            if (btnScan) { btnScan.classList.add('scanning');
+                btnScan.textContent = 'Escaneando…'; }
+            if (fab) fab.classList.add('scanning');
+
+            try {
+                var reader = new ZXing.BrowserMultiFormatReader();
+                _scanReader = reader;
+                var result = await reader.decodeOnceFromConstraints({
+                    video: { facingMode: { ideal: 'environment' } }
+                }, video);
+
+                detenerScanner();
+
+                var campo = document.getElementById('stockSearchInput');
+                if (campo) {
+                    campo.value = result.text;
+                    campo.dispatchEvent(new Event('input'));
+                    buscarProductos();
+                }
+            } catch (e) {
+                detenerScanner();
+                if (e?.name !== 'NotFoundException' && e?.name !== 'AbortException') {
+                    mostrarToast('No se pudo acceder a la cámara.', 'error');
+                }
+            }
+        });
+    }
+
+    function detenerScanner() {
+        if (_scanReader) {
+            try { _scanReader.reset(); } catch (e) { /* silenciar */ }
+            _scanReader = null;
+        }
+        var wrap = document.getElementById('scannerVideoWrap');
+        var btnScan = document.getElementById('btnScan');
+        var fab = document.getElementById('fabScan');
+
+        if (wrap) wrap.style.display = 'none';
+        if (btnScan) {
+            btnScan.classList.remove('scanning');
+            btnScan.innerHTML =
+                '<svg viewBox="0 0 24 24"><path d="M15 12h2v5h-2v-5zm-4 0h2v5h-2v-5zm-4 0h2v5H7v-5zM9 2H7v3H2v2h5V2zm6 0h2v5h5V5h-3V2h-2v-5zm-1 18c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2v-1h10v1zm8-3H5c-1.1 0-2 .9-2 2v1h14v-1c0-1.1-.9-2-2-2zm0-10h-2v3h2V7z"/></svg> Escanear';
+        }
+        if (fab) fab.classList.remove('scanning');
+    }
+
+    // ── Toasts ──────────────────────────────────────────────────────────────────
+
+    function mostrarToast(msg, tipo) {
+        var iconos = {
+            exito: '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>',
+            error: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>'
+        };
+        var w = document.getElementById('toastWrap');
+        var t = document.createElement('div');
+        t.className = 'toast-msg ' + tipo;
+        t.innerHTML = iconos[tipo] + '<span>' + msg + '</span>';
+        w.appendChild(t);
+        setTimeout(function() { t.style.opacity = '0'; }, 3500);
+        setTimeout(function() { t.remove(); }, 3800);
+    }
+
+    // ── Utilidades ──────────────────────────────────────────────────────────────
+
+    function esc(s) {
+        return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function escAttr(s) {
+        return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+</script>
+}

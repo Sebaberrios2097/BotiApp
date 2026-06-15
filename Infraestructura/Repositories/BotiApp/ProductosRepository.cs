@@ -220,6 +220,16 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
         return true;
     }
 
+    public async Task<IEnumerable<ProProductos>> BuscarPorCodigoAsync(string codigo)
+        => await context.ProProductos
+            .AsNoTracking()
+            .Include(p => p.IdMarcaNavigation)
+            .Include(p => p.IdTipoProductoNavigation)
+            .Include(p => p.ProProductosRetornables)
+            .Where(p => p.Codigo != null && p.Codigo == codigo)
+            .OrderBy(p => p.NombreProducto)
+            .ToListAsync();
+
     public async Task<ProMarcas> CrearMarcaAsync(ProMarcas marca)
     {
         marca.Estado = true;

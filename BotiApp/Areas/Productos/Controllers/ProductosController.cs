@@ -101,6 +101,8 @@ public class ProductosController(
         if (!ModelState.IsValid)
             return Json(new { ok = false, errores = ObtenerErrores() });
 
+        var existente = await productosRepository.ObtenerPorIdAsync(id);
+
         if (imagenFile is { Length: > 0 })
         {
             using var ms = new MemoryStream();
@@ -109,9 +111,11 @@ public class ProductosController(
         }
         else
         {
-            var existente = await productosRepository.ObtenerPorIdAsync(id);
             producto.Imagen = existente?.Imagen;
         }
+
+        if (existente != null)
+            producto.FechaIngreso = existente.FechaIngreso;
 
         await productosRepository.ActualizarAsync(producto);
         var completo = await productosRepository.ObtenerPorIdAsync(id);
@@ -295,6 +299,26 @@ public class ProductosController(
         }
     }
 
+    // ── Control de Stock / Inventario ───────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> Stock()
+    {
+        await CargarSelectListsAsync();
+        return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> BuscarPorCodigo(string codigo)
+    {
+        if (string.IsNullOrWhiteSpace(codigo))
+            return Json(Array.Empty<object>());
+
+        var productos = await productosRepository.BuscarPorCodigoAsync(codigo.Trim());
+        var resultado = productos.Select(MapFila);
+        return Json(resultado);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private async Task CargarSelectListsAsync(int idMarca = 0, int idTipo = 0)
@@ -318,6 +342,8 @@ public class ProductosController(
         descripcion = p.Descripción ?? "",
         nombreTipo = p.IdTipoProductoNavigation?.NombreTipoProducto ?? "—",
         nombreMarca = p.IdMarcaNavigation?.NombreMarca ?? "—",
+        idTipoProducto = p.IdTipoProducto,
+        idMarca = p.IdMarca,
         p.Precio,
         p.Stock,
         p.Estado,
