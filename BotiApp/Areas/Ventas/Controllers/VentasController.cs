@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using BotiApp.Areas.Ventas.Models;
 using BotiApp.Helpers;
 using BotiApp.Hubs;
@@ -273,6 +275,34 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         });
     }
 
+    // ── POST: proxy emitir DTE (evita CORS hacia localhost:5000) ─────────────
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "AdminOCajero")]
+    public async Task<IActionResult> EmitirDteAjax([FromBody] EmitirDteRequest request)
+    {
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        var json = JsonSerializer.Serialize(new
+        {
+            tipoDte    = request.TipoDte,
+            montoTotal = request.MontoTotal,
+            fmaPago    = request.FmaPago,
+            detalles   = request.Detalles.Select(d => new
+            {
+                nombre         = d.Nombre,
+                cantidad       = d.Cantidad,
+                precioUnitario = d.PrecioUnitario
+            })
+        });
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await httpClient.PostAsync("http://localhost:5000/api/boletas/emitir?format=json", content);
+        var body = await response.Content.ReadAsStringAsync();
+
+        Response.StatusCode = (int)response.StatusCode;
+        return Content(body, "application/json");
+    }
+
     // ── GET: boletas pendientes para panel rápido en Caja ────────────────────
     [HttpGet]
     public async Task<IActionResult> BoletasPendientesAjax()
@@ -349,3 +379,5 @@ public record ModificarBoletaRequest(int IdBoleta, List<ItemBoleta> Items);
 public record CobrarBoletaRequest(int IdBoleta, List<MetodoPagoItem> MetodosPago);
 public record DejarFiadoRequest(int IdBoleta, int IdClienteFiado);
 public record MetodoPagoItem(int IdMetodoPago, int Monto);
+public record EmitirDteRequest(int TipoDte, int MontoTotal, int FmaPago, List<EmitirDteDetalle> Detalles);
+public record EmitirDteDetalle(string Nombre, int Cantidad, int PrecioUnitario);

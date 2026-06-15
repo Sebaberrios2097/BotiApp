@@ -53,6 +53,7 @@
     var urlCrearCliente  = Url.Action("CrearClienteAjax",      "Fiado",  new { area = "Ventas" });
     var urlCrear         = Url.Action("CrearBoletaAjax",       "Ventas", new { area = "Ventas" });
     var urlImagen        = Url.Action("Imagen", "Productos", new { area = "Productos", id = 0 })!.Replace("/0", "");
+    var urlEmitirDte     = Url.Action("EmitirDteAjax",      "Ventas", new { area = "Ventas" });
 }
 
 <style>
@@ -735,7 +736,7 @@
 
                     <!-- Botón para mostrar/ocultar pago adicional -->
                     <button onclick="toggleAdicional()" id="btnToggleAdicional"
-                        style="background:none; border:none; font-size:.8rem; font-weight:600; color:var(--color-primario); cursor:pointer; text-align:left; padding:0; text-decoration:underline;">
+                        style="background:none; border:none; font-size:.8rem; font-weight:600; color:var(--color-primario); cursor:pointer; text-align:left; padding:0; text-decoration:underline; margin-bottom: .2rem;">
                         + Agregar otro método de pago
                     </button>
 
@@ -821,6 +822,7 @@
     const URL_CREAR_CLIENTE  = '@Html.Raw(urlCrearCliente)';
     const URL_CREAR          = '@Html.Raw(urlCrear)';
     const URL_IMG            = '@Html.Raw(urlImagen)';
+    const URL_EMITIR_DTE    = '@Html.Raw(urlEmitirDte)';
 
     /* ── Mapa de retornables ─────────────────────────────────────────────── */
     const RETORNABLES_MAP = {};
@@ -877,6 +879,139 @@
         if (cargando) btn.dataset.oldHtml = btn.innerHTML;
         btn.innerHTML = cargando ? '<span class="spin-sm"></span> Procesando…' : btn.dataset.oldHtml;
     }
+
+    /* ── DTE Helpers y Emisión ─────────────────────────────────────────────── */
+    window.emitirDte = async function (boleta) {
+        if (!boleta) return;
+
+        function base64ToBlob(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+        }
+
+        function getFmaPago() {
+            const primary = metodosCobro.find(m => m.monto > 0);
+            if (!primary) return 1;
+            const name = (primary.nombre || "").toLowerCase();
+            if (name.includes("efectivo")) return 1;
+            if (name.includes("tarjeta") || name.includes("debito") || name.includes("débito") || 
+                name.includes("credito") || name.includes("crédito") || name.includes("transbank")) return 2;
+            if (name.includes("cheque") || name.includes("transferencia") || name.includes("banco") || name.includes("fiado")) return 3;
+            return 1;
+        }
+
+        const detalles = boleta.detalle.map(d => {
+            return {
+                nombre: d.nombre === "—" ? "Venta de productos/Otros" : d.nombre,
+                cantidad: d.cantidad,
+                precioUnitario: d.precioUnitario
+            };
+        });
+
+        const payload = {
+            tipoDte: 39,
+            montoTotal: boleta.montoTotal,
+            fmaPago: getFmaPago(),
+            detalles: detalles
+        };
+
+        let dteExitoso = false;
+        while (!dteExitoso) {
+            Swal.fire({
+                title: 'Emitiendo Boleta Electrónica...',
+                text: 'Por favor espera mientras nos comunicamos con el SII.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                const response = await fetch(URL_EMITIR_DTE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': TOKEN },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `Código de respuesta: ${response.status}`;
+                    try {
+                        const errBody = await response.json();
+                        if (errBody && errBody.mensaje) errorMsg = errBody.mensaje;
+                        else if (errBody && errBody.error) errorMsg = errBody.error;
+                    } catch {}
+                    throw new Error(errorMsg);
+                }
+
+                const resDte = await response.json();
+                Swal.close();
+
+                if (resDte && resDte.pdf) {
+                    dteExitoso = true;
+                    
+                    const pdfBlob = base64ToBlob(resDte.pdf, 'application/pdf');
+                    const pdfUrl = URL.createObjectURL(pdfBlob);
+                    
+                    const pdfWindow = window.open(pdfUrl, '_blank');
+                    if (!pdfWindow || pdfWindow.closed || typeof pdfWindow.closed == 'undefined') {
+                        toast('El bloqueo de ventanas emergentes impidió abrir el PDF. Se descargará automáticamente.', 'error');
+                    }
+
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = pdfUrl;
+                    downloadLink.download = `DTE_Folio_${resDte.folio || 'Emitido'}.pdf`;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+
+                    await Swal.fire({
+                        title: '¡Boleta Emitida Exitosamente!',
+                        html: `Documento Tipo: <strong>39 (Boleta Afecta)</strong><br>` +
+                              `Folio SII: <strong>${resDte.folio || 'N/A'}</strong><br>` +
+                              `Track ID: <strong>${resDte.trackId || 'N/A'}</strong><br><br>` +
+                              `<span style="font-size:0.9em;color:#6b7280;">El archivo PDF ha sido descargado y abierto en una pestaña.</span>`,
+                        icon: 'success',
+                        confirmButtonText: 'Aceptar',
+                        confirmButtonColor: '#e76f2e'
+                    });
+
+                } else {
+                    const errMsg = resDte?.mensaje || resDte?.error || 'La respuesta del servidor DTE no contiene los datos esperados.';
+                    throw new Error(errMsg);
+                }
+
+            } catch (err) {
+                Swal.close();
+                console.error('DTE Emission Error:', err);
+
+                const retryResult = await Swal.fire({
+                    title: 'Error al emitir Boleta Electrónica',
+                    html: `El cobro se registró correctamente en caja local, pero falló la emisión del DTE.<br><br>` +
+                          `<span style="color:#dc2626;font-size:0.9em;">Detalle: ${err.message || err}</span><br><br>` +
+                          `¿Deseas reintentar la emisión de la boleta o continuar sin DTE?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Reintentar Emisión DTE',
+                    cancelButtonText: 'Continuar sin DTE',
+                    confirmButtonColor: '#e76f2e',
+                    cancelButtonColor: '#6b7280',
+                    reverseButtons: true
+                });
+
+                if (!retryResult.isConfirmed) {
+                    dteExitoso = true;
+                    toast('Checkout finalizado sin emisión de DTE.', 'error');
+                }
+            }
+        }
+    };
+
 
     /* Auto-guardar silencioso (sin spinner de botón) */
     let _autoGuardarTimer = null;
@@ -1881,6 +2016,8 @@
         toast(res.mensaje, 'exito');
         cargarBoleta(res.boleta);
         cargarBoletasPendientes();
+
+        await emitirDte(res.boleta);
     };
 
     /* ════════════════════════════════════════════════════
