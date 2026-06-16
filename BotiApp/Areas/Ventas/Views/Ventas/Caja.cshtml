@@ -2478,7 +2478,11 @@
     let barcodeBuffer = '';
     let lastKeyTime   = Date.now();
 
-    window.addEventListener('keydown', function(e) {
+    if (window._cajaKeyDownHandler) {
+        window.removeEventListener('keydown', window._cajaKeyDownHandler);
+    }
+
+    window._cajaKeyDownHandler = function(e) {
         if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') {
             return;
         }
@@ -2535,7 +2539,9 @@
         if (e.key.length === 1) {
             barcodeBuffer += e.key;
         }
-    });
+    };
+
+    window.addEventListener('keydown', window._cajaKeyDownHandler);
 
 })();
 </script>
