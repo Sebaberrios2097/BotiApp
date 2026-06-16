@@ -13,7 +13,7 @@
         .GroupBy(o => o.IdProducto)
         .ToDictionary(g => g.Key, g => g.OrderBy(o => o.PrecioOferta).First().IdOfertaProducto);
 
-    var catalogoJson = JsonSerializer.Serialize(Model.Productos.Select(p => new
+    var catalogoJson = JsonSerializer.Serialize(Model.Productos.Where(p => p.IdProducto != 0).Select(p => new
     {
         id          = p.IdProducto,
         nombre      = p.NombreProducto,
@@ -1693,7 +1693,8 @@
 
                 // Mostrar ticket con el snapshot
                 mostrarTicket({
-                    idBoleta:     data.boleta.idBoleta,
+                    idBoleta:          data.boleta.idBoleta,
+                    correlativoDiario: data.boleta.correlativoDiario,
                     @* cajero:       data.boleta.cajero, *@
                     fechaEmision: data.boleta.fechaEmision,
                     instancias:   snapshotInstancias,
@@ -1720,7 +1721,7 @@
     /* ══════════════════════════════════════════════════════════════════════
        TICKET POS
     ══════════════════════════════════════════════════════════════════════ */
-    function mostrarTicket({ idBoleta, cajero, fechaEmision, instancias, remaining, carritoSnap, descPromos, descOfertas, descTotal, subtotal, envases, soloCliente = false }) {
+    function mostrarTicket({ idBoleta, correlativoDiario, cajero, fechaEmision, instancias, remaining, carritoSnap, descPromos, descOfertas, descTotal, subtotal, envases, soloCliente = false }) {
         const NOMBRE_LOCAL = 'Botillería Cuatro Ases';
         const total = Math.max(0, subtotal - descTotal);
         const pad58  = (l, r) => {
@@ -1855,7 +1856,7 @@
             <div class="ticket-wrap">
                 <div class="ticket ticket-cliente">
                     <div class="ticket-title ticket-bold">${x(NOMBRE_LOCAL)}</div>
-                    <div class="ticket-subtitle ticket-bold" style="margin-top:2px;">TICKET N° ${idBoleta}</div>
+                    <div class="ticket-subtitle ticket-bold" style="margin-top:2px;">TICKET N° ${correlativoDiario ?? idBoleta}</div>
                     <div class="ticket-sub-label">TICKET INTERNO</div>
                     <hr class="ticket-hr-sol">
                     <div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">${fechaEmision}</span></div>
@@ -1869,7 +1870,7 @@
                 <div class="ticket-cut">✂ &nbsp; CORTAR &nbsp; ✂</div>
                 <div class="ticket ticket-vendedor">
                     <div class="ticket-title ticket-bold">LISTA DE DESPACHO</div>
-                    <div class="ticket-subtitle ticket-bold" style="margin-top:2px;">TICKET N° ${idBoleta}</div>
+                    <div class="ticket-subtitle ticket-bold" style="margin-top:2px;">TICKET N° ${correlativoDiario ?? idBoleta}</div>
                     <div class="ticket-sub-label">COPIA VENDEDOR</div>
                     <hr class="ticket-hr-sol">
                     <div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">${fechaEmision}</span></div>

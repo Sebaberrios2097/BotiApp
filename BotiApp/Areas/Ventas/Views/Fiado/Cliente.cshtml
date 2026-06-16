@@ -390,7 +390,7 @@
                                 var anio = b.FechaEmision?.Year.ToString() ?? "";
                                 var mes  = b.FechaEmision?.Month.ToString() ?? "";
                                 <tr data-anio="@anio" data-mes="@mes">
-                                    <td style="color:#9ca3af">@b.IdBoleta</td>
+                                    <td style="color:#9ca3af">@(b.CorrelativoDiario != null ? $"#{b.CorrelativoDiario} (ID: {b.IdBoleta})" : $"ID: {b.IdBoleta}")</td>
                                     <td style="white-space:nowrap">@(b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
                                     <td><span class="fc-badge @estadoClass">@estadoLabel</span></td>
                                     <td style="text-align:right;font-weight:600">$@b.MontoTotal.ToString("N0")</td>

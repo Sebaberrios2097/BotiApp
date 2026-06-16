@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -24,6 +24,9 @@ public partial class VenBoletas
 
     [Column("Fecha_Emision", TypeName = "datetime")]
     public DateTime? FechaEmision { get; set; }
+
+    [Column("Correlativo_Diario")]
+    public int? CorrelativoDiario { get; set; }
 
     [Column("Monto_Total")]
     public int MontoTotal { get; set; }

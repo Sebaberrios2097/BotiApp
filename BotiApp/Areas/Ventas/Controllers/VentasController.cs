@@ -59,6 +59,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
 
         var boletasDtos = boletas.Select(b => new BoletaResumenDto(
             b.IdBoleta,
+            b.CorrelativoDiario,
             b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
             b.IdEstadoBoletaNavigation?.NombreEstadoBoleta ?? "—",
             b.IdEstadoBoleta,
@@ -149,7 +150,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         return Json(new
         {
             ok = true,
-            mensaje = $"Boleta N° {creada.IdBoleta} generada por ${creada.MontoTotal:N0}.",
+            mensaje = $"Boleta N° {creada.CorrelativoDiario ?? creada.IdBoleta}{(creada.CorrelativoDiario != null ? $" (ID: {creada.IdBoleta})" : "")} generada por ${creada.MontoTotal:N0}.",
             boleta = MapBoletaCaja(completa!)
         });
     }
@@ -161,6 +162,11 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
     public async Task<IActionResult> BuscarBoletaAjax([FromBody] BuscarBoletaRequest request)
     {
         var boleta = await ventasRepository.ObtenerBoletaParaCajaAsync(request.IdBoleta);
+        if (boleta == null)
+        {
+            boleta = await ventasRepository.ObtenerBoletaPorCorrelativoDiarioAsync(request.IdBoleta, DateTime.Now);
+        }
+
         if (boleta == null)
             return Json(new { ok = false, mensaje = $"Boleta N° {request.IdBoleta} no encontrada." });
 
@@ -226,7 +232,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         return Json(new
         {
             ok = true,
-            mensaje = $"Boleta N° {cobrada.IdBoleta} cobrada exitosamente por ${cobrada.MontoTotal:N0}.",
+            mensaje = $"Boleta N° {cobrada.CorrelativoDiario ?? cobrada.IdBoleta}{(cobrada.CorrelativoDiario != null ? $" (ID: {cobrada.IdBoleta})" : "")} cobrada exitosamente por ${cobrada.MontoTotal:N0}.",
             boleta = MapBoletaCaja(cobrada)
         });
     }
@@ -262,7 +268,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         return Json(new
         {
             ok = true,
-            mensaje = $"Boleta N° {boleta.IdBoleta} registrada como fiado.",
+            mensaje = $"Boleta N° {boleta.CorrelativoDiario ?? boleta.IdBoleta}{(boleta.CorrelativoDiario != null ? $" (ID: {boleta.IdBoleta})" : "")} registrada como fiado.",
             boleta = MapBoletaCaja(boleta)
         });
     }
@@ -275,6 +281,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         var result = boletas.Select(b => new
         {
             idBoleta = b.IdBoleta,
+            correlativoDiario = b.CorrelativoDiario,
             fechaEmision = b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
             vendedor = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } ev
                 ? $"{ev.NombresEmpleado} {ev.Apellido1}".Trim()
@@ -289,6 +296,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
     private static object MapBoletaTicket(VenBoletas b) => new
     {
         b.IdBoleta,
+        correlativoDiario = b.CorrelativoDiario,
         fechaEmision = b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
         estado = b.IdEstadoBoletaNavigation?.NombreEstadoBoleta ?? "—",
         idEstado = b.IdEstadoBoleta,
@@ -307,6 +315,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
     private static object MapBoletaCaja(VenBoletas b) => new
     {
         b.IdBoleta,
+        correlativoDiario = b.CorrelativoDiario,
         fechaEmision = b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
         estado = b.IdEstadoBoletaNavigation?.NombreEstadoBoleta ?? "—",
         idEstado = b.IdEstadoBoleta,

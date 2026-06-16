@@ -18,8 +18,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath        = "/Login/Login";
         options.LogoutPath       = "/Login/Logout";
         options.AccessDeniedPath = "/Home/AccesoDenegado";
-        options.ExpireTimeSpan   = TimeSpan.FromHours(8);
+        options.ExpireTimeSpan   = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;
+        options.Cookie.Name = "BotiAppSession";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.IsEssential = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
  
 builder.Services.AddAuthorization(options =>
@@ -35,6 +40,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
 
 if (!app.Environment.IsDevelopment())
 {
