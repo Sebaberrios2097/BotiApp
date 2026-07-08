@@ -217,7 +217,7 @@
     <div class="pro-toolbar">
         <div class="pro-search-bar">
             <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-            <input type="text" id="buscador" placeholder="Buscar por nombre, código, marca o tipo…" oninput="filtrarYPaginar()" />
+            <input type="text" id="buscador" placeholder="Buscar por nombre o código…" oninput="filtrarYPaginar()" />
         </div>
         <select class="pro-filter-select" id="filtroEstado" onchange="filtrarYPaginar()">
             <option value="">Todos los estados</option>
@@ -306,8 +306,9 @@
         var retBadge = p.ProProductosRetornables is not null
             ? @"<span class=""badge-ret""><svg viewBox=""0 0 24 24""><path d=""M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z""/></svg>Ret.</span>"
             : "";
+        var buscar = (p.NombreProducto ?? "") + " " + (p.Codigo ?? "");
         return $@"
-<tr id=""fila-{p.IdProducto}"" data-id=""{p.IdProducto}"" data-estado=""{(p.Estado ? "activo" : "inactivo")}"">
+<tr id=""fila-{p.IdProducto}"" data-id=""{p.IdProducto}"" data-estado=""{(p.Estado ? "activo" : "inactivo")}"" data-buscar=""{System.Web.HttpUtility.HtmlAttributeEncode(buscar)}"">
   <td>{imgHtml}</td>
   <td><span style=""font-weight:600"">{p.NombreProducto}</span>{retBadge}{codigo}{desc}</td>
   <td>{p.IdTipoProductoNavigation?.NombreTipoProducto ?? "—"}</td>
@@ -358,16 +359,24 @@ function initPaginado() {
 }
 
 function filtrarYPaginar() {
-    const q   = document.getElementById('buscador').value.toLowerCase().trim();
+    const q   = normalizarBusqueda(document.getElementById('buscador').value);
     const est = document.getElementById('filtroEstado').value;
     filteredRows = allRows.filter(tr => {
-        const txt = tr.textContent.toLowerCase();
-        const matchQ   = !q   || txt.includes(q);
+        const haystack = normalizarBusqueda(tr.dataset.buscar || '');
+        const matchQ   = !q   || haystack.includes(q);
         const matchEst = !est || tr.dataset.estado === est;
         return matchQ && matchEst;
     });
     currentPage = 1;
     renderPagina();
+}
+
+function normalizarBusqueda(s) {
+    return String(s ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '');
 }
 
 function cambiarTamano() {
@@ -726,8 +735,9 @@ function buildFila(p) {
     const toggleIcon  = p.estado
         ? `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>`
         : `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>`;
+    const buscar = [p.nombreProducto || '', p.codigo || ''].join(' ');
     return `
-<tr id="fila-${p.idProducto}" data-id="${p.idProducto}" data-estado="${estadoData}">
+<tr id="fila-${p.idProducto}" data-id="${p.idProducto}" data-estado="${estadoData}" data-buscar="${esc(buscar)}">
   <td>${imgHtml}</td>
   <td><span style="font-weight:600">${esc(p.nombreProducto)}</span>${codigo}${desc}</td>
   <td>${esc(p.nombreTipo)}</td>
@@ -811,9 +821,10 @@ window.cerrarModalRetornables = function () {
 };
 
 window.filtrarModalRet = function () {
-    const q = (document.getElementById('retmBuscador')?.value ?? '').trim().toLowerCase();
+    const q = normalizarBusqueda(document.getElementById('retmBuscador')?.value ?? '');
     const filtrados = RETM_PRODUCTOS.filter(p =>
-        p.nombre.toLowerCase().includes(q) || p.marca.toLowerCase().includes(q)
+        normalizarBusqueda(p.nombre).includes(q) ||
+        (p.codigo && normalizarBusqueda(p.codigo).includes(q))
     );
     renderModalRetGrid(filtrados);
 };

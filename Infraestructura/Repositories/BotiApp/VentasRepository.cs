@@ -329,54 +329,67 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
 
     public async Task<IEnumerable<ProProductos>> BuscarProductosAsync(string q)
     {
-        var query = context.ProProductos
+        var candidatos = await context.ProProductos
             .AsNoTracking()
-            .Where(p => p.Estado && p.Stock > 0);
-
-        if (!string.IsNullOrWhiteSpace(q))
-            query = query.Where(p =>
-                p.NombreProducto.Contains(q) ||
-                (p.Descripción != null && p.Descripción.Contains(q)) ||
-                (p.IdMarcaNavigation != null && p.IdMarcaNavigation.NombreMarca.Contains(q)) ||
-                (p.Codigo != null && p.Codigo.Contains(q)));
-
-        var list = await query
-            .OrderBy(p => p.NombreProducto)
-            .Take(30)
-            .Select(p => new
-            {
-                p.IdProducto,
-                p.IdTipoProducto,
-                p.IdMarca,
-                p.NombreProducto,
-                p.Descripción,
-                p.Precio,
-                p.Stock,
-                p.Estado,
-                p.Codigo,
-                p.FechaIngreso,
-                TieneImagen = p.Imagen != null,
-                Marca = p.IdMarcaNavigation,
-                Tipo = p.IdTipoProductoNavigation
-            })
+            .Include(p => p.IdMarcaNavigation)
+            .Include(p => p.IdTipoProductoNavigation)
+            .Where(p => p.Estado && p.Stock > 0)
             .ToListAsync();
 
-        return list.Select(x => new ProProductos
+        if (string.IsNullOrWhiteSpace(q))
+            candidatos = candidatos.Take(30).ToList();
+        else
         {
-            IdProducto = x.IdProducto,
-            IdTipoProducto = x.IdTipoProducto,
-            IdMarca = x.IdMarca,
-            NombreProducto = x.NombreProducto,
-            Descripción = x.Descripción,
-            Precio = x.Precio,
-            Stock = x.Stock,
-            Estado = x.Estado,
-            Codigo = x.Codigo,
-            FechaIngreso = x.FechaIngreso,
-            Imagen = x.TieneImagen ? new byte[1] : null,
-            IdMarcaNavigation = x.Marca,
-            IdTipoProductoNavigation = x.Tipo
+            var filtroNorm = NormalizarTexto(q);
+            candidatos = candidatos
+                .Where(p =>
+                    NormalizarTexto(p.NombreProducto).Contains(filtroNorm) ||
+                    (p.Codigo != null && NormalizarTexto(p.Codigo).Contains(filtroNorm)))
+                .OrderBy(p => p.NombreProducto)
+                .Take(30)
+                .ToList();
+        }
+
+        return candidatos.Select(p => new ProProductos
+        {
+            IdProducto = p.IdProducto,
+            IdTipoProducto = p.IdTipoProducto,
+            IdMarca = p.IdMarca,
+            NombreProducto = p.NombreProducto,
+            Descripción = p.Descripción,
+            Precio = p.Precio,
+            Stock = p.Stock,
+            Estado = p.Estado,
+            Codigo = p.Codigo,
+            FechaIngreso = p.FechaIngreso,
+            Imagen = p.Imagen != null ? new byte[1] : null,
+            IdMarcaNavigation = p.IdMarcaNavigation,
+            IdTipoProductoNavigation = p.IdTipoProductoNavigation
         });
+    }
+
+    /// <summary>
+    /// Normaliza un texto para búsquedas: minúsculas, sin acentos, sin separadores
+    /// (espacios, guiones, guiones bajos, puntos, comas, etc.). De este modo,
+    /// "coca cola", "coca-cola", "coca_cola" y "cocacola" son equivalentes.
+    /// </summary>
+    private static string NormalizarTexto(string texto)
+    {
+        if (string.IsNullOrEmpty(texto)) return string.Empty;
+
+        var sinAcentos = texto.Normalize(System.Text.NormalizationForm.FormD);
+        var sb = new System.Text.StringBuilder(sinAcentos.Length);
+        foreach (var c in sinAcentos)
+        {
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) ==
+                System.Globalization.UnicodeCategory.NonSpacingMark)
+                continue;
+
+            if (char.IsLetterOrDigit(c))
+                sb.Append(char.ToLowerInvariant(c));
+        }
+
+        return sb.ToString().Normalize(System.Text.NormalizationForm.FormC);
     }
 
     // ── Dashboard ─────────────────────────────────────────────────────────────

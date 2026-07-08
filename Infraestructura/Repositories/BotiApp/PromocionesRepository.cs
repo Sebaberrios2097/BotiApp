@@ -113,15 +113,48 @@ public class PromocionesRepository(BotiAppContext context) : IPromocionesReposit
 
     public async Task<IEnumerable<ProProductos>> BuscarProductosAsync(string q)
     {
-        q = q.Trim().ToLower();
-        return await context.ProProductos
+        q = (q ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(q))
+            return Enumerable.Empty<ProProductos>();
+
+        var filtroNorm = NormalizarTexto(q);
+
+        var todos = await context.ProProductos
+            .AsNoTracking()
             .Include(p => p.IdMarcaNavigation)
             .Include(p => p.IdTipoProductoNavigation)
-            .Where(p => p.Estado &&
-                        (p.NombreProducto.ToLower().Contains(q) ||
-                         p.IdMarcaNavigation.NombreMarca.ToLower().Contains(q)))
-            .OrderBy(p => p.NombreProducto)
-            .Take(20)
+            .Where(p => p.Estado)
             .ToListAsync();
+
+        return todos
+            .Where(p =>
+                NormalizarTexto(p.NombreProducto).Contains(filtroNorm) ||
+                (p.Codigo != null && NormalizarTexto(p.Codigo).Contains(filtroNorm)))
+            .OrderBy(p => p.NombreProducto)
+            .Take(20);
+    }
+
+    /// <summary>
+    /// Normaliza un texto para búsquedas: minúsculas, sin acentos, sin separadores
+    /// (espacios, guiones, guiones bajos, puntos, comas, etc.). De este modo,
+    /// "coca cola", "coca-cola", "coca_cola" y "cocacola" son equivalentes.
+    /// </summary>
+    private static string NormalizarTexto(string texto)
+    {
+        if (string.IsNullOrEmpty(texto)) return string.Empty;
+
+        var sinAcentos = texto.Normalize(System.Text.NormalizationForm.FormD);
+        var sb = new System.Text.StringBuilder(sinAcentos.Length);
+        foreach (var c in sinAcentos)
+        {
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) ==
+                System.Globalization.UnicodeCategory.NonSpacingMark)
+                continue;
+
+            if (char.IsLetterOrDigit(c))
+                sb.Append(char.ToLowerInvariant(c));
+        }
+
+        return sb.ToString().Normalize(System.Text.NormalizationForm.FormC);
     }
 }

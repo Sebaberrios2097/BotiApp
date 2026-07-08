@@ -2,6 +2,7 @@
 @{
     var ultimos = ViewBag.UltimosProductos as IEnumerable<Infraestructura.Entities.BotiApp.ProProductos>
                   ?? Enumerable.Empty<Infraestructura.Entities.BotiApp.ProProductos>();
+    var codigoInicial = ViewBag.CodigoInicial as string ?? Model.Codigo ?? string.Empty;
 }
 <style>
     .mc-header {
@@ -307,7 +308,7 @@
                 <div class="form-group">
                     <label class="form-label" asp-for="Codigo">Código / SKU</label>
                     <div style="display:flex;gap:.45rem;align-items:center;">
-                        <input asp-for="Codigo" class="form-control" placeholder="Ej. CRV-0012" id="crearCodigo" style="flex:1;min-width:0;" />
+                        <input type="text" name="Codigo" class="form-control" placeholder="Ej. CRV-0012" id="crearCodigo" value="@codigoInicial" style="flex:1;min-width:0;" />
                         <button type="button" id="crearBtnScan" onclick="prdToggleScanner('crear')" title="Escanear código de barras"
                             style="flex-shrink:0;width:36px;height:36px;border:1.5px solid #e0d5cc;border-radius:7px;background:#faf7f5;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-primario);transition:background .15s;">
                             <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:currentColor;"><path d="M9 2H4C2.9 2 2 2.9 2 4v5h2V4h5V2zm-5 18v-5H2v5c0 1.1.9 2 2 2h5v-2H4zm16 0h-5v2h5c1.1 0 2-.9 2-2v-5h-2v5zm0-16h-5V2h5c1.1 0 2 .9 2 2v5h-2V4zM7 7h10v10H7z"/></svg>

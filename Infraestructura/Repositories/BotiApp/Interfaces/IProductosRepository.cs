@@ -18,8 +18,10 @@ public interface IProductosRepository
     Task<IEnumerable<ProProductosRetornables>> ObtenerRetornablesAsync();
     Task<ProProductosRetornables> AgregarRetornableAsync(ProProductosRetornables retornable);
     Task<bool> EliminarRetornableAsync(int idProducto);
-    // Búsqueda por código de barra
-    Task<IEnumerable<ProProductos>> BuscarPorCodigoAsync(string codigo);
+    // Búsqueda por nombre o código (coincidencia parcial, ignora tildes/case)
+    Task<IEnumerable<ProProductos>> BuscarAsync(string filtro);
+    // Verifica si ya existe un producto con un código determinado
+    Task<bool> ExisteCodigoAsync(string codigo);
     // Creación de Marca / Tipo
     Task<ProMarcas> CrearMarcaAsync(ProMarcas marca);
     Task<ProTiposProductos> CrearTipoProductoAsync(ProTiposProductos tipo);

@@ -496,6 +496,85 @@
         color: #9a8070;
     }
 
+    .btn-nuevo-stock {
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        padding: .65rem 1.25rem;
+        background: var(--color-primario);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: .9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s, transform .15s;
+    }
+    .btn-nuevo-stock svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+    }
+    .btn-nuevo-stock:hover {
+        background: #cf5f22;
+        transform: translateY(-1px);
+    }
+
+    /* ── Overlay crear producto ── */
+    .m-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.5);
+        z-index: 700;
+        align-items: flex-start;
+        justify-content: center;
+        overflow-y: auto;
+        padding: 2rem 1rem;
+    }
+    .m-overlay.open {
+        display: flex;
+        animation: fadeOverlay .2s ease;
+    }
+    @@keyframes fadeOverlay {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+    .m-box {
+        background: #fff;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 920px;
+        box-shadow: 0 20px 60px rgba(0,0,0,.2);
+        animation: slideModal .25s ease;
+        margin: auto;
+        overflow: hidden;
+    }
+    @@keyframes slideModal {
+        from { opacity: 0; transform: translateY(-20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .m-spinner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        gap: 1rem;
+        color: #a89080;
+    }
+    .spinner-ring {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #f0ebe5;
+        border-top-color: var(--color-primario);
+        border-radius: 50%;
+        animation: spin .7s linear infinite;
+    }
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
     .stock-loading {
         display: none;
         text-align: center;
@@ -640,6 +719,15 @@
 
 <div class="toast-wrap" id="toastWrap"></div>
 
+<!-- Overlay para crear producto desde Stock -->
+<div class="m-overlay" id="stockCreateOverlay">
+    <div class="m-box" id="stockCreateBox">
+        <div id="stockCreateBody">
+            <div class="m-spinner" style="padding:3rem"><div class="spinner-ring"></div><span>Cargando…</span></div>
+        </div>
+    </div>
+</div>
+
 @Html.AntiForgeryToken()
 
 <div class="stock-header-card">
@@ -649,14 +737,14 @@
         </div>
         <div>
             <h1 class="stock-header-title">Control de Stock</h1>
-            <p class="stock-header-sub">Escanea o busca productos por código para revisar y modificar inventario</p>
+            <p class="stock-header-sub">Busca por nombre o código de barras para revisar y modificar inventario</p>
         </div>
     </div>
 </div>
 
 <div class="stock-search-wrap">
     <svg class="stock-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-    <input type="text" id="stockSearchInput" class="stock-search-input" placeholder="Escanea un código o ingrésalo manualmente…" autocomplete="off" />
+    <input type="text" id="stockSearchInput" class="stock-search-input" placeholder="Busca por nombre o código de barras…" autocomplete="off" />
     <button class="btn-clear" id="btnClear" title="Limpiar búsqueda" onclick="limpiarBusqueda()" style="display:none">
         <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
     </button>
@@ -684,7 +772,7 @@
     <div class="stock-empty" id="stockEmpty">
         <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
         <h3>Busca un producto</h3>
-        <p>Ingresa un código de barras manualmente o usa el escáner</p>
+        <p>Ingresa un nombre o código de barras (o usa el escáner)</p>
     </div>
 </div>
 
@@ -760,7 +848,7 @@
         if (loading) loading.classList.add('visible');
 
         try {
-            var resp = await fetch('/Productos/Productos/BuscarPorCodigo?codigo=' + encodeURIComponent(codigo));
+            var resp = await fetch('/Productos/Productos/Buscar?filtro=' + encodeURIComponent(codigo));
             if (!resp.ok) throw new Error();
             var data = await resp.json();
             _productosCache = data;
@@ -782,6 +870,17 @@
         if (info) info.style.display = 'none';
         grid.innerHTML = '';
         if (empty) { empty.style.display = ''; grid.appendChild(empty); }
+        else { grid.appendChild(buildInitialEmpty()); }
+    }
+
+    function buildInitialEmpty() {
+        var wrap = document.createElement('div');
+        wrap.className = 'stock-empty';
+        wrap.innerHTML =
+            '<svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>' +
+            '<h3>Busca un producto</h3>' +
+            '<p>Ingresa un nombre o código de barras (o usa el escáner)</p>';
+        return wrap;
     }
 
     function renderGrid(productos) {
@@ -795,11 +894,10 @@
 
         if (!productos || productos.length === 0) {
             grid.innerHTML = '';
-            if (empty) empty.style.display = '';
             if (info) info.style.display = 'none';
-            grid.appendChild(empty);
+            var termino = stockInput ? stockInput.value.trim() : '';
+            grid.appendChild(buildNoResults(termino));
         } else {
-            if (empty) empty.remove();
             if (info) {
                 info.style.display = '';
                 countEl.innerHTML = '<strong>' + productos.length + '</strong> producto' +
@@ -807,6 +905,174 @@
             }
             grid.innerHTML = productos.map(function(p) { return buildCard(p); }).join('');
         }
+    }
+
+    function buildNoResults(termino) {
+        var terminoEsc = esc(termino);
+        var wrap = document.createElement('div');
+        wrap.className = 'stock-empty';
+        wrap.innerHTML =
+            '<svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>' +
+            '<h3>No se encontraron productos</h3>' +
+            (termino
+                ? '<p>No hay coincidencias para «<strong>' + terminoEsc + '</strong>».</p>'
+                : '<p>Intenta con otro nombre o código.</p>') +
+            '<div style="margin-top:1.25rem;display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;">' +
+            '<button type="button" class="btn-nuevo-stock" id="btnCrearNuevoStock">' +
+            '<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>' +
+            'Crear producto con este código' +
+            '</button>' +
+            '</div>';
+        var btn = wrap.querySelector('#btnCrearNuevoStock');
+        if (btn) btn.addEventListener('click', function () { crearNuevoProducto(termino); });
+        return wrap;
+    }
+
+    function crearNuevoProducto(codigo) {
+        abrirOverlayCrear(codigo || '');
+    }
+
+    // ── Stubs para que el _ModalCrear inyectado funcione dentro de Stock ──
+    function cerrarModal() { cerrarOverlayCrear(); }
+
+    function limpiarErroresModal() {
+        document.querySelectorAll('#stockCreateBody .input-error').forEach(function (el) { el.classList.remove('input-error'); });
+        document.querySelectorAll('#stockCreateBody .field-error').forEach(function (el) { el.textContent = ''; });
+    }
+
+    function mostrarErroresModal(errores) {
+        if (!errores) return;
+        var root = document.getElementById('stockCreateBody');
+        Object.keys(errores).forEach(function (campo) {
+            var input = root ? root.querySelector('[name="' + campo + '"]') : null;
+            if (!input) return;
+            input.classList.add('input-error');
+            var span = input.parentElement.querySelector('.field-error');
+            if (!span) { span = document.createElement('span'); span.className = 'field-error'; input.after(span); }
+            span.textContent = errores[campo];
+        });
+    }
+
+    async function submitFormAjax(formId, esNuevo) {
+        var root = document.getElementById('stockCreateBody');
+        if (!root) return;
+        var form = document.getElementById(formId);
+        if (!form) return;
+        var btn = form.querySelector('[type=submit]');
+        if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+        limpiarErroresModal();
+        try {
+            var resp = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+            var data = await resp.json();
+            if (data.ok) {
+                cerrarOverlayCrear();
+                onProductoCreadoExito(data.producto);
+            } else {
+                mostrarErroresModal(data.errores || {});
+                if (data.mensaje) mostrarToast(data.mensaje, 'error');
+            }
+        } catch (e) {
+            mostrarToast('Error de conexión. Inténtalo de nuevo.', 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Guardar producto'; }
+        }
+    }
+
+    // ── Scanner de código (necesario para el botón de scan del modal inyectado) ──
+    var _stockPrdScanReaders = {};
+    function _stockCargarZxing(cb) {
+        if (window.ZXing) { cb(); return; }
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@@zxing/library@@0.21.3/umd/index.min.js';
+        s.onload = cb;
+        s.onerror = function () { mostrarToast('No se pudo cargar el escáner.', 'error'); };
+        document.head.appendChild(s);
+    }
+    window.prdToggleScanner = function (ctx) {
+        var wrap = document.getElementById(ctx + 'ScannerWrap');
+        if (wrap && wrap.style.display === 'block') prdDetenerScanner(ctx);
+        else prdIniciarScanner(ctx);
+    };
+    window.prdIniciarScanner = function (ctx) {
+        _stockCargarZxing(function () {
+            var wrap = document.getElementById(ctx + 'ScannerWrap');
+            var video = document.getElementById(ctx + 'ScannerVideo');
+            var btn = document.getElementById(ctx + 'BtnScan');
+            if (!wrap || !video) return;
+            wrap.style.display = 'block';
+            if (btn) btn.style.background = 'rgba(231,111,46,.18)';
+            var reader = new ZXing.BrowserMultiFormatReader();
+            _stockPrdScanReaders[ctx] = reader;
+            reader.decodeOnceFromConstraints({ video: { facingMode: { ideal: 'environment' } } }, video)
+                .then(function (result) {
+                    prdDetenerScanner(ctx);
+                    var campo = document.getElementById(ctx + 'Codigo');
+                    if (campo) campo.value = result.text;
+                })
+                .catch(function (e) {
+                    prdDetenerScanner(ctx);
+                    if (e && e.name !== 'NotFoundException' && e.name !== 'AbortException') {
+                        mostrarToast('No se pudo acceder a la cámara.', 'error');
+                    }
+                });
+        });
+    };
+    window.prdDetenerScanner = function (ctx) {
+        if (_stockPrdScanReaders[ctx]) {
+            try { _stockPrdScanReaders[ctx].reset(); } catch (e) { /* silenciar */ }
+            delete _stockPrdScanReaders[ctx];
+        }
+        var wrap = document.getElementById(ctx + 'ScannerWrap');
+        var btn = document.getElementById(ctx + 'BtnScan');
+        if (wrap) wrap.style.display = 'none';
+        if (btn) btn.style.background = '#faf7f5';
+    };
+
+    async function abrirOverlayCrear(codigoInicial) {
+        var overlay = document.getElementById('stockCreateOverlay');
+        var body = document.getElementById('stockCreateBody');
+        if (!overlay || !body) return;
+        body.innerHTML =
+            '<div class="m-spinner" style="padding:3rem"><div class="spinner-ring"></div><span>Cargando…</span></div>';
+        overlay.classList.add('open');
+        try {
+            var qs = codigoInicial ? '?codigo=' + encodeURIComponent(codigoInicial) : '';
+            var resp = await fetch('/Productos/Productos/ModalCrear' + qs, { credentials: 'same-origin' });
+            if (!resp.ok) throw new Error();
+            body.innerHTML = await resp.text();
+            body.querySelectorAll('script').forEach(function (old) {
+                var s = document.createElement('script');
+                if (old.src) { s.src = old.src; s.async = false; }
+                else { s.textContent = old.textContent; }
+                s.setAttribute('data-stock-create-script', '');
+                document.body.appendChild(s);
+            });
+        } catch (e) {
+            overlay.classList.remove('open');
+            mostrarToast('Error al cargar el formulario de creación.', 'error');
+        }
+    }
+
+    function cerrarOverlayCrear() {
+        var overlay = document.getElementById('stockCreateOverlay');
+        if (!overlay) return;
+        try { prdDetenerScanner && prdDetenerScanner('crear'); } catch (e) { /* silenciar */ }
+        document.querySelectorAll('script[data-stock-create-script]').forEach(function (s) { s.remove(); });
+        overlay.classList.remove('open');
+        setTimeout(function () {
+            var body = document.getElementById('stockCreateBody');
+            if (body) body.innerHTML = '';
+        }, 250);
+    }
+
+    function onProductoCreadoExito(producto) {
+        cerrarOverlayCrear();
+        mostrarToast('Producto «' + (producto && producto.nombreProducto ? producto.nombreProducto : '') + '» creado.', 'exito');
+        if (producto && stockInput) {
+            stockInput.value = producto.codigo || producto.nombreProducto || stockInput.value;
+            btnClear.style.display = stockInput.value ? '' : 'none';
+        }
+        buscarProductos();
     }
 
     // ── Card builder ────────────────────────────────────────────────────────────

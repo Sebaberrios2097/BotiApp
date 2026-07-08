@@ -220,15 +220,93 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
         return true;
     }
 
-    public async Task<IEnumerable<ProProductos>> BuscarPorCodigoAsync(string codigo)
-        => await context.ProProductos
-            .AsNoTracking()
+    public async Task<IEnumerable<ProProductos>> BuscarAsync(string filtro)
+    {
+        filtro = (filtro ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(filtro))
+            return Enumerable.Empty<ProProductos>();
+
+        var terminos = filtro
+            .Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(t => t.ToLower())
+            .Where(t => t.Length > 0)
+            .ToArray();
+
+        if (terminos.Length == 0)
+            return Enumerable.Empty<ProProductos>();
+
+        var query = context.ProProductos.AsNoTracking().AsQueryable();
+
+        var primerTermino = terminos[0];
+        query = query.Where(p =>
+            EF.Functions.Like(p.NombreProducto.ToLower(), "%" + primerTermino + "%") ||
+            (p.Codigo != null && EF.Functions.Like(p.Codigo.ToLower(), "%" + primerTermino + "%")));
+
+        for (var i = 1; i < terminos.Length; i++)
+        {
+            var t = terminos[i];
+            query = query.Where(p =>
+                EF.Functions.Like(p.NombreProducto.ToLower(), "%" + t + "%") ||
+                (p.Codigo != null && EF.Functions.Like(p.Codigo.ToLower(), "%" + t + "%")));
+        }
+
+        var candidatos = await query
             .Include(p => p.IdMarcaNavigation)
             .Include(p => p.IdTipoProductoNavigation)
             .Include(p => p.ProProductosRetornables)
-            .Where(p => p.Codigo != null && p.Codigo == codigo)
             .OrderBy(p => p.NombreProducto)
+            .Take(200)
             .ToListAsync();
+
+        var terminosNorm = terminos.Select(NormalizarTexto).ToArray();
+        var resultado = candidatos
+            .Where(p =>
+            {
+                var nombreNorm = NormalizarTexto(p.NombreProducto);
+                var codigoNorm = p.Codigo != null ? NormalizarTexto(p.Codigo) : string.Empty;
+                return terminosNorm.All(t => nombreNorm.Contains(t) || codigoNorm.Contains(t));
+            })
+            .Take(50)
+            .ToList();
+
+        return resultado;
+    }
+
+    public async Task<bool> ExisteCodigoAsync(string codigo)
+    {
+        if (string.IsNullOrWhiteSpace(codigo)) return false;
+        var normalizado = NormalizarTexto(codigo);
+        var codigos = await context.ProProductos
+            .AsNoTracking()
+            .Where(p => p.Codigo != null)
+            .Select(p => p.Codigo)
+            .ToListAsync();
+        return codigos.Any(c => c != null && NormalizarTexto(c) == normalizado);
+    }
+
+    /// <summary>
+    /// Normaliza un texto para búsquedas: minúsculas, sin acentos, sin separadores
+    /// (espacios, guiones, guiones bajos, puntos, comas, etc.). De este modo,
+    /// "coca cola", "coca-cola", "coca_cola" y "cocacola" son equivalentes.
+    /// </summary>
+    private static string NormalizarTexto(string texto)
+    {
+        if (string.IsNullOrEmpty(texto)) return string.Empty;
+
+        var sinAcentos = texto.Normalize(System.Text.NormalizationForm.FormD);
+        var sb = new System.Text.StringBuilder(sinAcentos.Length);
+        foreach (var c in sinAcentos)
+        {
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) ==
+                System.Globalization.UnicodeCategory.NonSpacingMark)
+                continue;
+
+            if (char.IsLetterOrDigit(c))
+                sb.Append(char.ToLowerInvariant(c));
+        }
+
+        return sb.ToString().Normalize(System.Text.NormalizationForm.FormC);
+    }
 
     public async Task<ProMarcas> CrearMarcaAsync(ProMarcas marca)
     {

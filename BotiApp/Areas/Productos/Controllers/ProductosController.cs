@@ -29,10 +29,11 @@ public class ProductosController(
     // ── Partials para modals ─────────────────────────────────────────────────
 
     [HttpGet]
-    public async Task<IActionResult> ModalCrear()
+    public async Task<IActionResult> ModalCrear(string? codigo = null)
     {
         await CargarSelectListsAsync();
         ViewBag.UltimosProductos = await productosRepository.ObtenerUltimosIngresadosAsync(5);
+        ViewBag.CodigoInicial = codigo;
         return PartialView("_ModalCrear", new ProProductos { Estado = true, FechaIngreso = DateTime.Now });
     }
 
@@ -309,14 +310,24 @@ public class ProductosController(
     }
 
     [HttpGet]
-    public async Task<IActionResult> BuscarPorCodigo(string codigo)
+    public async Task<IActionResult> Buscar(string filtro)
     {
-        if (string.IsNullOrWhiteSpace(codigo))
+        if (string.IsNullOrWhiteSpace(filtro))
             return Json(Array.Empty<object>());
 
-        var productos = await productosRepository.BuscarPorCodigoAsync(codigo.Trim());
+        var productos = await productosRepository.BuscarAsync(filtro);
         var resultado = productos.Select(MapFila);
         return Json(resultado);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ExisteCodigo(string codigo)
+    {
+        if (string.IsNullOrWhiteSpace(codigo))
+            return Json(new { existe = false });
+
+        var existe = await productosRepository.ExisteCodigoAsync(codigo);
+        return Json(new { existe });
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
