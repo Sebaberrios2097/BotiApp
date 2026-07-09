@@ -97,7 +97,7 @@
 .bl-estado { font-size:.68rem; font-weight:700; padding:.2rem .55rem; border-radius:20px; flex-shrink:0; }
 .bl-estado.est-1 { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
 .bl-estado.est-2 { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
-.bl-estado.est-3 { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
+.bl-estado.est-3 { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
 .bl-estado.est-4 { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
 .bl-estado.est-other { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
 .bl-total { font-size:.88rem; font-weight:700; color:var(--color-primario); flex-shrink:0; margin-left:auto; }
@@ -166,23 +166,23 @@
 .ticket-actions button:hover { opacity:.85; }
 .btn-print  { background:var(--color-secundario); color:#fff; }
 .btn-cerrar { background:#f0ebe5; color:var(--color-secundario); }
-.ticket { font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace; font-size:13px; line-height:1.35; padding: 0 .6rem .5rem .6rem; color:#000; }
+.ticket { font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace; font-size:17px; line-height:1.35; padding: 0 .6rem .5rem .6rem; color:#000; }
 .ticket-hr     { border:none; border-top:1px dashed #555; margin:.25rem 0; }
 .ticket-hr-sol { border:none; border-top:1px solid #555;  margin:.25rem 0; }
 .ticket-row { display:flex; justify-content:space-between; margin-bottom:1px; }
 .ticket-row .tk-l { flex:1; min-width:0; overflow:hidden; text-overflow:clip; }
 .ticket-row .tk-r { flex-shrink:0; padding-left:.5rem; text-align:right; }
-.ticket-total     { font-size:16px; font-weight:700; }
+.ticket-total     { font-size:20px; font-weight:700; }
 .ticket-bold      { font-weight:700; }
 .ticket-center    { text-align:center; }
 .ticket-desc      { color:#000; }
-.ticket-promo-tag { font-size:12px; font-weight:700; }
-.ticket-title { font-size:16px; font-weight:700; text-align:center; }
-.ticket-subtitle { font-size:14px; font-weight:700; text-align:center; }
-.ticket-sub-label { font-size:12px; text-align:center; }
-.ticket-small { font-size:12px; }
-.ticket-strike { text-decoration:line-through; font-size:11px; }
-.ticket-bottle-charge { color:#e76f2e; font-size:12px; }
+.ticket-promo-tag { font-size:16px; font-weight:700; }
+.ticket-title { font-size:20px; font-weight:700; text-align:center; }
+.ticket-subtitle { font-size:18px; font-weight:700; text-align:center; }
+.ticket-sub-label { font-size:16px; text-align:center; }
+.ticket-small { font-size:16px; }
+.ticket-strike { text-decoration:line-through; font-size:15px; }
+.ticket-bottle-charge { color:#000; font-size:16px; }
 @@page { size:80mm auto; margin:0; }
 @@media print {
     html,body { margin:0 !important; padding:0 !important; background:#fff !important; }
@@ -190,14 +190,14 @@
     .ticket-overlay { display:block !important; position:static !important; background:none !important; inset:auto !important; animation:none !important; }
     .ticket-actions { display:none !important; }
     .ticket-wrap { box-shadow:none !important; border-radius:0 !important; max-height:none !important; overflow:visible !important; width:80mm !important; }
-    .ticket { padding: 0 2mm !important; font-size:11pt !important; line-height:1.4 !important; }
-    .ticket-total { font-size:14pt !important; }
-    .ticket-title { font-size:14pt !important; }
-    .ticket-subtitle { font-size:12pt !important; }
-    .ticket-sub-label { font-size:10pt !important; }
-    .ticket-small { font-size:10pt !important; }
-    .ticket-strike { font-size:9pt !important; }
-    .ticket-bottle-charge { font-size:10pt !important; }
+    .ticket { padding: 0 2mm !important; font-size:15pt !important; line-height:1.4 !important; }
+    .ticket-total { font-size:18pt !important; }
+    .ticket-title { font-size:18pt !important; }
+    .ticket-subtitle { font-size:16pt !important; }
+    .ticket-sub-label { font-size:14pt !important; }
+    .ticket-small { font-size:14pt !important; }
+    .ticket-strike { font-size:13pt !important; }
+    .ticket-bottle-charge { font-size:14pt !important; }
 }
 </style>
 
