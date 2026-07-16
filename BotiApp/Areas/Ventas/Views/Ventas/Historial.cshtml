@@ -12,6 +12,8 @@
                          ? (int?)int.Parse(b.FechaEmision.Substring(6, 4)) : null,
         mes        = b.FechaEmision != "—" && b.FechaEmision.Length >= 5
                          ? (int?)int.Parse(b.FechaEmision.Substring(3, 2)) : null,
+        dia        = b.FechaEmision != "—" && b.FechaEmision.Length >= 2
+                         ? (int?)int.Parse(b.FechaEmision.Substring(0, 2)) : null,
         estado     = b.Estado,
         idEstado   = b.IdEstado,
         idVendedor = b.IdVendedor,
@@ -166,7 +168,7 @@
 .ticket-actions button:hover { opacity:.85; }
 .btn-print  { background:var(--color-secundario); color:#fff; }
 .btn-cerrar { background:#f0ebe5; color:var(--color-secundario); }
-.ticket { font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace; font-size:17px; line-height:1.35; padding: 0 .6rem .5rem .6rem; color:#000; }
+.ticket { font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace; font-size:13px; line-height:1.35; padding: 0 .6rem .5rem .6rem; color:#000; }
 .ticket-hr     { border:none; border-top:1px dashed #555; margin:.25rem 0; }
 .ticket-hr-sol { border:none; border-top:1px solid #555;  margin:.25rem 0; }
 .ticket-row { display:flex; justify-content:space-between; margin-bottom:1px; }
@@ -176,13 +178,13 @@
 .ticket-bold      { font-weight:700; }
 .ticket-center    { text-align:center; }
 .ticket-desc      { color:#000; }
-.ticket-promo-tag { font-size:16px; font-weight:700; }
-.ticket-title { font-size:20px; font-weight:700; text-align:center; }
-.ticket-subtitle { font-size:18px; font-weight:700; text-align:center; }
-.ticket-sub-label { font-size:16px; text-align:center; }
-.ticket-small { font-size:16px; }
-.ticket-strike { text-decoration:line-through; font-size:15px; }
-.ticket-bottle-charge { color:#000; font-size:16px; }
+.ticket-promo-tag { font-size:13px; font-weight:700; }
+.ticket-title { font-size:14px; font-weight:700; text-align:center; }
+.ticket-subtitle { font-size:13px; font-weight:700; text-align:center; }
+.ticket-sub-label { font-size:11px; text-align:center; }
+.ticket-small { font-size:11px; }
+.ticket-strike { text-decoration:line-through; font-size:10px; }
+.ticket-bottle-charge { color:#e76f2e; font-size:11px; }
 @@page { size:80mm auto; margin:0; }
 @@media print {
     html,body { margin:0 !important; padding:0 !important; background:#fff !important; }
@@ -190,14 +192,14 @@
     .ticket-overlay { display:block !important; position:static !important; background:none !important; inset:auto !important; animation:none !important; }
     .ticket-actions { display:none !important; }
     .ticket-wrap { box-shadow:none !important; border-radius:0 !important; max-height:none !important; overflow:visible !important; width:80mm !important; }
-    .ticket { padding: 0 2mm !important; font-size:15pt !important; line-height:1.4 !important; }
-    .ticket-total { font-size:18pt !important; }
-    .ticket-title { font-size:18pt !important; }
-    .ticket-subtitle { font-size:16pt !important; }
-    .ticket-sub-label { font-size:14pt !important; }
-    .ticket-small { font-size:14pt !important; }
-    .ticket-strike { font-size:13pt !important; }
-    .ticket-bottle-charge { font-size:14pt !important; }
+    .ticket { padding: 0 2mm !important; font-size:11pt !important; line-height:1.4 !important; }
+    .ticket-total { font-size:17pt !important; }
+    .ticket-title { font-size:12pt !important; }
+    .ticket-subtitle { font-size:11pt !important; }
+    .ticket-sub-label { font-size:9.5pt !important; }
+    .ticket-small { font-size:9.5pt !important; }
+    .ticket-strike { font-size:8.5pt !important; }
+    .ticket-bottle-charge { font-size:9.5pt !important; }
 }
 </style>
 
@@ -236,6 +238,10 @@
                 <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">✕</button>
             </div>
             <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+                <select class="fil-estado" id="selRangoFecha" onchange="aplicarFiltros()">
+                    <option value="dia">Ventas del día</option>
+                    <option value="historicas">Históricas (Todas)</option>
+                </select>
                 <select class="fil-estado" id="selEstado" onchange="aplicarFiltros()">
                     <option value="0">Todos los estados</option>
                     <option value="1">Pendiente</option>
@@ -243,7 +249,7 @@
                     <option value="2">Anulada</option>
                     <option value="4">Fiado</option>
                 </select>
-                <select class="fil-estado" id="selAnio" onchange="aplicarFiltros()">
+                <select class="fil-estado" id="selAnio" onchange="aplicarFiltros(true)">
                     <option value="">Todos los años</option>
                     @{
                         var anioActual = DateTime.Now.Year.ToString();
@@ -265,19 +271,26 @@
                         }
                     }
                 </select>
-                <select class="fil-estado" id="selMes" onchange="aplicarFiltros()">
+                <select class="fil-estado" id="selMes" onchange="aplicarFiltros(true)">
                     <option value="">Todos los meses</option>
                     @{ var mesesNombres = new[]{"","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"}; }
                     @for (int m = 1; m <= 12; m++)
                     {
                         if (m == DateTime.Now.Month)
                         {
-                            <option value="@m" selected>@mesesNombres[m]</option>
+                            <option value="@m" selected>Mes: @mesesNombres[m]</option>
                         }
                         else
                         {
-                            <option value="@m">@mesesNombres[m]</option>
+                            <option value="@m">Mes: @mesesNombres[m]</option>
                         }
+                    }
+                </select>
+                <select class="fil-estado" id="selDia" onchange="aplicarFiltros(true)">
+                    <option value="">Todos los días</option>
+                    @for (int d = 1; d <= 31; d++)
+                    {
+                        <option value="@d">Día: @d</option>
                     }
                 </select>
             </div>
@@ -322,6 +335,23 @@
     /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        FILTROS
     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    function parseFechaEmision(fechaStr) {
+        if (!fechaStr || fechaStr === '—') return null;
+        var parts = fechaStr.split(' ');
+        var dParts = parts[0].split('/');
+        var tParts = parts[1].split(':');
+        return new Date(+dParts[2], +dParts[1] - 1, +dParts[0], +tParts[0], +tParts[1]);
+    }
+
+    function obtenerInicioDiaComercial() {
+        var now = new Date();
+        var inicio = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0, 0);
+        if (now.getHours() < 8) {
+            inicio.setDate(inicio.getDate() - 1);
+        }
+        return inicio;
+    }
+
     window.selVendedor = function (id) {
         vendedorActivo = id;
         document.querySelectorAll('#pillsVendedores .pill')
@@ -329,24 +359,49 @@
         aplicarFiltros();
     };
 
-    window.aplicarFiltros = function () {
+    window.aplicarFiltros = function (fromCalendarChange) {
         var q         = (document.getElementById('txtBuscar')?.value ?? '').trim().toLowerCase();
         var estadoSel = +(document.getElementById('selEstado')?.value ?? 0);
-        var anioSel   =  +document.getElementById('selAnio')?.value  || 0;
-        var mesSel    =  +document.getElementById('selMes')?.value   || 0;
+        var rangoSelEl = document.getElementById('selRangoFecha');
+        var rangoSel  = rangoSelEl?.value ?? 'dia';
+        
+        if (fromCalendarChange && rangoSelEl && rangoSel === 'dia') {
+            rangoSelEl.value = 'historicas';
+            rangoSel = 'historicas';
+        }
+        
+        var anioSel   = 0;
+        var mesSel    = 0;
+        var diaSel    = 0;
+        
+        if (rangoSel !== 'dia') {
+            anioSel = +document.getElementById('selAnio')?.value || 0;
+            mesSel  = +document.getElementById('selMes')?.value  || 0;
+            diaSel  = +document.getElementById('selDia')?.value  || 0;
+        }
+
         document.getElementById('btnClr')?.classList.toggle('on', q.length > 0);
 
+        var inicioDia = obtenerInicioDiaComercial();
+
         boletasFiltradas = BOLETAS.filter(function(b) {
+            var okRango = true;
+            if (rangoSel === 'dia') {
+                var dt = parseFechaEmision(b.fecha);
+                okRango = dt && dt >= inicioDia;
+            }
+
             var okVendedor = vendedorActivo === 0 || b.idVendedor === vendedorActivo;
             var okEstado   = estadoSel === 0 || b.idEstado  === estadoSel;
             var okAnio     = anioSel   === 0 || b.anio      === anioSel;
             var okMes      = mesSel    === 0 || b.mes       === mesSel;
+            var okDia      = diaSel    === 0 || b.dia       === diaSel;
             var okQ = q === ''
                 || String(b.id).includes(q)
                 || String(b.correlativoDiario ?? '').includes(q)
                 || b.vendedor.toLowerCase().includes(q)
                 || b.fecha.toLowerCase().includes(q);
-            return okVendedor && okEstado && okAnio && okMes && okQ;
+            return okRango && okVendedor && okEstado && okAnio && okMes && okDia && okQ;
         });
 
         paginaActual = 1;
@@ -468,8 +523,8 @@
                     detalleRows += '<tr class="promo-gr-item">'
                         + '<td>' + x(d.nombre) + '</td>'
                         + '<td style="text-align:center;">' + d.cantidad + '</td>'
-                        + '<td style="text-align:right;">$' + fmt(d.precioUnitario) + '</td>'
-                        + '<td style="text-align:right;">$' + fmt(d.subtotal) + '</td>'
+                        + '<td style="text-align:right;"></td>'
+                        + '<td style="text-align:right;"></td>'
                         + '</tr>';
                 });
                 // Separador visual
@@ -495,7 +550,7 @@
 
             return '<div class="bl-card" id="blc-' + b.id + '">' +
                 '<div class="bl-card-top" onclick="toggleDetalle(' + b.id + ')">' +
-                    '<span class="bl-num">' + (b.correlativoDiario ? 'Ticket #' + b.correlativoDiario + ' <small style="font-weight:400;color:#9ca3af;font-size:.7rem">(ID: ' + b.id + ')</small>' : 'ID ' + b.id) + '</span>' +
+                    '<span class="bl-num">' + (b.correlativoDiario ? 'Ticket #' + b.correlativoDiario : 'Ticket #' + b.id) + '</span>' +
                     '<span class="bl-fecha">' + x(b.fecha) + '</span>' +
                     infoHtml +
                     '<span class="bl-estado ' + estadoClass + '">' + x(b.estado) + '</span>' +
@@ -552,7 +607,7 @@
     };
 
     function mostrarTicketHistorial(b, tipo) {
-        var NOMBRE_LOCAL = 'Botillería Cuatro Ases';
+        var NOMBRE_LOCAL = 'Cuatro Ases';
         var lineas = '';
 
         var envases      = b.detalle.filter(function(d) { return d.precioNormal === 0 && !d.nombrePromocion && !d.nombreOferta; });
@@ -576,12 +631,10 @@
                 itemMap.get(key).cantidad += d.cantidad;
             });
             lineas += '<hr class="ticket-hr">';
-            lineas += '<div class="ticket-row ticket-promo-tag"><span class="tk-l">' + x(nombrePromo) + '</span><span class="tk-r ticket-bold">$' + fmt(g.subtotalReal) + '</span></div>';
+            lineas += '<div class="ticket-row ticket-promo-tag"><span class="tk-l">Promo: ' + x(nombrePromo) + '</span><span class="tk-r ticket-bold">$' + fmt(g.subtotalReal) + '</span></div>';
             itemMap.forEach(function(d) {
-                lineas += '<div class="ticket-row" style="padding-left:.8rem;"><span class="tk-l">' + x(d.nombre) + '</span><span class="tk-r">' + d.cantidad + ' x $' + fmt(d.precioNormal) + '</span></div>';
+                lineas += '<div class="ticket-row" style="padding-left:.8rem;"><span class="tk-l">' + x(d.nombre) + '</span><span class="tk-r">x' + d.cantidad + '</span></div>';
             });
-            var ahorro = g.subtotalNormal - g.subtotalReal;
-            if (ahorro > 0) lineas += '<div class="ticket-row ticket-desc ticket-small" style="padding-left:.8rem;"><span class="tk-l">Ahorro promo</span><span class="tk-r">-$' + fmt(ahorro) + '</span></div>';
         });
 
         var indivMap = new Map();
@@ -636,8 +689,25 @@
             });
         }
 
-        lineas += '<hr class="ticket-hr-sol">';
         lineas += '<div class="ticket-row ticket-total"><span class="tk-l">TOTAL</span><span class="tk-r">$' + fmt(b.total) + '</span></div>';
+
+        var pickingMap = new Map();
+        b.detalle.forEach(function(d) {
+            var esEnvase = d.precioNormal === 0 && !d.nombrePromocion && !d.nombreOferta;
+            if (esEnvase) return;
+            if (!pickingMap.has(d.nombre)) {
+                pickingMap.set(d.nombre, 0);
+            }
+            pickingMap.set(d.nombre, pickingMap.get(d.nombre) + d.cantidad);
+        });
+
+        var lineasVendedor = '';
+        pickingMap.forEach(function(cantTotal, nombre) {
+            lineasVendedor += '<div class="ticket-row">' +
+                '<span class="tk-l">' + x(nombre) + '</span>' +
+                '<span class="tk-r ticket-bold">' + cantTotal + '</span>' +
+            '</div>';
+        });
 
         var html = '<div class="ticket-overlay" id="ticketOverlay">' +
             '<div class="ticket-wrap">' +
@@ -667,8 +737,8 @@
                 '<hr class="ticket-hr-sol">' +
                 '<div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">' + x(b.fecha) + '</span></div>' +
                 '<hr class="ticket-hr-sol">' +
-                '<div class="ticket-row ticket-bold"><span class="tk-l">ARTÍCULO</span><span class="tk-r">VALOR</span></div>' +
-                lineas +
+                '<div class="ticket-row ticket-bold"><span class="tk-l">ARTÍCULO</span><span class="tk-r">CANT.</span></div>' +
+                lineasVendedor +
                 '<hr class="ticket-hr">' +
             '</div>';
         }
