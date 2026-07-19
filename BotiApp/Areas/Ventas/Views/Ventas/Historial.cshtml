@@ -169,11 +169,18 @@
 .btn-print  { background:var(--color-secundario); color:#fff; }
 .btn-cerrar { background:#f0ebe5; color:var(--color-secundario); }
 .ticket { font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace; font-size:13px; line-height:1.35; padding: 0 .6rem .5rem .6rem; color:#000; }
-.ticket-hr     { border:none; border-top:1px dashed #555; margin:.25rem 0; }
-.ticket-hr-sol { border:none; border-top:1px solid #555;  margin:.25rem 0; }
+.ticket-hr     { border:none !important; border-top:1px dashed #555 !important; margin:.25rem 0 !important; opacity:1 !important; }
+.ticket-hr-sol { border:none !important; border-top:1px solid #555 !important;  margin:.25rem 0 !important; opacity:1 !important; }
 .ticket-row { display:flex; justify-content:space-between; margin-bottom:1px; }
 .ticket-row .tk-l { flex:1; min-width:0; overflow:hidden; text-overflow:clip; }
 .ticket-row .tk-r { flex-shrink:0; padding-left:.5rem; text-align:right; }
+
+/* Grid columns for ticket items */
+.ticket-row.ticket-grid { font-size:11px; }
+.ticket-row.ticket-grid .tk-l { flex:1; min-width:0; overflow:hidden; text-overflow:clip; }
+.ticket-row.ticket-grid .tk-q { flex-shrink:0; padding-left:.25rem; text-align:right; width:35px; }
+.ticket-row.ticket-grid .tk-m { flex-shrink:0; padding-left:.25rem; text-align:right; width:65px; }
+.ticket-row.ticket-grid .tk-r { flex-shrink:0; padding-left:.25rem; text-align:right; width:70px; }
 .ticket-total     { font-size:20px; font-weight:700; }
 .ticket-bold      { font-weight:700; }
 .ticket-center    { text-align:center; }
@@ -184,7 +191,7 @@
 .ticket-sub-label { font-size:11px; text-align:center; }
 .ticket-small { font-size:11px; }
 .ticket-strike { text-decoration:line-through; font-size:10px; }
-.ticket-bottle-charge { color:#e76f2e; font-size:11px; }
+.ticket-bottle-charge { color:#000; font-size:11px; }
 @@page { size:80mm auto; margin:0; }
 @@media print {
     html,body { margin:0 !important; padding:0 !important; background:#fff !important; }
@@ -633,7 +640,12 @@
             lineas += '<hr class="ticket-hr">';
             lineas += '<div class="ticket-row ticket-promo-tag"><span class="tk-l">Promo: ' + x(nombrePromo) + '</span><span class="tk-r ticket-bold">$' + fmt(g.subtotalReal) + '</span></div>';
             itemMap.forEach(function(d) {
-                lineas += '<div class="ticket-row" style="padding-left:.8rem;"><span class="tk-l">' + x(d.nombre) + '</span><span class="tk-r">x' + d.cantidad + '</span></div>';
+                lineas += '<div class="ticket-row ticket-grid" style="padding-left:.8rem;">' +
+                    '<span class="tk-l">' + x(d.nombre) + '</span>' +
+                    '<span class="tk-q">' + d.cantidad + '</span>' +
+                    '<span class="tk-m"></span>' +
+                    '<span class="tk-r"></span>' +
+                '</div>';
             });
         });
 
@@ -654,7 +666,13 @@
                 ? '<span class="ticket-strike">$' + fmt(d.precioNormal) + '</span> $' + fmt(d.precioUnitario)
                 : '$' + fmt(d.precioUnitario);
             var badge = d.nombreOferta ? ' <em>(oferta)</em>' : '';
-            lineas += '<div class="ticket-row"><span class="tk-l">' + x(d.nombre) + badge + '</span><span class="tk-r">' + d.cantidad + ' x ' + precioHtml + '</span></div>';
+            var subtotalItem = d.precioUnitario * d.cantidad;
+            lineas += '<div class="ticket-row ticket-grid">' +
+                '<span class="tk-l">' + x(d.nombre) + badge + '</span>' +
+                '<span class="tk-q">' + d.cantidad + '</span>' +
+                '<span class="tk-m">' + precioHtml + '</span>' +
+                '<span class="tk-r">$' + fmt(subtotalItem) + '</span>' +
+            '</div>';
         });
 
         var subtotal = b.detalle
@@ -724,7 +742,7 @@
                 '<hr class="ticket-hr-sol">' +
                 '<div class="ticket-row"><span class="tk-l">Fecha</span><span class="tk-r">' + x(b.fecha) + '</span></div>' +
                 '<hr class="ticket-hr-sol">' +
-                '<div class="ticket-row ticket-bold"><span class="tk-l">ARTÍCULO</span><span class="tk-r">VALOR</span></div>' +
+                '<div class="ticket-row ticket-bold ticket-grid"><span class="tk-l">ARTÍCULO</span><span class="tk-q">CANT</span><span class="tk-m">P.UNIT</span><span class="tk-r">TOTAL</span></div>' +
                 lineas +
                 '<hr class="ticket-hr">' +
                 '<div class="ticket-sub-label" style="margin-top:.5rem;">¡Gracias por su compra!</div>' +
