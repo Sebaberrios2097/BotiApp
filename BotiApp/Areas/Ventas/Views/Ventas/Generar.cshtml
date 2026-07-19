@@ -627,7 +627,7 @@
             const enCart   = carrito.has(p.id);
             const cant     = enCart ? carrito.get(p.id).cantidad : 0;
             const oferta   = OFERTAS_MAP[p.id];
-            const sinStock = p.stock <= 0 && !enCart;
+            const sinStock = false;
             const imgHtml = p.tieneImagen
                 ? `<img src="${URL_IMG}/${p.id}" alt="${x(p.nombre)}" loading="lazy">`
                 : `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`;
@@ -689,7 +689,6 @@
                 if (!prod) return;
                 const usado    = carrito.get(req.idProducto)?.cantidad ?? 0;
                 const stockDisp = prod.stock - usado;
-                if (stockDisp < req.cantidad) tieneSinStock = true;
                 const cls = stockDisp <= 0 ? 'sin' : stockDisp <= 3 ? 'poco' : '';
                 prodRows.push(`<div class="promo-prod-item">
                     <span class="promo-prod-nombre" title="${x(prod.nombre)}">${x(prod.nombre)}</span>
@@ -707,27 +706,20 @@
             })();
             p.grupos.forEach(g => {
                 if (g.esExcluyente) {
-                    // Mostrar TODOS los productos del grupo con "Elige uno:"
-                    const hayAlguno = g.productos.some(r => {
-                        const pr = CATALOGO.find(c => c.id === r.idProducto);
-                        const us = carrito.get(r.idProducto)?.cantidad ?? 0;
-                        return pr && (pr.stock - us) >= r.cantidad;
-                    });
-                    if (!hayAlguno) tieneSinStock = true;
                     prodRows.push(`<div class="promo-prod-grupo-sep">Elige uno:</div>`);
                     g.productos.forEach(r => {
                         const prod = CATALOGO.find(c => c.id === r.idProducto);
                         if (!prod) return;
                         const usado     = carrito.get(r.idProducto)?.cantidad ?? 0;
                         const stockDisp = prod.stock - usado;
-                        const sinStock  = stockDisp < r.cantidad;
-                        const cls       = sinStock ? 'sin' : stockDisp <= 3 ? 'poco' : '';
+                        const sinStock  = false;
+                        const cls       = stockDisp <= 0 ? 'sin' : stockDisp <= 3 ? 'poco' : '';
                         const esSel     = selGrupos[g.idGrupo] === r.idProducto;
-                        const itemCls   = esSel ? ' selected-opt' : (sinStock ? ' sin-opt' : '');
+                        const itemCls   = esSel ? ' selected-opt' : '';
                         prodRows.push(`<div class="promo-prod-item${itemCls}">
                             <span class="promo-prod-nombre" title="${x(prod.nombre)}">${esSel ? '✓ ' : ''}${x(prod.nombre)}</span>
                             <span class="promo-prod-req">×${r.cantidad}</span>
-                            <span class="promo-prod-stock ${cls}">${sinStock ? 'Sin stock' : `Stock: ${stockDisp}`}</span>
+                            <span class="promo-prod-stock ${cls}">Stock: ${stockDisp}</span>
                         </div>`);
                     });
                 } else {
@@ -736,7 +728,6 @@
                         if (!prod) return;
                         const usado    = carrito.get(req.idProducto)?.cantidad ?? 0;
                         const stockDisp = prod.stock - usado;
-                        if (stockDisp < req.cantidad) tieneSinStock = true;
                         const cls = stockDisp <= 0 ? 'sin' : stockDisp <= 3 ? 'poco' : '';
                         prodRows.push(`<div class="promo-prod-item">
                             <span class="promo-prod-nombre" title="${x(prod.nombre)}">${x(prod.nombre)}</span>
@@ -757,22 +748,21 @@
                            <button onclick="event.stopPropagation();cambiarCantidadPromo(${p.id},+1)">+</button>
                        </div>
                    </div>`
-                : `<span class="promo-card-stock">${tieneSinStock ? '⚠ Sin stock' : 'Seleccionar'}</span>`;
+                : `<span class="promo-card-stock">Seleccionar</span>`;
 
             let extraClass = enCart ? ' en-carrito' : '';
-            if (tieneSinStock && !enCart) extraClass += ' sin-stock-promo';
 
             return `
             <div class="promo-card${extraClass}" id="pmc-${p.id}" tabindex="0"
                  onclick="togglePromo(${p.id})">
-                <div class="promo-card-body">
-                    <div class="promo-card-nombre">${x(p.nombre)}</div>
-                    <div class="promo-card-precio">$${fmt(p.precio)}</div>
-                </div>
-                ${desgloseHtml}
-                <div class="promo-card-footer">
-                    ${badgeHtml}
-                </div>
+                 <div class="promo-card-body">
+                     <div class="promo-card-nombre">${x(p.nombre)}</div>
+                     <div class="promo-card-precio">$${fmt(p.precio)}</div>
+                 </div>
+                 ${desgloseHtml}
+                 <div class="promo-card-footer">
+                     ${badgeHtml}
+                 </div>
             </div>`;
         }).join('');
     }
@@ -823,14 +813,14 @@
                 if (!prod) return '';
                 const usado     = carrito.get(r.idProducto)?.cantidad ?? 0;
                 const stockDisp = prod.stock - usado;
-                const sinStock  = stockDisp < r.cantidad;
-                const cls       = sinStock ? 'sin' : stockDisp <= 3 ? 'poco' : '';
-                const sinCls    = sinStock ? ' goc-sin' : '';
-                const clickFn   = sinStock ? '' : `onclick="seleccionarOpcionGrupo(this,'${g.idGrupo}')"`;
-                return `<div class="goc${sinCls}" data-grupo="${g.idGrupo}" data-producto="${r.idProducto}" ${clickFn}>
+                const sinStock  = false;
+                const cls       = '';
+                const sinCls    = '';
+                const clickFn   = `onclick="seleccionarOpcionGrupo(this,'${g.idGrupo}')"`;
+                return `<div class="goc" data-grupo="${g.idGrupo}" data-producto="${r.idProducto}" ${clickFn}>
                     <div class="goc-check">✓</div>
                     <span class="goc-nombre">${x(prod.nombre)} <small style="font-weight:400;color:#a89080">×${r.cantidad}</small></span>
-                    <span class="goc-stock ${cls}">${sinStock ? 'Sin stock' : `Stock: ${stockDisp}`}</span>
+                    <span class="goc-stock">Stock: ${stockDisp}</span>
                 </div>`;
             }).join('');
             return `<div class="grupos-section">
@@ -914,67 +904,6 @@
        considerando lo que ya hay en el carrito.
        Retorna { ok: true } o { ok: false, nombre, disponible } */
     function validarStockPromo(idPromo, cantidadAgregar, seleccionGrupos = {}) {
-        const promo = PROMOS.find(p => p.id === idPromo);
-        if (!promo) return { ok: true };
-
-        // Acumular cuántas unidades extra necesitamos por producto
-        const needed = new Map();
-
-        promo.productosBase.forEach(req => {
-            needed.set(req.idProducto, (needed.get(req.idProducto) ?? 0) + req.cantidad * cantidadAgregar);
-        });
-
-        promo.grupos.forEach(g => {
-            if (g.esExcluyente) {
-                // Se valida por separado abajo
-                return;
-            }
-            g.productos.forEach(req => {
-                needed.set(req.idProducto, (needed.get(req.idProducto) ?? 0) + req.cantidad * cantidadAgregar);
-            });
-        });
-
-        // Validar productos base y grupos no excluyentes
-        for (const [idProducto, cantNeeded] of needed) {
-            const prod = CATALOGO.find(c => c.id === idProducto);
-            if (!prod) continue;
-            const enCarrito  = carrito.get(idProducto)?.cantidad ?? 0;
-            const disponible = prod.stock - enCarrito;
-            if (cantNeeded > disponible) {
-                return { ok: false, nombre: prod.nombre, disponible: Math.max(0, disponible) };
-            }
-        }
-
-        // Validar grupos excluyentes
-        for (const g of promo.grupos) {
-            if (!g.esExcluyente) continue;
-            const selIdProducto = seleccionGrupos[g.idGrupo];
-            if (selIdProducto) {
-                // Validar el producto específico seleccionado
-                const req = g.productos.find(r => r.idProducto === selIdProducto);
-                if (!req) continue;
-                const prod = CATALOGO.find(c => c.id === selIdProducto);
-                if (!prod) continue;
-                const enCarrito  = carrito.get(selIdProducto)?.cantidad ?? 0;
-                const disponible = prod.stock - enCarrito;
-                if (req.cantidad * cantidadAgregar > disponible) {
-                    return { ok: false, nombre: prod.nombre, disponible: Math.max(0, disponible) };
-                }
-            } else {
-                // Sin selección guardada: al menos uno debe tener stock
-                const hayAlguno = g.productos.some(req => {
-                    const prod = CATALOGO.find(c => c.id === req.idProducto);
-                    if (!prod) return false;
-                    const enCarrito  = carrito.get(req.idProducto)?.cantidad ?? 0;
-                    return (prod.stock - enCarrito) >= req.cantidad * cantidadAgregar;
-                });
-                if (!hayAlguno) {
-                    const primero = CATALOGO.find(c => c.id === g.productos[0].idProducto);
-                    return { ok: false, nombre: primero?.nombre ?? 'producto del grupo', disponible: 0 };
-                }
-            }
-        }
-
         return { ok: true };
     }
 
@@ -1126,26 +1055,14 @@
     window.toggleProducto = function (id, nombre, precio, stock) {
         if (carrito.has(id)) {
             const it = carrito.get(id);
-            if (it.cantidad >= stock) {
-                toast(`Stock agotado para "${nombre}" (stock: ${stock})`, 'error');
-                return;
-            }
             it.cantidad++;
             renderCarrito();
             actualizarTarjeta(id);
             renderPromoGrid();
         } else if (RETORNABLES_MAP[id]) {
-            if (stock <= 0) {
-                toast(`Sin stock disponible para "${nombre}"`, 'error');
-                return;
-            }
             pendingEnvase = { id, nombre, precio, stock };
             mostrarDialogoEnvase(nombre, RETORNABLES_MAP[id].valorEnvase, RETORNABLES_MAP[id].soloEfectivo);
         } else {
-            if (stock <= 0) {
-                toast(`Sin stock disponible para "${nombre}"`, 'error');
-                return;
-            }
             carrito.set(id, { id, nombre, precio, cantidad: 1, stock });
             renderCarrito();
             actualizarTarjeta(id);
@@ -1203,9 +1120,6 @@
         if (nueva <= 0) {
             carrito.delete(id);
             envasesMap.delete(id);
-        } else if (delta > 0 && nueva > it.stock) {
-            toast(`Stock agotado para "${it.nombre}" (stock: ${it.stock})`, 'error');
-            return;
         } else {
             it.cantidad = nueva;
         }
@@ -1240,7 +1154,7 @@
         const p      = CATALOGO.find(c => c.id === id);
         if (!p) return;
         const oferta   = OFERTAS_MAP[id];
-        const sinStock = p.stock <= 0 && !enCart;
+        const sinStock = false;
         card.classList.remove('en-carrito', 'tiene-oferta', 'sin-stock');
         if (enCart) card.classList.add('en-carrito');
         else if (sinStock) card.classList.add('sin-stock');
@@ -1684,12 +1598,23 @@
             const data = await resp.json();
 
             if (data.ok) {
+                // Decrementar stock localmente en CATALOGO para reflejar la venta
+                items.forEach(item => {
+                    if (item.idProducto !== 0 && item.precioNormal > 0) {
+                        const prod = CATALOGO.find(p => p.id === item.idProducto);
+                        if (prod) {
+                            prod.stock -= item.cantidad;
+                        }
+                    }
+                });
+
                 // Limpiar carrito
                 const ids = [...carrito.keys()];
                 carrito.clear();
                 envasesMap.clear();
                 renderCarrito();
                 ids.forEach(id => actualizarTarjeta(id));
+                renderPromoGrid();
 
                 // Mostrar ticket con el snapshot
                 mostrarTicket({
@@ -1999,6 +1924,11 @@
     let barcodeBuffer = '';
     let lastKeyTime   = Date.now();
 
+    if (window._cajaKeyDownHandler) {
+        window.removeEventListener('keydown', window._cajaKeyDownHandler);
+        window._cajaKeyDownHandler = null;
+    }
+
     if (window._generarVentaKeyDownHandler) {
         window.removeEventListener('keydown', window._generarVentaKeyDownHandler);
     }
@@ -2080,7 +2010,6 @@
                     }
 
                     toggleProducto(prod.id, prod.nombre, prod.precio, prod.stock);
-                    toast(`Escaneado: ${prod.nombre}`, 'exito');
                 } else {
                     if (code.length >= 3) {
                         e.preventDefault();

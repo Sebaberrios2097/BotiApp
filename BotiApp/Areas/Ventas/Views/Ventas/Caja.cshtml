@@ -957,7 +957,7 @@
     /* ════════════════════════════════════════════════════
        MODAL AGREGAR PRODUCTO
     ════════════════════════════════════════════════════ */
-    const CATALOGO_ACTIVO = CATALOGO.filter(p => p.stock > 0)
+    const CATALOGO_ACTIVO = CATALOGO
         .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
     /* ── Tab switcher ────────────────────────────────────────────────── */
@@ -1007,26 +1007,6 @@
     }
 
     function puedeAgregarPromo(idPromo) {
-        const promo = PROMOS.find(p => p.id === idPromo);
-        if (!promo) return false;
-        for (const req of promo.productosBase) {
-            const prod = CATALOGO.find(c => c.id === req.idProducto);
-            if (!prod || prod.stock < req.cantidad) return false;
-        }
-        for (const g of promo.grupos) {
-            if (g.esExcluyente) {
-                const hayAlguno = g.productos.some(r => {
-                    const prod = CATALOGO.find(c => c.id === r.idProducto);
-                    return prod && prod.stock >= r.cantidad;
-                });
-                if (!hayAlguno) return false;
-            } else {
-                for (const req of g.productos) {
-                    const prod = CATALOGO.find(c => c.id === req.idProducto);
-                    if (!prod || prod.stock < req.cantidad) return false;
-                }
-            }
-        }
         return true;
     }
 
@@ -1355,14 +1335,14 @@
                 const prod = CATALOGO.find(c => c.id === r.idProducto);
                 if (!prod) return '';
                 const stockDisp = prod.stock;
-                const sinStock  = stockDisp < r.cantidad;
-                const cls       = sinStock ? 'sin' : stockDisp <= 3 ? 'poco' : '';
-                const sinCls    = sinStock ? ' goc-sin' : '';
-                const clickFn   = sinStock ? '' : `onclick="seleccionarOpcionGrupo(this,'${g.idGrupo}')"`;
-                return `<div class="goc${sinCls}" data-grupo="${g.idGrupo}" data-producto="${r.idProducto}" ${clickFn}>
+                const sinStock  = false;
+                const cls       = '';
+                const sinCls    = '';
+                const clickFn   = `onclick="seleccionarOpcionGrupo(this,'${g.idGrupo}')"`;
+                return `<div class="goc" data-grupo="${g.idGrupo}" data-producto="${r.idProducto}" ${clickFn}>
                     <div class="goc-check">✓</div>
                     <span class="goc-nombre">${x(prod.nombre)} <small style="font-weight:400;color:#a89080">×${r.cantidad}</small></span>
-                    <span class="goc-stock ${cls}">${sinStock ? 'Sin stock' : `Stock: ${stockDisp}`}</span>
+                    <span class="goc-stock">Stock: ${stockDisp}</span>
                 </div>`;
             }).join('');
             return `<div class="grupos-section">
@@ -2489,6 +2469,11 @@
     let barcodeBuffer = '';
     let lastKeyTime   = Date.now();
 
+    if (window._generarVentaKeyDownHandler) {
+        window.removeEventListener('keydown', window._generarVentaKeyDownHandler);
+        window._generarVentaKeyDownHandler = null;
+    }
+
     if (window._cajaKeyDownHandler) {
         window.removeEventListener('keydown', window._cajaKeyDownHandler);
     }
@@ -2513,11 +2498,6 @@
                         return;
                     }
 
-                    if (prod.stock <= 0) {
-                        toast(`El producto ${prod.nombre} no tiene stock disponible`, "error");
-                        return;
-                    }
-
                     if (prod.retornable) {
                         pendingEnvase = { p: prod, qty: 1 };
                         cerrarModal();
@@ -2526,7 +2506,6 @@
                         _agregarProductoADetalle(prod, 1, false);
                         renderDetalle();
                         _autoGuardarDebounce();
-                        toast(`Escaneado: ${prod.nombre} x1`, 'exito');
                     }
                 } else {
                     if (code.length >= 3) {

@@ -95,7 +95,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             item.IdBoleta = boleta.IdBoleta;
             context.VenBoletaDetalle.Add(item);
 
-            if (item.IdProducto != 0)
+            if (item.IdProducto != 0 && item.PrecioNormal > 0)
             {
                 var producto = await context.ProProductos.FindAsync(item.IdProducto);
                 if (producto is not null)
@@ -123,7 +123,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         // Restaurar stock de ítems anteriores
         foreach (var old in boleta.VenBoletaDetalle)
         {
-            if (old.IdProducto != 0)
+            if (old.IdProducto != 0 && old.PrecioNormal > 0)
             {
                 var prod = await context.ProProductos.FindAsync(old.IdProducto);
                 if (prod != null) prod.Stock += old.Cantidad;
@@ -139,7 +139,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         {
             item.IdBoleta = idBoleta;
             context.VenBoletaDetalle.Add(item);
-            if (item.IdProducto != 0)
+            if (item.IdProducto != 0 && item.PrecioNormal > 0)
             {
                 var prod = await context.ProProductos.FindAsync(item.IdProducto);
                 if (prod != null) prod.Stock -= item.Cantidad;
@@ -212,7 +212,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         // Restaurar stock
         foreach (var d in boleta.VenBoletaDetalle)
         {
-            if (d.IdProducto != 0)
+            if (d.IdProducto != 0 && d.PrecioNormal > 0)
             {
                 var prod = await context.ProProductos.FindAsync(d.IdProducto);
                 if (prod != null) prod.Stock += d.Cantidad;
@@ -233,7 +233,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
     {
         var list = await context.ProProductos
             .AsNoTracking()
-            .Where(p => p.Estado && p.Stock > 0 && p.IdProducto != 0)
+            .Where(p => p.Estado && p.IdProducto != 0)
             .OrderBy(p => p.NombreProducto)
             .Select(p => new
             {
@@ -333,7 +333,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             .AsNoTracking()
             .Include(p => p.IdMarcaNavigation)
             .Include(p => p.IdTipoProductoNavigation)
-            .Where(p => p.Estado && p.Stock > 0)
+            .Where(p => p.Estado)
             .ToListAsync();
 
         if (string.IsNullOrWhiteSpace(q))
