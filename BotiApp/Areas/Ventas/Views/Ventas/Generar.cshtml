@@ -94,12 +94,12 @@
 .envase-btn svg { width:16px; height:16px; fill:currentColor; }
 
 /* ── Envase en carrito ───────────────────────────────── */
-.ci-envase { display:flex; align-items:center; gap:.4rem; background:rgba(231,111,46,.06); border:1px dashed rgba(231,111,46,.3); border-radius:7px; padding:.3rem .65rem; margin-top:.2rem; font-size:.75rem; }
-.ci-envase svg { width:13px; height:13px; fill:var(--color-primario); flex-shrink:0; }
-.ci-envase-lbl { flex:1; color:#7a6050; font-weight:600; }
-.ci-envase-ef { background:#fef2f2; color:#dc2626; border-radius:4px; padding:.05rem .3rem; font-size:.67rem; font-weight:700; font-style:normal; margin-left:.3rem; }
-.ci-envase-precio { font-weight:700; color:var(--color-primario); }
-.ci-envase.solo-ef { background:rgba(239,68,68,.05); border-color:rgba(239,68,68,.25); }
+.ci-envase { display:flex; align-items:center; gap:.4rem; background:#000 !important; color:#fff !important; border-radius:7px; padding:.35rem .65rem; margin-top:.2rem; font-size:.75rem; font-weight:700; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+.ci-envase svg { width:13px; height:13px; fill:#fff !important; flex-shrink:0; }
+.ci-envase-lbl { flex:1; color:#fff !important; font-weight:700; }
+.ci-envase-ef { background:#dc2626; color:#fff !important; border-radius:4px; padding:.05rem .3rem; font-size:.67rem; font-weight:700; font-style:normal; margin-left:.3rem; }
+.ci-envase-precio { font-weight:700; color:#fff !important; }
+.ci-envase.solo-ef { background:#000 !important; }
 .tot-line.cargo-envase { font-size:.8rem; color:var(--color-primario); font-weight:600; }
 
 /* ══════════════════════════════════════════════════════
@@ -372,7 +372,18 @@
 .ticket-sub-label { font-size:11px; text-align:center; }
 .ticket-small { font-size:11px; }
 .ticket-strike { text-decoration:line-through; font-size:10px; }
-.ticket-bottle-charge { color:#000; font-size:11px; }
+.ticket-bottle-charge {
+    background-color: #000 !important;
+    color: #fff !important;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 3px 6px;
+    margin: 3px 0;
+    border-radius: 2px;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+.ticket-bottle-charge * { color: #fff !important; }
 .ticket-cut {
     text-align:center; font-size:11px; letter-spacing:1px; color:#000;
     border-top:1px dashed #000; border-bottom:1px dashed #000;
@@ -413,7 +424,16 @@
     .ticket-sub-label { font-size:9.5pt !important; }
     .ticket-small { font-size:9.5pt !important; }
     .ticket-strike { font-size:8.5pt !important; }
-    .ticket-bottle-charge { font-size:9.5pt !important; }
+    .ticket-bottle-charge {
+        background-color: #000 !important;
+        color: #fff !important;
+        font-size: 9.5pt !important;
+        font-weight: bold !important;
+        padding: 3px 6px !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .ticket-bottle-charge * { color: #fff !important; }
     /* Fuerza corte de papel entre boleta cliente y lista vendedor */
     .ticket-cliente { break-after: page !important; }
     .ticket-cut     { display:none !important; }

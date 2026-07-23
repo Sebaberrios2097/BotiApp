@@ -120,6 +120,7 @@
 .bl-det-total .val { font-size:.95rem; font-weight:700; color:var(--color-primario); }
 .etq-promo  { font-size:.62rem; font-weight:700; background:#fef3c7; color:#d97706; border-radius:4px; padding:.1rem .35rem; vertical-align:middle; white-space:nowrap; }
 .etq-oferta { font-size:.62rem; font-weight:700; background:#ede9fe; color:#7c3aed; border-radius:4px; padding:.1rem .35rem; vertical-align:middle; white-space:nowrap; }
+.etq-envase { font-size:.62rem; font-weight:700; background:#000 !important; color:#fff !important; border-radius:4px; padding:.1rem .35rem; vertical-align:middle; white-space:nowrap; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 .promo-gr-head td { background:#fffbeb; border-bottom:none !important; padding:.45rem .5rem !important; }
 .promo-gr-item td { padding:.2rem .5rem .2rem 1.4rem !important; font-size:.75rem; color:#78716c; }
 .promo-gr-sep td  { padding:0 !important; border-bottom:2px solid #fde68a !important; }
@@ -130,7 +131,7 @@
 .boletas-empty { text-align:center; padding:3.5rem 1rem; color:#b8a898; font-size:.88rem; }
 .boletas-empty svg { width:52px; height:52px; fill:#ddd0c4; display:block; margin:0 auto .75rem; }
 
-/* PaginaciÃ³n */
+/* Paginación */
 .pag-wrap { display:flex; align-items:center; justify-content:center; gap:.35rem; padding:.75rem 1rem; border-top:1px solid #f0ebe5; flex-shrink:0; }
 .pag-btn { padding:.3rem .65rem; border-radius:7px; border:1.5px solid #e0d5cc; background:#fff; color:#7a6050; font-size:.78rem; font-weight:600; cursor:pointer; transition:border-color .13s,background .13s,color .13s; }
 .pag-btn:hover { border-color:var(--color-primario); color:var(--color-primario); }
@@ -150,16 +151,16 @@
 .toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
 @@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════════════════════
    REIMPRIMIR
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+══════════════════════════════════════════════════════ */
 .bl-reimprimir { display:inline-flex; align-items:center; gap:.4rem; padding:.38rem .85rem; border-radius:8px; border:1.5px solid var(--color-primario); background:#fff; color:var(--color-primario); font-size:.78rem; font-weight:700; cursor:pointer; transition:background .15s,color .15s; }
 .bl-reimprimir:hover { background:var(--color-primario); color:#fff; }
 .bl-reimprimir svg { width:15px; height:15px; fill:currentColor; }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════════════════════
    TICKET MODAL
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+══════════════════════════════════════════════════════ */
 .ticket-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10000; display:flex; align-items:center; justify-content:center; animation:fadeInT .2s ease; }
 @@keyframes fadeInT { from{opacity:0} to{opacity:1} }
 .ticket-wrap { background:#fff; width:300px; max-height:92vh; overflow-y:auto; border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,.25); display:flex; flex-direction:column; }
@@ -191,7 +192,18 @@
 .ticket-sub-label { font-size:11px; text-align:center; }
 .ticket-small { font-size:11px; }
 .ticket-strike { text-decoration:line-through; font-size:10px; }
-.ticket-bottle-charge { color:#000; font-size:11px; }
+.ticket-bottle-charge {
+    background-color: #000 !important;
+    color: #fff !important;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 3px 6px;
+    margin: 3px 0;
+    border-radius: 2px;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+.ticket-bottle-charge * { color: #fff !important; }
 @@page { size:80mm auto; margin:0; }
 @@media print {
     html,body { margin:0 !important; padding:0 !important; background:#fff !important; }
@@ -540,11 +552,12 @@
 
             // Rendir ítems individuales (sin promo)
             noPromoItems.forEach(function(d) {
+                var esEnvase = d.precioNormal === 0 && !d.nombrePromocion && !d.nombreOferta;
                 var tieneDescuento = d.precioNormal > d.precioUnitario;
-                var badge = d.nombreOferta ? ' <span class="etq-oferta">✦ Oferta</span>' : '';
-                var precioHtml = tieneDescuento
+                var badge = esEnvase ? ' <span class="etq-envase">⚡ ENVASE</span>' : (d.nombreOferta ? ' <span class="etq-oferta">✦ Oferta</span>' : '');
+                var precioHtml = esEnvase ? '$' + fmt(d.precioUnitario) : (tieneDescuento
                     ? '<span class="precio-normal-tachado">$' + fmt(d.precioNormal) + '</span><span class="precio-descuento">$' + fmt(d.precioUnitario) + '</span>'
-                    : '$' + fmt(d.precioUnitario);
+                    : '$' + fmt(d.precioUnitario));
                 detalleRows += '<tr>'
                     + '<td>' + x(d.nombre) + badge + '</td>'
                     + '<td style="text-align:center;">' + d.cantidad + '</td>'

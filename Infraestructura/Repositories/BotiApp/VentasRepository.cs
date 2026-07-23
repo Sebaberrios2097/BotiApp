@@ -231,10 +231,16 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
 
     public async Task<IEnumerable<ProProductos>> ObtenerProductosDisponiblesAsync()
     {
+        var ventasPorProducto = await context.VenBoletaDetalle
+            .AsNoTracking()
+            .Where(d => d.IdBoletaNavigation.IdEstadoBoleta == 3)
+            .GroupBy(d => d.IdProducto)
+            .Select(g => new { IdProducto = g.Key, Cantidad = g.Sum(d => d.Cantidad) })
+            .ToDictionaryAsync(x => x.IdProducto, x => x.Cantidad);
+
         var list = await context.ProProductos
             .AsNoTracking()
             .Where(p => p.Estado && p.IdProducto != 0)
-            .OrderBy(p => p.NombreProducto)
             .Select(p => new
             {
                 p.IdProducto,
@@ -254,23 +260,26 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             })
             .ToListAsync();
 
-        return list.Select(x => new ProProductos
-        {
-            IdProducto = x.IdProducto,
-            IdTipoProducto = x.IdTipoProducto,
-            IdMarca = x.IdMarca,
-            NombreProducto = x.NombreProducto,
-            Descripción = x.Descripción,
-            Precio = x.Precio,
-            Stock = x.Stock,
-            Estado = x.Estado,
-            Codigo = x.Codigo,
-            FechaIngreso = x.FechaIngreso,
-            Imagen = x.TieneImagen ? new byte[1] : null,
-            IdMarcaNavigation = x.Marca,
-            IdTipoProductoNavigation = x.Tipo,
-            ProProductosRetornables = x.Retornable
-        });
+        return list
+            .OrderByDescending(x => ventasPorProducto.GetValueOrDefault(x.IdProducto, 0))
+            .ThenBy(x => x.NombreProducto)
+            .Select(x => new ProProductos
+            {
+                IdProducto = x.IdProducto,
+                IdTipoProducto = x.IdTipoProducto,
+                IdMarca = x.IdMarca,
+                NombreProducto = x.NombreProducto,
+                Descripción = x.Descripción,
+                Precio = x.Precio,
+                Stock = x.Stock,
+                Estado = x.Estado,
+                Codigo = x.Codigo,
+                FechaIngreso = x.FechaIngreso,
+                Imagen = x.TieneImagen ? new byte[1] : null,
+                IdMarcaNavigation = x.Marca,
+                IdTipoProductoNavigation = x.Tipo,
+                ProProductosRetornables = x.Retornable
+            });
     }
 
     public async Task<IEnumerable<ProTiposProductos>> ObtenerTiposAsync()
