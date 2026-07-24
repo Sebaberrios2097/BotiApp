@@ -61,8 +61,8 @@
 /* ══════════════════════════════════════════════════════
    LAYOUT
 ══════════════════════════════════════════════════════ */
-.gv-wrap { display:grid; grid-template-columns:1fr 330px; gap:1.25rem; align-items:start; }
-@@media (max-width:980px) { .gv-wrap { grid-template-columns:1fr; } }
+.gv-wrap { display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem; align-items:stretch; }
+@@media (max-width: 980px) { .gv-wrap { grid-template-columns:1fr; } }
 
 /* ── Header card ─────────────────────────────────────── */
 .page-header-card { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); padding:1.1rem 1.5rem; margin-bottom:1.4rem; display:flex; align-items:center; gap:1rem; }
@@ -105,7 +105,7 @@
 /* ══════════════════════════════════════════════════════
    CATÁLOGO
 ══════════════════════════════════════════════════════ */
-.cat-panel { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; display:flex; flex-direction:column; }
+.cat-panel { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; display:flex; flex-direction:column; height:calc(100vh - 85px); }
 .cat-panel-header { display:flex; align-items:center; gap:.55rem; padding:.85rem 1.15rem; background:var(--color-secundario); color:#fff; flex-shrink:0; }
 .cat-panel-header svg { width:17px; height:17px; fill:var(--color-primario); }
 .cat-panel-header span { font-size:.85rem; font-weight:700; }
@@ -130,10 +130,10 @@
 .productos-grid {
     padding: .85rem 1rem;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
     gap: .75rem;
     overflow-y: auto;
-    max-height: calc(100vh - 265px);
+    flex: 1;
     min-height: 200px;
 }
 @@media (max-width: 900px) {
@@ -146,7 +146,7 @@
         grid-template-columns: 1fr;
     }
 }
-#tabPromociones .promo-grid { max-height:calc(100vh - 230px); min-height:200px; }
+#tabPromociones .promo-grid { flex:1; overflow-y:auto; min-height:200px; }
 .prod-card { border:1.5px solid #ede5df; border-radius:11px; background:#fff; cursor:pointer; transition:border-color .15s,box-shadow .15s,transform .12s; overflow:hidden; display:flex; flex-direction:column; user-select:none; min-height:245px; height:auto; }
 .prod-card:hover { border-color:var(--color-primario); box-shadow:0 3px 12px rgba(231,111,46,.12); transform:translateY(-2px); }
 .prod-card:focus-visible, .promo-card:focus-visible { outline: 3px solid var(--color-primario); box-shadow: 0 0 8px rgba(231,111,46,.5); }
@@ -178,38 +178,48 @@
 .prod-card-qty-btn span { font-size:.72rem; font-weight:700; min-width:18px; text-align:center; color:var(--color-secundario); }
 
 /* Promo cards */
-.promo-grid { padding:.85rem 1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:.75rem; overflow-y:auto; max-height:180px; min-height:80px; }
-.promo-card { border:1.5px solid #d97706; border-radius:11px; background:#fffbeb; cursor:pointer; transition:border-color .15s,box-shadow .15s,transform .12s; overflow:hidden; display:flex; flex-direction:column; user-select:none; }
-.promo-card:hover { border-color:#b45309; box-shadow:0 3px 12px rgba(217,119,6,.2); transform:translateY(-2px); }
+.promo-grid { padding:.85rem 1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:.85rem; overflow-y:auto; flex:1; min-height:200px; }
+.promo-card { border:1.5px solid #d97706; border-radius:12px; background:#fff; cursor:pointer; transition:border-color .15s,box-shadow .15s,transform .12s; overflow:hidden; display:flex; flex-direction:column; user-select:none; min-height:170px; box-shadow:0 2px 8px rgba(217,119,6,.08); }
+.promo-card:hover { border-color:#b45309; box-shadow:0 3px 14px rgba(217,119,6,.2); transform:translateY(-2px); }
 .promo-card.en-carrito { border-color:#16a34a; background:#f0fdf4; }
 .promo-card.sin-stock-promo { border-color:#dc2626; background:#fff5f5; opacity:.85; }
-.promo-card-body { padding:.55rem .65rem .35rem; display:flex; flex-direction:column; gap:.1rem; }
-.promo-card-nombre { font-size:.78rem; font-weight:700; color:#92400e; line-height:1.25; }
-.promo-card-precio { font-size:.85rem; font-weight:700; color:#d97706; }
-.promo-card-footer { display:flex; align-items:center; justify-content:space-between; padding:.35rem .65rem; border-top:1px solid #fde68a; flex-shrink:0; }
-.promo-card.en-carrito .promo-card-footer { border-top-color:#bbf7d0; }
-.promo-card.sin-stock-promo .promo-card-footer { border-top-color:#fecaca; }
-.promo-card-cant { font-size:.67rem; color:#16a34a; font-weight:700; }
-.promo-card-stock { font-size:.67rem; color:#a89080; }
-.promo-card-qty-btn { display:flex; align-items:center; gap:.1rem; }
-.promo-card-qty-btn button { width:22px; height:20px; border-radius:4px; border:1px solid #e0d5cc; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; font-weight:700; color:#92400e; transition:background .1s; }
+
+.promo-card-header { background:#fffbeb; border-bottom:1.5px solid #fde68a; padding:.65rem .85rem; display:flex; align-items:center; justify-content:space-between; gap:.5rem; flex-shrink:0; }
+.promo-card.en-carrito .promo-card-header { background:#dcfce7; border-bottom-color:#bbf7d0; }
+.promo-card.sin-stock-promo .promo-card-header { background:#fee2e2; border-bottom-color:#fecaca; }
+
+.promo-card-nombre { font-size:.88rem; font-weight:700; color:#92400e; line-height:1.3; flex:1; min-width:0; white-space:normal; word-break:break-word; }
+.promo-card.en-carrito .promo-card-nombre { color:#14532d; }
+
+.promo-card-footer { display:flex; align-items:center; justify-content:space-between; padding:.45rem .75rem; border-top:1px solid #fde68a; background:#fffbeb; flex-shrink:0; }
+.promo-card.en-carrito .promo-card-footer { border-top-color:#bbf7d0; background:#f0fdf4; }
+.promo-card.sin-stock-promo .promo-card-footer { border-top-color:#fecaca; background:#fff5f5; }
+
+.promo-card-cant { font-size:.75rem; color:#16a34a; font-weight:700; }
+.btn-promo-precio { background:#d97706; color:#fff; border:none; border-radius:6px; padding:.25rem .75rem; font-size:.88rem; font-weight:800; cursor:pointer; transition:background .15s; margin-left:auto; }
+.btn-promo-precio:hover { background:#b45309; }
+
+.promo-card-qty-btn { display:flex; align-items:center; gap:.2rem; }
+.promo-card-qty-btn button { width:24px; height:22px; border-radius:5px; border:1px solid #e0d5cc; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.9rem; font-weight:700; color:#92400e; transition:background .1s; }
 .promo-card-qty-btn button:hover { background:#f5f0eb; }
-.promo-card-qty-btn span { font-size:.72rem; font-weight:700; min-width:18px; text-align:center; color:#92400e; }
+.promo-card-qty-btn span { font-size:.8rem; font-weight:800; min-width:20px; text-align:center; color:#92400e; }
 
 /* Desglose de productos dentro de la promo card */
-.promo-prod-list { padding:.3rem .65rem .4rem; border-top:1px dashed #fde68a; display:flex; flex-direction:column; gap:.18rem; background:rgba(254,243,199,.4); }
-.promo-card.en-carrito .promo-prod-list { border-top-color:#bbf7d0; background:rgba(240,253,244,.5); }
-.promo-card.sin-stock-promo .promo-prod-list { border-top-color:#fecaca; background:rgba(255,245,245,.5); }
-.promo-prod-item { display:flex; align-items:center; gap:.25rem; }
-.promo-prod-nombre { flex:1; font-size:.67rem; color:#78716c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
-.promo-prod-req { font-size:.65rem; color:#a89080; flex-shrink:0; }
-.promo-prod-stock { font-size:.65rem; font-weight:700; flex-shrink:0; color:#a89080; }
+.promo-prod-list { padding:.5rem .75rem; display:flex; flex-direction:column; gap:.3rem; flex:1; max-height:140px; overflow-y:auto; background:#fff; }
+.promo-card.en-carrito .promo-prod-list { background:rgba(240,253,244,.4); }
+.promo-card.sin-stock-promo .promo-prod-list { background:rgba(255,245,245,.4); }
+.promo-card.en-carrito .promo-prod-list { background:rgba(240,253,244,.4); }
+.promo-card.sin-stock-promo .promo-prod-list { background:rgba(255,245,245,.4); }
+.promo-prod-item { display:flex; align-items:center; justify-content:space-between; gap:.4rem; font-size:.8rem; }
+.promo-prod-nombre { flex:1; font-size:.82rem; color:var(--color-secundario); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.promo-prod-req { font-size:.78rem; font-weight:700; color:#7a6050; background:#f5f0eb; padding:.1rem .35rem; border-radius:4px; flex-shrink:0; }
+.promo-prod-stock { font-size:.72rem; font-weight:700; flex-shrink:0; color:#a89080; }
 .promo-prod-stock.poco { color:#d97706; }
 .promo-prod-stock.sin  { color:#dc2626; }
-.promo-prod-grupo-lbl  { font-size:.62rem; color:#a89080; font-style:italic; padding:.05rem 0 .05rem .3rem; }
-.promo-prod-grupo-sep  { font-size:.6rem; color:#92400e; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:.25rem 0 .1rem; margin-top:.15rem; border-top:1px dashed #fde68a; }
+.promo-prod-grupo-lbl  { font-size:.7rem; color:#a89080; font-style:italic; padding:.05rem 0 .05rem .3rem; }
+.promo-prod-grupo-sep  { font-size:.7rem; color:#92400e; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:.3rem 0 .15rem; margin-top:.2rem; border-top:1px dashed #fde68a; }
 .promo-prod-grupo-sep:first-child { border-top:none; margin-top:0; }
-.promo-prod-item.selected-opt { background:rgba(167,243,208,.35); border-radius:4px; padding-left:.25rem; }
+.promo-prod-item.selected-opt { background:rgba(167,243,208,.35); border-radius:4px; padding-left:.3rem; }
 .promo-prod-item.sin-opt .promo-prod-nombre, .promo-prod-item.sin-opt .promo-prod-req { opacity:.4; text-decoration:line-through; }
 /* ── Diálogo grupos excluyentes ─────────────────────── */
 .grupos-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10002; display:none; align-items:center; justify-content:center; animation:fadeIn .2s ease; }
@@ -227,74 +237,77 @@
 .goc.goc-sel .goc-check { border-color:#22c55e; background:#22c55e; color:#fff; }
 .goc-nombre { flex:1; font-size:.86rem; font-weight:600; color:var(--color-secundario); min-width:0; }
 .goc-stock { font-size:.72rem; font-weight:700; color:#a89080; flex-shrink:0; }
-.goc-stock.poco { color:#d97706; }
-.goc-stock.sin  { color:#dc2626; }
-.grupos-btns { display:flex; gap:.6rem; margin-top:1rem; }
-.grupos-btn { flex:1; padding:.65rem 1rem; border-radius:9px; border:none; font-size:.88rem; font-weight:700; cursor:pointer; transition:opacity .15s,transform .12s; }
-.grupos-btn:hover { opacity:.88; transform:translateY(-1px); }
-.grupos-btn.confirmar { background:var(--color-primario); color:#fff; }
-.grupos-btn.confirmar:disabled { opacity:.4; cursor:not-allowed; transform:none; }
-.grupos-btn.cancelar { background:#f0ebe5; color:#7a6050; }
-
-.grid-empty { grid-column:1/-1; text-align:center; padding:3rem 1rem; color:#b8a898; font-size:.85rem; }
-.grid-empty svg { width:48px; height:48px; fill:#ddd0c4; display:block; margin:0 auto .6rem; }
 
 /* ══════════════════════════════════════════════════════
    PANEL BOLETA
-══════════════════════════════════════════════════════ */
-.boleta-panel { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; display:flex; flex-direction:column; position:sticky; top:1rem; }
-.boleta-header { display:flex; align-items:center; gap:.55rem; padding:.85rem 1.1rem; background:var(--color-secundario); color:#fff; flex-shrink:0; }
-.boleta-header svg { width:17px; height:17px; fill:var(--color-primario); }
-.boleta-header span { font-size:.85rem; font-weight:700; flex:1; }
-.boleta-header .cart-cnt { background:var(--color-primario); color:#fff; border-radius:20px; padding:.1rem .5rem; font-size:.7rem; font-weight:700; }
-.cart-items { overflow-y:auto; max-height:300px; padding:.5rem .65rem; display:flex; flex-direction:column; gap:.35rem; }
-.ci-item { background:#faf7f5; border:1px solid #ede5df; border-radius:9px; padding:.5rem .65rem; }
-.ci-top { display:flex; align-items:center; gap:.4rem; }
-.ci-nombre { flex:1; min-width:0; font-size:.79rem; font-weight:600; color:var(--color-secundario); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ci-del { width:20px; height:20px; border-radius:4px; border:none; cursor:pointer; background:rgba(239,68,68,.08); color:#dc2626; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .12s; }
-.ci-del:hover { background:rgba(239,68,68,.2); }
-.ci-del svg { width:12px; height:12px; fill:currentColor; }
-.ci-bottom { display:flex; align-items:center; justify-content:space-between; margin-top:.35rem; gap:.3rem; flex-wrap:wrap; }
-.ci-qty { display:flex; align-items:center; gap:.25rem; }
-.ci-qty button { width:22px; height:22px; border-radius:5px; border:1px solid #e0d5cc; background:#f5f0eb; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.88rem; font-weight:700; transition:background .1s; }
-.ci-qty button:hover { background:#e8ddd4; }
-.ci-qty span { font-size:.82rem; font-weight:700; min-width:22px; text-align:center; color:var(--color-secundario); }
-.ci-sub { font-size:.82rem; font-weight:700; color:var(--color-primario); }
-.ci-oferta-badge { font-size:.63rem; font-weight:700; background:#ede9fe; color:#7c3aed; border-radius:4px; padding:.1rem .35rem; flex-shrink:0; }
+ ══════════════════════════════════════════════════════ */
+.boleta-panel { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; display:flex; flex-direction:column; height:calc(100vh - 85px); }
+.boleta-header { display:flex; align-items:center; gap:.65rem; padding:.85rem 1.15rem; background:var(--color-secundario); color:#fff; flex-shrink:0; }
+.boleta-header svg { width:18px; height:18px; fill:var(--color-primario); }
+.boleta-header .boleta-title { font-size:.92rem; font-weight:700; flex:1; }
+.boleta-header-right { display:flex; align-items:center; gap:.4rem; margin-left:auto; }
+.cart-badge { background:rgba(255,255,255,.15); color:#fff; border-radius:20px; padding:.2rem .6rem; font-size:.78rem; font-weight:700; white-space:nowrap; flex-shrink:0; }
+.cart-badge.promo-badge { background:#d97706; color:#fff; font-weight:800; }
+.btn-limpiar-carrito { display:flex; align-items:center; gap:.35rem; padding:.35rem .75rem; background:rgba(239,68,68,.2); border:1px solid rgba(239,68,68,.4); border-radius:8px; color:#ff8585; font-size:.8rem; font-weight:700; cursor:pointer; transition:background .15s,color .15s,border-color .15s; flex-shrink:0; margin-left:.25rem; }
+.btn-limpiar-carrito:hover:not(:disabled) { background:#dc2626; border-color:#dc2626; color:#fff; }
+.btn-limpiar-carrito svg { width:14px; height:14px; fill:currentColor; }
+.btn-limpiar-carrito:disabled { opacity:.4; cursor:not-allowed; background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.12); color:rgba(255,255,255,.4); }
+.cart-items { overflow-y:auto; flex:1 1 0%; min-height:0; padding:.65rem .85rem 3.5rem; display:flex; flex-direction:column; gap:.5rem; }
+.cart-items.split-cols { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; align-items:stretch; }
+.cart-col-promos, .cart-col-prods { display:flex; flex-direction:column; gap:.5rem; min-width:0; }
+.cart-col-header { font-size:.75rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:#d97706; padding:.25rem .4rem; border-bottom:1.5px solid #fde68a; margin-bottom:.2rem; }
+.cart-col-prods .cart-col-header { color:var(--color-secundario); border-bottom-color:#ede5df; }
 
-/* Promo group */
-.ci-promo-group { border:1.5px solid #d97706; border-radius:10px; overflow:hidden; }
-.ci-promo-header { display:flex; align-items:center; gap:.4rem; padding:.45rem .65rem; background:#fffbeb; flex-wrap:wrap; }
-.ci-promo-tag { font-size:.63rem; font-weight:700; background:#fef3c7; color:#d97706; border-radius:4px; padding:.1rem .35rem; flex-shrink:0; }
-.ci-promo-nombre { flex:1; font-size:.78rem; font-weight:700; color:#92400e; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ci-promo-precio { font-size:.82rem; font-weight:700; color:#d97706; flex-shrink:0; }
-.ci-promo-ahorro { font-size:.68rem; color:#16a34a; font-weight:600; padding:.1rem .65rem .3rem; background:#fffbeb; }
-.ci-promo-item { display:flex; align-items:center; justify-content:space-between; padding:.3rem .65rem; border-top:1px dashed #fde68a; background:#fff; }
-.ci-promo-item .ci-nombre { font-size:.74rem; color:#78716c; font-weight:500; }
-.ci-promo-item-qty { font-size:.7rem; color:#a89080; flex-shrink:0; }
-.ci-promo-item-del { background:none; border:none; cursor:pointer; color:#dc2626; opacity:.7; padding:0; margin-left:.3rem; display:flex; align-items:center; flex-shrink:0; }
+/* Item en carrito: Todo en 1 fila horizontal */
+.ci-item { background:#faf7f5; border:1.5px solid #ede5df; border-radius:10px; padding:.65rem .9rem; display:flex; align-items:center; justify-content:space-between; gap:.85rem; flex-wrap:nowrap; flex-shrink:0; }
+.ci-nombre-wrap { flex:1; min-width:0; display:flex; align-items:center; gap:.4rem; }
+.ci-nombre { font-size:.95rem; font-weight:700; color:var(--color-secundario); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ci-qty-wrap { display:flex; align-items:center; gap:.4rem; flex-shrink:0; }
+.ci-qty-label { font-size:.88rem; font-weight:600; color:#7a6050; }
+.ci-qty { display:flex; align-items:center; gap:.3rem; }
+.ci-qty button { width:26px; height:26px; border-radius:6px; border:1.5px solid #e0d5cc; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.95rem; font-weight:700; color:var(--color-secundario); transition:background .12s,border-color .12s; }
+.ci-qty button:hover { background:#f5f0eb; border-color:var(--color-primario); }
+.ci-qty span { font-size:.92rem; font-weight:800; min-width:24px; text-align:center; color:var(--color-secundario); }
+.ci-unit-price { display:flex; flex-direction:column; align-items:flex-end; font-size:.88rem; color:#7a6050; flex-shrink:0; white-space:nowrap; }
+.ci-price-old { font-size:.75rem; color:#a89080; text-decoration:line-through; }
+.ci-price-current { font-size:.88rem; font-weight:600; color:#7a6050; }
+.ci-subtotal { font-size:1.1rem; font-weight:800; color:var(--color-primario); flex-shrink:0; white-space:nowrap; min-width:70px; text-align:right; }
+.ci-del { width:26px; height:26px; border-radius:6px; border:none; cursor:pointer; background:rgba(239,68,68,.08); color:#dc2626; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s,transform .1s; }
+.ci-del:hover { background:rgba(239,68,68,.2); transform:scale(1.05); }
+.ci-del svg { width:14px; height:14px; fill:currentColor; }
+.ci-oferta-badge { font-size:.68rem; font-weight:700; background:#ede9fe; color:#7c3aed; border-radius:4px; padding:.1rem .4rem; flex-shrink:0; }
+
+/* Promo Card en Carrito: Mismas filas horizontales que productos + desglose inferior */
+.ci-promo-card { background:#fff; border:1.5px solid #d97706; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 2px 6px rgba(217,119,6,.08); flex-shrink:0; min-height:80px; }
+.ci-promo-main-row { background:#fffbeb; padding:.65rem .9rem; display:flex; align-items:center; justify-content:space-between; gap:.85rem; flex-wrap:nowrap; border-bottom:1px solid #fde68a; }
+.ci-promo-tag { background:#d97706; color:#fff; font-size:.72rem; font-weight:800; padding:.15rem .45rem; border-radius:4px; margin-right:.2rem; white-space:nowrap; flex-shrink:0; }
+.ci-promo-body { padding:.5rem .9rem; background:#ffffff; display:flex; flex-direction:column; gap:.3rem; }
+.ci-promo-body-title { font-size:.72rem; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:.03em; margin-bottom:.1rem; }
+.ci-promo-item-row { display:flex; align-items:center; justify-content:space-between; font-size:.82rem; color:#451a03; padding:.25rem .5rem; background:#fffcf8; border-radius:5px; border:1px dashed #fde68a; }
+.ci-promo-item-nombre { font-weight:600; flex:1; }
+.ci-promo-item-cant { font-size:.75rem; font-weight:700; color:#d97706; background:#fef3c7; padding:.1rem .4rem; border-radius:4px; }
 .ci-promo-item-del:hover { opacity:1; }
 .ci-promo-item-del svg { width:12px; height:12px; fill:currentColor; }
 
-.cart-empty { text-align:center; padding:1.75rem .5rem; color:#b8a898; font-size:.8rem; }
-.cart-empty svg { width:36px; height:36px; fill:#ddd0c4; display:block; margin:0 auto .4rem; }
+.cart-empty { text-align:center; padding:2.5rem 1rem; color:#b8a898; font-size:.9rem; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.cart-empty svg { width:48px !important; height:48px !important; max-width:48px !important; max-height:48px !important; fill:#ddd0c4 !important; display:block; margin:0 auto .6rem; flex-shrink:0; }
 
 /* Info boleta */
-.boleta-info-sec { padding:.65rem 1rem; border-top:1px solid #f0ebe5; display:flex; flex-direction:column; gap:.28rem; flex-shrink:0; }
-.bi-row { display:flex; justify-content:space-between; font-size:.78rem; }
-.bi-row .lbl { color:#a89080; font-weight:600; }
-.bi-row .val { color:var(--color-secundario); font-weight:600; text-align:right; }
+.boleta-info-sec { padding:.75rem 1.1rem; border-top:1px solid #f0ebe5; display:flex; flex-direction:column; gap:.35rem; flex-shrink:0; }
+.bi-row { display:flex; justify-content:space-between; font-size:.88rem; }
+.bi-row .lbl { color:#7a6050; font-weight:600; }
+.bi-row .val { color:var(--color-secundario); font-weight:700; text-align:right; }
 
 /* Totales */
-.boleta-totales { padding:.6rem 1rem; border-top:1px solid #f0ebe5; flex-shrink:0; }
-.tot-line { display:flex; justify-content:space-between; font-size:.82rem; color:#7a6050; padding:.12rem 0; }
-.tot-line.descuento      { font-size:.78rem; color:#16a34a; }
-.tot-line.descuento-total{ font-size:.8rem; font-weight:700; color:#16a34a; border-top:1px dashed #d1fae5; padding-top:.35rem; margin-top:.2rem; }
-.tot-line.gran { font-size:1rem; font-weight:700; color:var(--color-secundario); padding-top:.45rem; border-top:1.5px solid #f0ebe5; margin-top:.3rem; }
-.tot-line.gran span:last-child { color:var(--color-primario); }
+.boleta-totales { padding:.75rem 1.1rem; border-top:1px solid #f0ebe5; flex-shrink:0; }
+.tot-line { display:flex; justify-content:space-between; font-size:.9rem; color:#7a6050; padding:.18rem 0; }
+.tot-line.descuento      { font-size:.85rem; color:#16a34a; }
+.tot-line.descuento-total{ font-size:.88rem; font-weight:700; color:#16a34a; border-top:1px dashed #d1fae5; padding-top:.35rem; margin-top:.2rem; }
+.tot-line.gran { font-size:1.25rem; font-weight:800; color:var(--color-secundario); padding-top:.55rem; border-top:1.5px solid #f0ebe5; margin-top:.35rem; }
+.tot-line.gran span:last-child { color:var(--color-primario); font-weight:800; }
 
-.boleta-footer { padding:.85rem 1rem; border-top:1px solid #f0ebe5; flex-shrink:0; }
-.btn-generar { display:flex; align-items:center; justify-content:center; gap:.45rem; width:100%; padding:.7rem; background:var(--color-primario); color:#fff; border:none; border-radius:9px; font-size:.9rem; font-weight:700; cursor:pointer; transition:background .2s,transform .15s; }
+.boleta-footer { padding:1rem 1.1rem; border-top:1px solid #f0ebe5; flex-shrink:0; }
+.btn-generar { display:flex; align-items:center; justify-content:center; gap:.5rem; width:100%; padding:.85rem; background:var(--color-primario); color:#fff; border:none; border-radius:10px; font-size:1.05rem; font-weight:800; cursor:pointer; transition:background .2s,transform .15s; }
 .btn-generar svg { width:16px; height:16px; fill:currentColor; }
 .btn-generar:hover:not(:disabled) { background:#cf5f22; transform:translateY(-1px); }
 .btn-generar:disabled { opacity:.5; cursor:not-allowed; }
@@ -445,29 +458,6 @@
 <div class="grupos-overlay" id="gruposOverlay" onclick="cerrarDialogoGrupos()"></div>
 @Html.AntiForgeryToken()
 
-<div class="page-header-card">
-    <div class="phc-icon">
-        <svg viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
-    </div>
-    <div>
-        <h1 class="phc-title">Generar Venta</h1>
-        <p class="phc-sub">Selecciona productos del catálogo y emite la venta</p>
-    </div>
-    <div class="phc-badges">
-        <span class="phc-badge naranja">
-            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
-            @Model.Productos.Count() productos
-        </span>
-        @if (Model.Promociones.Any())
-        {
-            <span class="phc-badge verde">
-                <svg viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .59 1.42l9 9A2 2 0 0 0 13 22a2 2 0 0 0 1.41-.59l7-7A2 2 0 0 0 22 13a2 2 0 0 0-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
-                @Model.Promociones.Count() promos activas
-            </span>
-        }
-    </div>
-</div>
-
 <div class="gv-wrap">
 
     <!-- ══ CATÁLOGO ══ -->
@@ -480,6 +470,14 @@
 
         @if (Model.Promociones.Any())
         {
+            <div class="filtros-wrap">
+                <div class="search-bar">
+                    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="txtBuscar" placeholder="Buscar por producto o promoción…"
+                           oninput="aplicarFiltros()" autocomplete="off" />
+                    <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">✕</button>
+                </div>
+            </div>
             <!-- Tab nav -->
             <div class="tab-nav">
                 <button class="tab-btn active" id="tabBtnProductos" onclick="selTab('productos')">
@@ -494,14 +492,6 @@
             </div>
             <!-- Tab: Productos -->
             <div class="tab-pane" id="tabProductos">
-                <div class="filtros-wrap">
-                    <div class="search-bar">
-                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                        <input type="text" id="txtBuscar" placeholder="Buscar por nombre, marca…"
-                               oninput="aplicarFiltros()" autocomplete="off" />
-                        <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">✕</button>
-                    </div>
-                </div>
                 <div class="productos-grid" id="productosGrid"></div>
             </div>
             <!-- Tab: Promociones -->
@@ -514,7 +504,7 @@
             <div class="filtros-wrap">
                 <div class="search-bar">
                     <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                    <input type="text" id="txtBuscar" placeholder="Buscar por nombre, marca…"
+                    <input type="text" id="txtBuscar" placeholder="Buscar por producto o promoción…"
                            oninput="aplicarFiltros()" autocomplete="off" />
                     <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">✕</button>
                 </div>
@@ -527,8 +517,16 @@
     <div class="boleta-panel">
         <div class="boleta-header">
             <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h14v-2H7.42a.25.25 0 0 1-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.46 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/></svg>
-            <span>Detalle venta</span>
-            <span class="cart-cnt" id="cartCnt">0</span>
+            <span class="boleta-title">Detalle venta</span>
+            <div class="boleta-header-right">
+                <span class="cart-badge promo-badge" id="cartCntPromos" style="display:none;" title="Promociones en el carrito">0 Promos</span>
+                <span class="cart-badge" id="cartCntDistintos" title="Productos distintos">0 prods.</span>
+                <span class="cart-badge" id="cartCntUnidades" title="Unidades totales">0 un.</span>
+                <button class="btn-limpiar-carrito" id="btnLimpiarCarrito" onclick="confirmarLimpiarCarrito()" disabled title="Vaciar todos los productos del carrito">
+                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    Limpiar
+                </button>
+            </div>
         </div>
 
         <div class="cart-items" id="cartItems">
@@ -536,14 +534,6 @@
                 <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h14v-2H7.42a.25.25 0 0 1-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.46 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/></svg>
                 Selecciona productos del catálogo
             </div>
-        </div>
-
-        <div class="boleta-info-sec">
-            @* <div class="bi-row"><span class="lbl">Cajero</span><span class="val">@Model.NombreCajero</span></div> *@
-            <div class="bi-row"><span class="lbl">Fecha emisión</span><span class="val" id="infoFecha">—</span></div>
-            <div class="bi-row"><span class="lbl">Productos distintos</span><span class="val" id="infoDistintos">0</span></div>
-            <div class="bi-row"><span class="lbl">Unidades totales</span><span class="val" id="infoUnidades">0</span></div>
-            <div class="bi-row"><span class="lbl">Estado</span><span class="val" style="color:#16a34a;font-weight:700;">● Generada</span></div>
         </div>
 
         <!-- Totales -->
@@ -602,8 +592,9 @@
     CATALOGO.forEach(p => { if (p.retornable) RETORNABLES_MAP[p.id] = p.retornable; });
 
     /* ── Estado ──────────────────────────────────────────────────────────── */
-    const carrito       = new Map();            // id → {id, nombre, precio, cantidad, stock}
-    const promoCarrito  = new Map();            // idPromo → {idPromo, nombre, precio, cantidad}
+    let cartSeqCounter  = 0;
+    const carrito       = new Map();            // id → {id, nombre, precio, cantidad, stock, _seq}
+    const promoCarrito  = new Map();            // idPromo → {idPromo, nombre, precio, cantidad, _seq}
     const envasesMap    = new Map();            // idProducto → {valorEnvase, soloEfectivo}
     let pendingEnvase   = null;                 // producto pendiente de confirmación envase
 
@@ -631,6 +622,7 @@
             || (p.codigo || '').toLowerCase().includes(q)
         );
         renderGrid(f);
+        renderPromoGrid(q);
     };
 
     window.limpiarQ = function () {
@@ -698,10 +690,34 @@
     /* ══════════════════════════════════════════════════════════════════════
        GRID DE PROMOCIONES
     ══════════════════════════════════════════════════════════════════════ */
-    function renderPromoGrid() {
+    function renderPromoGrid(filtroText = '') {
         const grid = document.getElementById('promoGrid');
         if (!grid) return;
-        grid.innerHTML = PROMOS.map(p => {
+
+        const q = filtroText.trim().toLowerCase();
+        const promosFiltradas = PROMOS.filter(p => {
+            if (!q) return true;
+            if (p.nombre.toLowerCase().includes(q)) return true;
+            const prodMatchBase = p.productosBase.some(r => {
+                const prod = CATALOGO.find(c => c.id === r.idProducto);
+                return prod && prod.nombre.toLowerCase().includes(q);
+            });
+            if (prodMatchBase) return true;
+            const prodMatchGrupo = p.grupos.some(g => g.productos.some(r => {
+                const prod = CATALOGO.find(c => c.id === r.idProducto);
+                return prod && prod.nombre.toLowerCase().includes(q);
+            }));
+            return prodMatchGrupo;
+        });
+
+        if (promosFiltradas.length === 0) {
+            grid.innerHTML = `<div class="grid-empty" style="grid-column: 1/-1; text-align:center; padding:2rem; color:#b8a898;">
+                <svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:#ddd0c4;display:block;margin:0 auto .5rem;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                No se encontraron promociones</div>`;
+            return;
+        }
+
+        grid.innerHTML = promosFiltradas.map(p => {
             const enCart  = promoCarrito.has(p.id);
             const cant    = enCart ? promoCarrito.get(p.id).cantidad : 0;
             const nomSafe = p.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -739,7 +755,6 @@
                         if (!prod) return;
                         const usado     = carrito.get(r.idProducto)?.cantidad ?? 0;
                         const stockDisp = prod.stock - usado;
-                        const sinStock  = false;
                         const cls       = stockDisp <= 0 ? 'sin' : stockDisp <= 3 ? 'poco' : '';
                         const esSel     = selGrupos[g.idGrupo] === r.idProducto;
                         const itemCls   = esSel ? ' selected-opt' : '';
@@ -775,16 +790,15 @@
                            <button onclick="event.stopPropagation();cambiarCantidadPromo(${p.id},+1)">+</button>
                        </div>
                    </div>`
-                : `<span class="promo-card-stock">Seleccionar</span>`;
+                : `<button class="btn-promo-precio" onclick="event.stopPropagation();togglePromo(${p.id})">$${fmt(p.precio)}</button>`;
 
             let extraClass = enCart ? ' en-carrito' : '';
 
             return `
             <div class="promo-card${extraClass}" id="pmc-${p.id}" tabindex="0"
                  onclick="togglePromo(${p.id})">
-                 <div class="promo-card-body">
-                     <div class="promo-card-nombre">${x(p.nombre)}</div>
-                     <div class="promo-card-precio">$${fmt(p.precio)}</div>
+                 <div class="promo-card-header">
+                     <span class="promo-card-nombre" title="${x(p.nombre)}">${x(p.nombre)}</span>
                  </div>
                  ${desgloseHtml}
                  <div class="promo-card-footer">
@@ -818,8 +832,9 @@
             it.cantidad++;
             it.unidades = it.unidades ?? [];
             it.unidades.push({});
+            it._seq = ++cartSeqCounter;
         } else {
-            promoCarrito.set(idPromo, { idPromo: promo.id, nombre: promo.nombre, precio: promo.precio, cantidad: 1, seleccionGrupos: {}, unidades: [{}] });
+            promoCarrito.set(idPromo, { idPromo: promo.id, nombre: promo.nombre, precio: promo.precio, cantidad: 1, seleccionGrupos: {}, unidades: [{}], _seq: ++cartSeqCounter });
         }
         agregarProductosDePromo(idPromo, 1, {});
         renderPromoGrid();
@@ -908,10 +923,11 @@
             entry.seleccionGrupos = seleccionGrupos;   // last selection (for promoGrid display)
             entry.unidades        = entry.unidades ?? [];
             entry.unidades.push(seleccionGrupos);
+            entry._seq = ++cartSeqCounter;
         } else {
             promoCarrito.set(idPromo, {
                 idPromo: promo.id, nombre: promo.nombre, precio: promo.precio,
-                cantidad: 1, seleccionGrupos, unidades: [seleccionGrupos]
+                cantidad: 1, seleccionGrupos, unidades: [seleccionGrupos], _seq: ++cartSeqCounter
             });
         }
 
@@ -988,7 +1004,7 @@
 
     function agregarConEnvase(id, nombre, precio, stock, valorEnvase, soloEfectivo, cantidad) {
         envasesMap.set(id, { valorEnvase, soloEfectivo });
-        carrito.set(id, { id, nombre, precio, cantidad, stock });
+        carrito.set(id, { id, nombre, precio, cantidad, stock, _seq: ++cartSeqCounter });
     }
 
     /* Quita del carrito los productos de exactamente 1 unidad de la promo,
@@ -1021,29 +1037,101 @@
     }
 
     window.cambiarCantidadPromo = function (idPromo, delta) {
+        if (!promoCarrito.has(idPromo)) return;
+        const entry = promoCarrito.get(idPromo);
+
         if (delta > 0) {
-            // Reusar togglePromo: valida stock y muestra diálogo si hay grupos excluyentes
-            window.togglePromo(idPromo);
+            // Reusar la última variante seleccionada para esa promo
+            const promoInfo = PROMOS.find(p => p.id === idPromo);
+            if (!promoInfo) return;
+
+            const lastVariant = (entry.unidades && entry.unidades.length > 0)
+                ? entry.unidades[entry.unidades.length - 1]
+                : (entry.seleccionGrupos ?? {});
+
+            const check = validarStockPromo(idPromo, 1, lastVariant);
+            if (!check.ok) {
+                toast(`Sin stock suficiente para la promo: "${check.nombre}" (disponible: ${check.disponible})`, 'error');
+                return;
+            }
+
+            entry.cantidad++;
+            entry.unidades = entry.unidades ?? [];
+            entry.unidades.push({ ...lastVariant });
+            entry._seq = ++cartSeqCounter;
+
+            agregarProductosDePromo(idPromo, 1, lastVariant);
+
+            renderPromoGrid();
+            renderCarrito();
+            actualizarTarjetasProductos();
             return;
         }
-        // delta < 0 (siempre -1 desde los botones)
-        if (!promoCarrito.has(idPromo)) return;
-        const it    = promoCarrito.get(idPromo);
-        const nueva = it.cantidad + delta;  // delta es negativo
 
+        // delta < 0
+        const nueva = entry.cantidad + delta;
         if (nueva <= 0) {
             eliminarPromoCompleta(idPromo);
         } else {
-            // Pop la última unidad y revertir sus productos
-            const unidades  = it.unidades ?? [];
-            const lastSel   = unidades.length > 0 ? unidades.pop() : (it.seleccionGrupos ?? {});
-            it.cantidad     = nueva;
-            it.seleccionGrupos = unidades.length > 0 ? unidades[unidades.length - 1] : (it.seleccionGrupos ?? {});
+            const unidades = entry.unidades ?? [];
+            const lastSel  = unidades.length > 0 ? unidades.pop() : (entry.seleccionGrupos ?? {});
+            entry.cantidad = nueva;
+            entry.seleccionGrupos = unidades.length > 0 ? unidades[unidades.length - 1] : (entry.seleccionGrupos ?? {});
+            entry._seq = ++cartSeqCounter;
             removerUnaUnidadDePromo(idPromo, lastSel);
         }
 
         renderPromoGrid();
         renderCarrito();
+        actualizarTarjetasProductos();
+    };
+
+    window.cambiarCantidadPromoAuto = function (idPromoStr, delta) {
+        const idPromo = parseInt(idPromoStr);
+        const promo = PROMOS.find(p => p.id === idPromo);
+        if (!promo) return;
+
+        if (delta > 0) {
+            promo.productosBase.forEach(req => {
+                if (carrito.has(req.idProducto)) {
+                    const it = carrito.get(req.idProducto);
+                    it.cantidad += req.cantidad;
+                    it._seq = ++cartSeqCounter;
+                }
+            });
+            promo.grupos.forEach(g => {
+                const prodId = g.productos[0].idProducto;
+                if (carrito.has(prodId)) {
+                    const it = carrito.get(prodId);
+                    it.cantidad += g.productos[0].cantidad;
+                    it._seq = ++cartSeqCounter;
+                }
+            });
+        } else {
+            promo.productosBase.forEach(req => {
+                quitarDePromo(req.idProducto, req.cantidad);
+            });
+            promo.grupos.forEach(g => {
+                quitarDePromo(g.productos[0].idProducto, g.productos[0].cantidad);
+            });
+        }
+        renderCarrito();
+        renderPromoGrid();
+        actualizarTarjetasProductos();
+    };
+
+    window.quitarDePromoAuto = function (idPromoStr) {
+        const idPromo = parseInt(idPromoStr);
+        const promo = PROMOS.find(p => p.id === idPromo);
+        if (!promo) return;
+        promo.productosBase.forEach(req => {
+            quitarDePromo(req.idProducto, req.cantidad);
+        });
+        promo.grupos.forEach(g => {
+            quitarDePromo(g.productos[0].idProducto, g.productos[0].cantidad);
+        });
+        renderCarrito();
+        renderPromoGrid();
         actualizarTarjetasProductos();
     };
 
@@ -1067,6 +1155,7 @@
 
     function actualizarTarjetasProductos() {
         CATALOGO.forEach(p => actualizarTarjeta(p.id));
+        aplicarFiltros();
     }
 
     window.quitarPromoCompleta = function (idPromo) {
@@ -1083,6 +1172,9 @@
         if (carrito.has(id)) {
             const it = carrito.get(id);
             it.cantidad++;
+            it._seq = ++cartSeqCounter;
+            carrito.delete(id);
+            carrito.set(id, it);
             renderCarrito();
             actualizarTarjeta(id);
             renderPromoGrid();
@@ -1090,7 +1182,8 @@
             pendingEnvase = { id, nombre, precio, stock };
             mostrarDialogoEnvase(nombre, RETORNABLES_MAP[id].valorEnvase, RETORNABLES_MAP[id].soloEfectivo);
         } else {
-            carrito.set(id, { id, nombre, precio, cantidad: 1, stock });
+            carrito.delete(id);
+            carrito.set(id, { id, nombre, precio, cantidad: 1, stock, _seq: ++cartSeqCounter });
             renderCarrito();
             actualizarTarjeta(id);
             renderPromoGrid();
@@ -1103,7 +1196,16 @@
         const { id, nombre, precio, stock } = pendingEnvase;
         pendingEnvase = null;
         if (!trajoEnvase) envasesMap.set(id, { ...RETORNABLES_MAP[id] });
-        carrito.set(id, { id, nombre, precio, cantidad: 1, stock });
+        if (carrito.has(id)) {
+            const it = carrito.get(id);
+            it.cantidad++;
+            it._seq = ++cartSeqCounter;
+            carrito.delete(id);
+            carrito.set(id, it);
+        } else {
+            carrito.delete(id);
+            carrito.set(id, { id, nombre, precio, cantidad: 1, stock, _seq: ++cartSeqCounter });
+        }
         renderCarrito();
         actualizarTarjeta(id);
         renderPromoGrid();
@@ -1149,6 +1251,9 @@
             envasesMap.delete(id);
         } else {
             it.cantidad = nueva;
+            it._seq = ++cartSeqCounter;
+            carrito.delete(id);
+            carrito.set(id, it);
         }
         renderCarrito();
         actualizarTarjeta(id);
@@ -1161,6 +1266,7 @@
         renderCarrito();
         actualizarTarjeta(id);
         renderPromoGrid();
+        actualizarTarjetasProductos();
     };
 
     window.quitarDePromo = function (id, cantReq) {
@@ -1171,6 +1277,8 @@
         else            it.cantidad = nueva;
         renderCarrito();
         actualizarTarjeta(id);
+        renderPromoGrid();
+        actualizarTarjetasProductos();
     };
 
     function actualizarTarjeta(id) {
@@ -1274,7 +1382,7 @@
                 const itemsActivos = [];
 
                 const consumir = req => {
-                    remaining.set(req.idProducto, remaining.get(req.idProducto) - req.cantidad);
+                    remaining.set(req.idProducto, (remaining.get(req.idProducto) ?? 0) - req.cantidad);
                     const it = carrito.get(req.idProducto);
                     if (it) itemsActivos.push({ id: it.id, nombre: it.nombre, precio: it.precio, cantReq: req.cantidad });
                 };
@@ -1334,170 +1442,254 @@
         return { instancias, consumidoEnPromo, remaining, descuentosPromoLines, descuentosOfertaLines, descTotal };
     }
 
+    function buildPromoProdBreakdownHtml(promoInfo, unidades, cantidad, seleccionGrupos) {
+        if (!promoInfo) return '';
+        const prodCounts = new Map();
+
+        // Productos base
+        (promoInfo.productosBase || []).forEach(req => {
+            if (req && req.idProducto) {
+                prodCounts.set(req.idProducto, (prodCounts.get(req.idProducto) || 0) + (req.cantidad || 1) * cantidad);
+            }
+        });
+
+        // Grupos
+        const unitsList = (unidades && unidades.length > 0)
+            ? unidades
+            : Array(cantidad).fill(seleccionGrupos || {});
+
+        unitsList.forEach(sel => {
+            (promoInfo.grupos || []).forEach(g => {
+                if (!g || !g.productos || g.productos.length === 0) return;
+                const selId = g.esExcluyente
+                    ? (sel[g.idGrupo] || g.productos[0].idProducto)
+                    : g.productos[0].idProducto;
+                const req = g.productos.find(r => r.idProducto === selId) || g.productos[0];
+                if (req && req.idProducto) {
+                    prodCounts.set(req.idProducto, (prodCounts.get(req.idProducto) || 0) + (req.cantidad || 1));
+                }
+            });
+        });
+
+        const rows = [];
+        prodCounts.forEach((cantTotal, idProd) => {
+            const prod = CATALOGO.find(c => c.id === idProd);
+            if (prod) {
+                rows.push(`
+                <div class="ci-promo-item-row">
+                    <span class="ci-promo-item-nombre">• ${x(prod.nombre)}</span>
+                    <span class="ci-promo-item-cant">${cantTotal} u.</span>
+                </div>`);
+            }
+        });
+
+        if (rows.length === 0) {
+            return `<div class="ci-promo-item-row"><span class="ci-promo-item-nombre">• Productos incluidos en la promoción</span></div>`;
+        }
+
+        return rows.join('');
+    }
+
     /* ══════════════════════════════════════════════════════════════════════
        RENDER CARRITO
     ══════════════════════════════════════════════════════════════════════ */
     function renderCarrito() {
         const cont   = document.getElementById('cartItems');
-        const cnt    = document.getElementById('cartCnt');
         const btnGen = document.getElementById('btnGenerar');
 
         if (carrito.size === 0 && promoCarrito.size === 0) {
             cont.innerHTML = `<div class="cart-empty">
                 <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h14v-2H7.42a.25.25 0 0 1-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.46 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/></svg>
                 Selecciona productos del catálogo</div>`;
-            cnt.textContent = '0';
-            btnGen.disabled = true;
+            if (btnGen) btnGen.disabled = true;
             actualizarTotales();
             return;
         }
 
         const { instancias, remaining } = calcularDescuentos();
-        let html = '';
+        const entries = [];
 
-        // Contador de promos directamente seleccionadas (para evitar duplicado visual)
+        // Contador de promos directamente seleccionadas
         const promosDirectas = new Map();
         promoCarrito.forEach(p => {
             promosDirectas.set(p.idPromo, (promosDirectas.get(p.idPromo) ?? 0) + p.cantidad);
         });
 
-        // ── 0. Promociones directas (seleccionadas desde el grid de promos) ────
+        // ── 0. Promociones directas ────
         if (promoCarrito.size > 0) {
             promoCarrito.forEach((p) => {
                 const promoInfo = PROMOS.find(pr => pr.id === p.idPromo);
                 if (!promoInfo) return;
-                const totalPromo = p.precio * p.cantidad;
-                html += `
-                <div class="ci-promo-group">
-                    <div class="ci-promo-header">
-                        <span class="ci-promo-tag">🎁 Promo</span>
-                        <span class="ci-promo-nombre" title="${x(p.nombre)}">${x(p.nombre)}</span>
-                        <span class="ci-promo-precio">$${fmt(p.precio)} x${p.cantidad}</span>
-                    </div>
-                    <div class="ci-promo-ahorro" style="display:flex;justify-content:space-between;align-items:center;">
-                        <span style="font-size:.68rem;">Total: $${fmt(totalPromo)}</span>
-                        <button class="ci-promo-item-del" onclick="quitarPromoCompleta(${p.idPromo})" title="Quitar promo">
+                const subtotal = p.precio * p.cantidad;
+
+                const prodRowsHtml = buildPromoProdBreakdownHtml(promoInfo, p.unidades, p.cantidad, p.seleccionGrupos);
+
+                let pHtml = `
+                <div class="ci-promo-card">
+                    <div class="ci-promo-main-row">
+                        <div class="ci-nombre-wrap">
+                            <span class="ci-promo-tag">🎁 Promo</span>
+                            <span class="ci-nombre" title="${x(p.nombre)}">${x(p.nombre)}</span>
+                        </div>
+                        <div class="ci-qty-wrap">
+                            <span class="ci-qty-label">Cantidad:</span>
+                            <div class="ci-qty">
+                                <button onclick="cambiarCantidadPromo(${p.idPromo},-1)">−</button>
+                                <span>${p.cantidad}</span>
+                                <button onclick="cambiarCantidadPromo(${p.idPromo},+1)">+</button>
+                            </div>
+                        </div>
+                        <div class="ci-unit-price">
+                            <span class="ci-price-current">$${fmt(p.precio)} c/u</span>
+                        </div>
+                        <div class="ci-subtotal">$${fmt(subtotal)}</div>
+                        <button class="ci-del" onclick="quitarPromoCompleta(${p.idPromo})" title="Eliminar promoción">
                             <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                         </button>
-                    </div>`;
-                
-                promoInfo.productosBase.forEach(req => {
-                    const prod = CATALOGO.find(c => c.id === req.idProducto);
-                    if (!prod) return;
-                    html += `
-                    <div class="ci-promo-item">
-                        <span class="ci-nombre" style="flex:1;">${x(prod.nombre)}</span>
-                        <span class="ci-promo-item-qty">${req.cantidad * p.cantidad} u.</span>
-                    </div>`;
-                });
+                    </div>
+                    <div class="ci-promo-body">
+                        <div class="ci-promo-body-title">Productos incluidos:</div>
+                        ${prodRowsHtml}
+                    </div>
+                </div>`;
 
-                // Consolidar productos de grupos a partir de las unidades individuales
-                {
-                    const unidades  = (p.unidades && p.unidades.length > 0) ? p.unidades : Array(p.cantidad).fill(p.seleccionGrupos ?? {});
-                    const resumen   = new Map();  // idProducto → cantidadTotal
-                    unidades.forEach(sel => {
-                        promoInfo.grupos.forEach(g => {
-                            const idEl = g.esExcluyente
-                                ? (sel[g.idGrupo] ?? g.productos[0].idProducto)
-                                : g.productos[0].idProducto;
-                            const req = g.productos.find(r => r.idProducto === idEl) ?? g.productos[0];
-                            resumen.set(req.idProducto, (resumen.get(req.idProducto) ?? 0) + req.cantidad);
-                        });
-                    });
-                    resumen.forEach((cantTotal, idProd) => {
-                        const prod = CATALOGO.find(c => c.id === idProd);
-                        if (!prod) return;
-                        html += `
-                        <div class="ci-promo-item">
-                            <span class="ci-nombre" style="flex:1;">${x(prod.nombre)}</span>
-                            <span class="ci-promo-item-qty">${cantTotal} u.</span>
-                        </div>`;
-                    });
-                }
-                
-                html += `</div>`;
+                entries.push({ seq: p._seq ?? 0, html: pHtml });
             });
         }
 
-        // ── 1. Bloques de cada instancia de promo (ocultar las que ya están en promoCarrito) ─
-        const instanciasOcultas = new Map(); // promoId -> cantidad ya ocultada
+        // ── 1. Bloques de cada instancia de promo (promociones automáticas) ─
+        const instanciasOcultas = new Map();
         instancias.forEach((inst, idx) => {
             const cantidadOcultar = promosDirectas.get(inst.promoId) ?? 0;
             const yaOculta = instanciasOcultas.get(inst.promoId) ?? 0;
             if (yaOculta < cantidadOcultar) {
                 instanciasOcultas.set(inst.promoId, yaOculta + 1);
-                return; // Skip this instance, it's already shown in promoCarrito
+                return;
             }
 
-            html += `
-            <div class="ci-promo-group">
-                <div class="ci-promo-header">
-                    <span class="ci-promo-tag">🏷️ Promo</span>
-                    <span class="ci-promo-nombre" title="${x(inst.promoNombre)}">${x(inst.promoNombre)}</span>
-                    <span class="ci-promo-precio">$${fmt(inst.promoPrecio)}</span>
-                </div>
-                <div class="ci-promo-ahorro">Ahorro: $${fmt(inst.ahorro)}</div>`;
-
+            let prodRowsHtml = '';
             inst.itemsActivos.forEach(({ id, nombre, cantReq }) => {
-                html += `
-                <div class="ci-promo-item">
-                    <span class="ci-nombre" style="flex:1;">${x(nombre)}</span>
-                    <span class="ci-promo-item-qty">${cantReq} u.</span>
-                    <button class="ci-promo-item-del" onclick="quitarDePromo(${id},${cantReq})" title="Quitar">
-                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                    </button>
+                prodRowsHtml += `
+                <div class="ci-promo-item-row">
+                    <span class="ci-promo-item-nombre">• ${x(nombre)}</span>
+                    <span class="ci-promo-item-cant">${cantReq} u.</span>
                 </div>`;
             });
-            html += `</div>`;
-        });
 
-        // ── 2. Ítems individuales: unidades que quedaron en "remaining" ────
-        carrito.forEach(it => {
-            const cantRest = remaining.get(it.id) ?? 0;
-            if (cantRest <= 0) return;                      // todo consumido por promos
-            const tieneOferta    = OFERTAS_MAP[it.id] != null;
-            const precioEfectivo = tieneOferta ? OFERTAS_MAP[it.id] : it.precio;
-            html += `
-            <div class="ci-item">
-                <div class="ci-top">
-                    <span class="ci-nombre" title="${x(it.nombre)}">${x(it.nombre)}</span>
-                    ${tieneOferta ? '<span class="ci-oferta-badge">Oferta</span>' : ''}
-                    <button class="ci-del" onclick="quitarDePromo(${it.id},${cantRest})" title="Quitar">
+            let aHtml = `
+            <div class="ci-promo-card">
+                <div class="ci-promo-main-row">
+                    <div class="ci-nombre-wrap">
+                        <span class="ci-promo-tag">🏷️ Promo</span>
+                        <span class="ci-nombre" title="${x(inst.promoNombre)}">${x(inst.promoNombre)}</span>
+                    </div>
+                    <div class="ci-qty-wrap">
+                        <span class="ci-qty-label">Cantidad:</span>
+                        <div class="ci-qty">
+                            <button onclick="cambiarCantidadPromoAuto('${inst.promoId}',-1)">−</button>
+                            <span>1</span>
+                            <button onclick="cambiarCantidadPromoAuto('${inst.promoId}',+1)">+</button>
+                        </div>
+                    </div>
+                    <div class="ci-unit-price">
+                        <span class="ci-price-current">$${fmt(inst.promoPrecio)} c/u</span>
+                    </div>
+                    <div class="ci-subtotal">$${fmt(inst.promoPrecio)}</div>
+                    <button class="ci-del" onclick="quitarDePromoAuto('${inst.promoId}')" title="Eliminar promoción">
                         <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                     </button>
                 </div>
-                <div class="ci-bottom">
+                <div class="ci-promo-body">
+                    <div class="ci-promo-body-title">Productos incluidos (Ahorro: $${fmt(inst.ahorro)}):</div>
+                    ${prodRowsHtml}
+                </div>
+            </div>`;
+
+            const maxSeq = Math.max(...inst.itemsActivos.map(i => (carrito.get(i.id) ? carrito.get(i.id)._seq || 0 : 0)), 0);
+            entries.push({ seq: maxSeq, html: aHtml });
+        });
+
+        // ── 2. Ítems individuales ────
+        carrito.forEach(it => {
+            const cantRest = remaining.get(it.id) ?? 0;
+            if (cantRest <= 0) return;
+            const tieneOferta    = OFERTAS_MAP[it.id] != null;
+            const precioEfectivo = tieneOferta ? OFERTAS_MAP[it.id] : it.precio;
+            let iHtml = `
+            <div class="ci-item">
+                <div class="ci-nombre-wrap">
+                    <span class="ci-nombre" title="${x(it.nombre)}">${x(it.nombre)}</span>
+                    ${tieneOferta ? '<span class="ci-oferta-badge">Oferta</span>' : ''}
+                </div>
+                <div class="ci-qty-wrap">
+                    <span class="ci-qty-label">Cantidad:</span>
                     <div class="ci-qty">
                         <button onclick="cambiarCantidad(${it.id},-1)">−</button>
                         <span>${cantRest}</span>
                         <button onclick="cambiarCantidad(${it.id},+1)">+</button>
                     </div>
-                    ${tieneOferta
-                        ? `<span style="font-size:.7rem;color:#a89080;text-decoration:line-through;">$${fmt(it.precio)}</span>
-                           <span style="font-size:.7rem;color:#7c3aed;font-weight:700;">$${fmt(OFERTAS_MAP[it.id])} c/u</span>`
-                        : `<span style="font-size:.7rem;color:#a89080;">$${fmt(it.precio)} c/u</span>`}
-                    <span class="ci-sub">$${fmt(precioEfectivo * cantRest)}</span>
                 </div>
+                <div class="ci-unit-price">
+                    ${tieneOferta
+                        ? `<span class="ci-price-old">$${fmt(it.precio)}</span>
+                           <span class="ci-price-current">$${fmt(OFERTAS_MAP[it.id])} c/u</span>`
+                        : `<span class="ci-price-current">$${fmt(it.precio)} c/u</span>`}
+                </div>
+                <div class="ci-subtotal">$${fmt(precioEfectivo * cantRest)}</div>
+                <button class="ci-del" onclick="quitarDePromo(${it.id},${cantRest})" title="Eliminar producto">
+                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                </button>
             </div>`;
-            // Línea de envase si corresponde
+
             const envase = envasesMap.get(it.id);
             if (envase) {
                 const efHtml = envase.soloEfectivo ? ' <em class="ci-envase-ef">solo efectivo</em>' : '';
-                html += `
+                iHtml += `
             <div class="ci-envase${envase.soloEfectivo ? ' solo-ef' : ''}">
                 <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                 <span class="ci-envase-lbl">Envase${efHtml}</span>
                 <span class="ci-envase-precio">$${fmt(envase.valorEnvase * it.cantidad)}</span>
             </div>`;
             }
+
+            entries.push({ seq: it._seq ?? 0, html: iHtml });
         });
 
-        cont.innerHTML  = html;
-        cnt.textContent = carrito.size + promoCarrito.size;
+        // ── Ordenar de más reciente (arriba) a más antiguo (abajo) ────
+        entries.sort((a, b) => b.seq - a.seq);
+
+        cont.classList.remove('split-cols');
+        cont.innerHTML = entries.map(e => e.html).join('');
+        cont.scrollTop = 0;
         btnGen.disabled = false;
         actualizarTotales();
         actualizarInfoFecha();
     }
+
+    window.confirmarLimpiarCarrito = function () {
+        if (carrito.size === 0 && promoCarrito.size === 0) return;
+        
+        Swal.fire({
+            title: '¿Vaciar carrito?',
+            text: 'Se eliminarán todos los productos agregados a esta venta.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#7a6050',
+            confirmButtonText: 'Sí, vaciar carrito',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                carrito.clear();
+                promoCarrito.clear();
+                envasesMap.clear();
+                renderCarrito();
+                renderPromoGrid();
+                actualizarTarjetasProductos();
+                toast('Carrito limpiado correctamente', 'exito');
+            }
+        });
+    };
 
     /* ══════════════════════════════════════════════════════════════════════
        TOTALES (siempre visibles, líneas dinámicas)
@@ -1506,7 +1698,7 @@
         let subtotal = 0, unidades = 0;
         carrito.forEach(it => { subtotal += it.precio * it.cantidad; unidades += it.cantidad; });
 
-        const { descuentosPromoLines, descuentosOfertaLines, descTotal } = calcularDescuentos();
+        const { instancias, descuentosPromoLines, descuentosOfertaLines, descTotal } = calcularDescuentos();
 
         // Cargo de envases
         let totalEnvases = 0;
@@ -1519,8 +1711,29 @@
 
         document.getElementById('totSub').textContent   = `$${fmt(subtotal)}`;
         document.getElementById('totTotal').textContent = `$${fmt(totalFinal)}`;
-        document.getElementById('infoDistintos').textContent = carrito.size;
-        document.getElementById('infoUnidades').textContent  = unidades;
+        
+        const distintos = carrito.size + promoCarrito.size;
+        const elDist = document.getElementById('cartCntDistintos');
+        const elUni  = document.getElementById('cartCntUnidades');
+        const btnLim = document.getElementById('btnLimpiarCarrito');
+        if (elDist) elDist.textContent = `${distintos} prod${distintos === 1 ? '' : 's'}.`;
+        if (elUni)  elUni.textContent  = `${unidades} un.`;
+        if (btnLim) btnLim.disabled    = (distintos === 0);
+
+        // Promos badge count
+        let numPromos = 0;
+        promoCarrito.forEach(p => numPromos += p.cantidad);
+        numPromos += instancias.length;
+
+        const elPromos = document.getElementById('cartCntPromos');
+        if (elPromos) {
+            if (numPromos > 0) {
+                elPromos.textContent = `${numPromos} Promo${numPromos === 1 ? '' : 's'}`;
+                elPromos.style.display = 'inline-block';
+            } else {
+                elPromos.style.display = 'none';
+            }
+        }
 
         // Construir líneas de descuento individuales
         let linesHtml = '';
@@ -1552,8 +1765,8 @@
     function actualizarInfoFecha() {
         const n   = new Date();
         const pad = v => String(v).padStart(2, '0');
-        document.getElementById('infoFecha').textContent =
-            `${pad(n.getDate())}/${pad(n.getMonth()+1)}/${n.getFullYear()} ${pad(n.getHours())}:${pad(n.getMinutes())}`;
+        const el  = document.getElementById('infoFecha');
+        if (el) el.textContent = `${pad(n.getDate())}/${pad(n.getMonth()+1)}/${n.getFullYear()} ${pad(n.getHours())}:${pad(n.getMinutes())}`;
     }
 
     /* ══════════════════════════════════════════════════════════════════════

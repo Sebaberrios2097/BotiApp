@@ -80,6 +80,11 @@ namespace BotiApp.Controllers
                     Response.Cookies.Delete("RecordarUsuario");
                 }
 
+                if (tipoUsuario == "Vendedor")
+                {
+                    return RedirectToAction("Generar", "Ventas", new { area = "Ventas" });
+                }
+
                 return RedirectToAction("Index", "Home");
             }
             else if (validaAcceso == 2)

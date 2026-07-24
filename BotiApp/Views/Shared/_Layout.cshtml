@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -411,6 +411,193 @@
                 flex-shrink: 0;
             }
 
+            /* ── NAVBAR VENDEDOR ── */
+            body.vendedor-mode {
+                flex-direction: column;
+            }
+
+            .navbar-vendedor {
+                height: 64px;
+                background-color: var(--naranja, #E76F2E);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 1.5rem;
+                color: #ffffff;
+                box-shadow: 0 3px 12px rgba(231, 111, 46, 0.25);
+                position: sticky;
+                top: 0;
+                z-index: 1000;
+                flex-shrink: 0;
+            }
+
+            .navbar-vendedor-left {
+                display: flex;
+                align-items: center;
+                gap: 1.5rem;
+            }
+
+            .navbar-vendedor-center {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            .vendedor-brand-title {
+                font-family: var(--font-heading);
+                font-size: 1.15rem;
+                font-weight: 800;
+                color: #ffffff;
+                letter-spacing: 0.5px;
+                line-height: 1.1;
+            }
+
+            .vendedor-clock-sub {
+                display: flex;
+                align-items: center;
+                gap: 0.35rem;
+                font-size: 0.78rem;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.9);
+                font-variant-numeric: tabular-nums;
+                letter-spacing: 0.5px;
+                margin-top: 0.1rem;
+            }
+
+            .vendedor-clock-sub svg {
+                width: 13px;
+                height: 13px;
+                fill: currentColor;
+                opacity: 0.85;
+            }
+
+            .navbar-vendedor-nav {
+                display: flex;
+                align-items: center;
+                gap: 0.4rem;
+                background-color: rgba(0, 0, 0, 0.12);
+                padding: 0.25rem;
+                border-radius: 10px;
+            }
+
+            .nav-vendedor-item {
+                display: flex;
+                align-items: center;
+                gap: 0.45rem;
+                padding: 0.45rem 0.9rem;
+                border-radius: 8px;
+                color: rgba(255, 255, 255, 0.88);
+                font-size: 0.88rem;
+                font-weight: 600;
+                text-decoration: none;
+                transition: background-color 0.15s, color 0.15s;
+            }
+
+            .nav-vendedor-item svg {
+                width: 17px;
+                height: 17px;
+                fill: currentColor;
+            }
+
+            .nav-vendedor-item:hover {
+                background-color: rgba(255, 255, 255, 0.18);
+                color: #ffffff;
+            }
+
+            .nav-vendedor-item.active {
+                background-color: #ffffff;
+                color: var(--color-secundario, #2C2C2C);
+                font-weight: 700;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            }
+
+            .nav-vendedor-item.active svg {
+                fill: var(--color-primario, #E76F2E);
+            }
+
+            .navbar-vendedor-right {
+                display: flex;
+                align-items: center;
+                gap: 1.25rem;
+            }
+
+            .navbar-vendedor-user {
+                display: flex;
+                align-items: center;
+                gap: 0.65rem;
+                background-color: rgba(255, 255, 255, 0.15);
+                padding: 0.35rem 0.85rem;
+                border-radius: 20px;
+            }
+
+            .navbar-vendedor-user .user-avatar {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background-color: #ffffff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .navbar-vendedor-user .user-avatar svg {
+                width: 16px;
+                height: 16px;
+                fill: var(--naranja, #E76F2E);
+            }
+
+            .navbar-vendedor-user .user-info {
+                display: flex;
+                flex-direction: column;
+                line-height: 1.1;
+            }
+
+            .navbar-vendedor-user .user-name {
+                font-size: 0.82rem;
+                font-weight: 700;
+                color: #ffffff;
+            }
+
+            .navbar-vendedor-user .user-role {
+                font-size: 0.68rem;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.85);
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .btn-vendedor-logout {
+                display: flex;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.45rem 0.9rem;
+                background-color: rgba(0, 0, 0, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                border-radius: 8px;
+                color: #ffffff;
+                font-size: 0.82rem;
+                font-weight: 700;
+                text-decoration: none;
+                transition: background-color 0.15s, border-color 0.15s;
+            }
+
+            .btn-vendedor-logout svg {
+                width: 15px;
+                height: 15px;
+                fill: currentColor;
+            }
+
+            .btn-vendedor-logout:hover {
+                background-color: rgba(239, 68, 68, 0.85);
+                border-color: #ef4444;
+                color: #ffffff;
+            }
+
             /* ── TOGGLE SIDEBAR MÓVIL (flotante) ── */
             .sidebar-toggle {
                 display: none;
@@ -498,39 +685,45 @@
     }
 }
 
-<body class="@densityClass">
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var action     = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var area       = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
 
-    @{
-        var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
-        var action     = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
-        var area       = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
+    bool IsActive(string ctrl, string act = "Index")
+        => string.Equals(controller, ctrl, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(action, act, StringComparison.OrdinalIgnoreCase);
 
-        bool IsActive(string ctrl, string act = "Index")
-            => string.Equals(controller, ctrl, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(action, act, StringComparison.OrdinalIgnoreCase);
+    bool IsController(string ctrl)
+        => string.Equals(controller, ctrl, StringComparison.OrdinalIgnoreCase);
 
-        bool IsController(string ctrl)
-            => string.Equals(controller, ctrl, StringComparison.OrdinalIgnoreCase);
+    bool IsArea(string a)
+        => string.Equals(area, a, StringComparison.OrdinalIgnoreCase);
 
-        bool IsArea(string a)
-            => string.Equals(area, a, StringComparison.OrdinalIgnoreCase);
+    bool configSubmenuOpen = IsController("Configuracion") || IsController("Usuarios")
+                          || IsController("Productos")     || IsController("Promociones")
+                          || IsController("Empleados")     || IsArea("Compras");
 
-        bool configSubmenuOpen = IsController("Configuracion") || IsController("Usuarios")
-                              || IsController("Productos")     || IsController("Promociones")
-                              || IsController("Empleados")     || IsArea("Compras");
+    var nombreCompleto = User.FindFirst("NombreCompleto")?.Value ?? User.Identity?.Name ?? "Usuario";
+    var tipoUsuario    = User.FindFirst("TipoUsuario")?.Value ?? "";
+    bool esAdmin       = tipoUsuario == "Administrador";
+    bool esVendedor    = tipoUsuario == "Vendedor";
+    bool esCajero      = tipoUsuario == "Cajero";
+}
 
-        var nombreCompleto = User.FindFirst("NombreCompleto")?.Value ?? User.Identity?.Name ?? "Usuario";
-        var tipoUsuario    = User.FindFirst("TipoUsuario")?.Value ?? "";
-        bool esAdmin       = tipoUsuario == "Administrador";
-        bool esVendedor    = tipoUsuario == "Vendedor";
-        bool esCajero      = tipoUsuario == "Cajero";
+<body class="@densityClass @(esVendedor ? "vendedor-mode" : "")">
+
+    @if (esVendedor)
+    {
+        <partial name="_NavbarVendedor" />
     }
+    else
+    {
+        <!-- Overlay móvil -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-    <!-- Overlay móvil -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
 
         <!-- ZONA 1: Marca -->
         <div class="sidebar-brand">
@@ -769,6 +962,7 @@
         </div>
 
     </aside>
+    }
 
     <!-- CONTENIDO PRINCIPAL -->
     <div class="main-wrapper">
@@ -780,12 +974,15 @@
         </footer>
     </div>
 
-    <!-- Botón hamburguesa flotante (solo móvil) -->
-    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Abrir menú">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-        </svg>
-    </button>
+    @if (!esVendedor)
+    {
+        <!-- Botón hamburguesa flotante (solo móvil) -->
+        <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Abrir menú">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+            </svg>
+        </button>
+    }
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
@@ -802,6 +999,8 @@
                 const s = String(now.getSeconds()).padStart(2, '0');
                 const el = document.getElementById('sidebar-time');
                 if (el) el.textContent = `${h}:${m}:${s}`;
+                const elNav = document.getElementById('navbar-time');
+                if (elNav) elNav.textContent = `${h}:${m}:${s}`;
             }
             updateClock();
             setInterval(updateClock, 1000);

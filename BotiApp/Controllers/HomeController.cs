@@ -28,6 +28,11 @@ namespace BotiApp.Controllers
         // Carga KPIs diferenciados según el rol del usuario autenticado.
         public async Task<IActionResult> Index(int? mes, int? anio)
         {
+            if (User.FindFirst("TipoUsuario")?.Value == "Vendedor")
+            {
+                return RedirectToAction("Generar", "Ventas", new { area = "Ventas" });
+            }
+
             var vm = await BuildDashboardVmAsync(mes, anio);
             return View(vm);
         }
