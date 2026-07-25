@@ -709,13 +709,14 @@
     bool esAdmin       = tipoUsuario == "Administrador";
     bool esVendedor    = tipoUsuario == "Vendedor";
     bool esCajero      = tipoUsuario == "Cajero";
+    bool useNavbar     = esVendedor || esCajero;
 }
 
-<body class="@densityClass @(esVendedor ? "vendedor-mode" : "")">
+<body class="@densityClass @(useNavbar ? "vendedor-mode" : "")">
 
-    @if (esVendedor)
+    @if (useNavbar)
     {
-        <partial name="_NavbarVendedor" />
+        <partial name="_Navbar" />
     }
     else
     {
@@ -743,7 +744,7 @@
                           stroke-linecap="round" opacity="0.7" />
                 </svg>
             </div>
-            <span>Botillería<br />Cuatro Ases</span>
+            <span>Cuatro Ases</span>
         </div>
 
         <!-- ZONA 2: Usuario -->

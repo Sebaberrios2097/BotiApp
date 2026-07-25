@@ -61,6 +61,10 @@ namespace BotiApp.Controllers
                 {
                     return RedirectToAction("Generar", "Ventas", new { area = "Ventas" });
                 }
+                if (tipoUsuario == "Cajero")
+                {
+                    return RedirectToAction("Caja", "Ventas", new { area = "Ventas" });
+                }
 
                 return RedirectToAction("Index", "Home");
             }
