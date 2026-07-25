@@ -241,12 +241,22 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = "AdminOCajero")]
-    public async Task<IActionResult> AnularBoletaAjax([FromBody] BuscarBoletaRequest request)
+    public async Task<IActionResult> AnularBoletaAjax([FromBody] AnularBoletaRequest request)
     {
         var idUsuario = ClaimHelper.GetIdUsuario(User);
-        var ok = await ventasRepository.AnularBoletaAsync(request.IdBoleta, idUsuario);
+
+        // Traza de la anulación en Observaciones: quién, cuándo y por qué. Es la única
+        // forma de saber quién anuló una boleta ya cobrada, porque Id_Cajero conserva
+        // al cajero original.
+        var motivo = request.Motivo?.Trim();
+        if (motivo is { Length: > 200 }) motivo = motivo[..200];
+
+        var nota = $"[Anulada el {DateTime.Now:dd-MM-yyyy HH:mm} por {ClaimHelper.GetNombreCompleto(User)}]"
+                 + (string.IsNullOrWhiteSpace(motivo) ? "" : $" Motivo: {motivo}");
+
+        var ok = await ventasRepository.AnularBoletaAsync(request.IdBoleta, idUsuario, nota);
         if (!ok)
-            return Json(new { ok = false, mensaje = "La boleta no existe o no está en estado Generada/Fiado." });
+            return Json(new { ok = false, mensaje = "La boleta no existe o ya estaba anulada." });
 
         return Json(new { ok = true, mensaje = $"Boleta N° {request.IdBoleta} anulada correctamente." });
     }
@@ -345,6 +355,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
 public record CrearBoletaRequest(List<ItemBoleta> Items);
 public record ItemBoleta(int IdProducto, int Cantidad, int PrecioNormal, int PrecioUnitario, int? IdPromocion, int? IdOfertaProducto, int? Subtotal = null);
 public record BuscarBoletaRequest(int IdBoleta);
+public record AnularBoletaRequest(int IdBoleta, string? Motivo = null);
 public record ModificarBoletaRequest(int IdBoleta, List<ItemBoleta> Items);
 public record CobrarBoletaRequest(int IdBoleta, List<MetodoPagoItem> MetodosPago);
 public record DejarFiadoRequest(int IdBoleta, int IdClienteFiado);

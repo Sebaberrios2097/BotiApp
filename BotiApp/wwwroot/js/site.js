@@ -41,6 +41,10 @@
                 if (link.target === '_blank') return;
                 // Cerrar sesión navega normalmente
                 if (href.toLowerCase().includes('logout')) return;
+                // Generar / Caja / Historial usan otro shell (navbar en vez de sidebar):
+                // entrar o salir de esas vistas requiere una navegación completa, no un swap SPA.
+                if (link.dataset.fullNav === 'true') return;
+                if (document.body.classList.contains('admin-navbar-mode')) return;
 
                 e.preventDefault();
 

@@ -17,7 +17,12 @@ public interface IVentasRepository
     Task<VenBoletas?> CobrarBoletaAsync(int idBoleta, int idCajero, IEnumerable<VenMetodosPagoBoleta> metodos);
     /// <summary>Cambia una boleta Pendiente (1) a estado Fiado (4) y la asocia al cliente.</summary>
     Task<VenBoletas?> DejarFiadoAsync(int idBoleta, int idClienteFiado, int idCajero);
-    Task<bool> AnularBoletaAsync(int idBoleta, int idUsuario);
+    /// <summary>
+    /// Anula una boleta Pendiente (1), Pagada (3) o Fiado (4) y devuelve el stock.
+    /// Conserva al cajero que la cobró; <paramref name="nota"/> se agrega a Observaciones
+    /// como traza de quién anuló y por qué.
+    /// </summary>
+    Task<bool> AnularBoletaAsync(int idBoleta, int idUsuario, string? nota = null);
 
     // ── Catálogo ──────────────────────────────────────────────────────────────
     Task<IEnumerable<ProProductos>> ObtenerProductosDisponiblesAsync();

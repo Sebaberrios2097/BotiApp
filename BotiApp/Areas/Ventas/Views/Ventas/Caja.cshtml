@@ -1865,6 +1865,8 @@
         const esPagada   = b.idEstado === 3;
         const esAnulada  = b.idEstado === 2;
         const esEditable = b.idEstado === 1;
+        // Se puede anular todo lo que no esté ya anulado: pendiente, pagada o fiado.
+        const esAnulable = b.idEstado === 1 || b.idEstado === 3 || b.idEstado === 4;
 
         const estadoClass = esPagada ? 'est-3' : esAnulada ? 'est-2' : 'est-1';
         const numTicket = b.correlativoDiario ? b.correlativoDiario : b.idBoleta;
@@ -1880,7 +1882,10 @@
             `<div class="bol-info-total-header"><span class="lbl-tot">Total:</span><span class="val-tot" id="bolHeaderTotal">${fmt(b.montoTotal)}</span></div>`;
 
         document.getElementById('btnAbrirModal').disabled = !esEditable;
-        document.getElementById('btnAnular').disabled     = !esEditable;
+        const btnAnular = document.getElementById('btnAnular');
+        btnAnular.disabled  = !esAnulable;
+        btnAnular.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>'
+                            + (esPagada ? 'Anular ticket pagado' : 'Anular boleta');
         const btnCobrar = document.getElementById('btnCobrar');
         if (btnCobrar) btnCobrar.disabled = !esEditable;
         const btnFiado = document.getElementById('btnFiado');
@@ -2573,14 +2578,42 @@
         await _autoGuardar();
     };
 
-    window.confirmarAnular = function () {
-        if (!confirm(`¿Seguro que deseas anular la boleta N° ${boletaActual.idBoleta}? Esta acción restaura el stock.`)) return;
-        anularBoleta();
+    window.confirmarAnular = async function () {
+        if (!boletaActual) return;
+
+        // Un ticket ya cobrado o fiado movió dinero: se avisa del alcance real y se
+        // exige un motivo que queda registrado en la boleta.
+        const yaProcesada = boletaActual.idEstado === 3 || boletaActual.idEstado === 4;
+        const numTicket   = boletaActual.correlativoDiario || boletaActual.idBoleta;
+
+        const result = await Swal.fire({
+            title: yaProcesada ? '¿Anular un ticket ya procesado?' : '¿Anular el ticket?',
+            html: `Ticket N° <strong>${numTicket}</strong> — <strong>${fmt(boletaActual.montoTotal)}</strong><br>`
+                + (yaProcesada
+                    ? `Figura como <strong>${x(boletaActual.estado)}</strong>. Se devolverá el stock y dejará de sumar en los informes de venta.`
+                    : 'Se devolverá el stock de los productos incluidos.'),
+            icon: 'warning',
+            input: 'text',
+            inputLabel: yaProcesada ? 'Motivo de la anulación' : 'Motivo (opcional)',
+            inputPlaceholder: yaProcesada ? 'Ej: cobro duplicado, devolución del cliente…' : '',
+            inputAttributes: { maxlength: 200, autocomplete: 'off' },
+            inputValidator: v => (yaProcesada && !(v || '').trim())
+                ? 'Indica el motivo de la anulación.'
+                : undefined,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, anular',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            reverseButtons: true
+        });
+        if (!result.isConfirmed) return;
+        anularBoleta(result.value);
     };
-    async function anularBoleta() {
+    async function anularBoleta(motivo) {
         const btn = document.getElementById('btnAnular');
         setBotonCargando(btn, true);
-        const res = await post(URL_ANULAR, { idBoleta: boletaActual.idBoleta });
+        const res = await post(URL_ANULAR, { idBoleta: boletaActual.idBoleta, motivo: motivo || null });
         setBotonCargando(btn, false);
         if (!res.ok) { toast(res.mensaje, 'error'); return; }
         toast(res.mensaje, 'exito');

@@ -198,14 +198,17 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         return await ObtenerBoletaParaCajaAsync(idBoleta);
     }
 
-    public async Task<bool> AnularBoletaAsync(int idBoleta, int idUsuario)
+    public async Task<bool> AnularBoletaAsync(int idBoleta, int idUsuario, string? nota = null)
     {
         await using var tx = await context.Database.BeginTransactionAsync();
 
-        // Acepta estado Pendiente (1) o Fiado (4)
+        // Acepta estado Pendiente (1), Pagada (3) o Fiado (4)
         var boleta = await context.VenBoletas
             .Include(b => b.VenBoletaDetalle)
-            .FirstOrDefaultAsync(b => b.IdBoleta == idBoleta && (b.IdEstadoBoleta == 1 || b.IdEstadoBoleta == 4));
+            .FirstOrDefaultAsync(b => b.IdBoleta == idBoleta
+                                      && (b.IdEstadoBoleta == 1
+                                       || b.IdEstadoBoleta == 3
+                                       || b.IdEstadoBoleta == 4));
 
         if (boleta == null) return false;
 
@@ -220,7 +223,20 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         }
 
         boleta.IdEstadoBoleta = 2; // Anulada
-        boleta.IdCajero = idUsuario;
+
+        // Se conserva al cajero que cobró o fió la boleta: solo se registra al usuario
+        // que anula cuando la boleta seguía pendiente y no tenía cajero asignado.
+        boleta.IdCajero ??= idUsuario;
+
+        // Los métodos de pago se mantienen como respaldo del cobro original; los
+        // informes filtran por estado, así que una boleta anulada ya no los suma.
+        if (!string.IsNullOrWhiteSpace(nota))
+        {
+            boleta.Observaciones = string.IsNullOrWhiteSpace(boleta.Observaciones)
+                ? nota
+                : $"{boleta.Observaciones}{Environment.NewLine}{nota}";
+        }
+
         await context.SaveChangesAsync();
         await tx.CommitAsync();
 

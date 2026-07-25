@@ -598,6 +598,64 @@
                 color: #ffffff;
             }
 
+            /* ── BOTÓN HAMBURGUESA DEL NAVBAR (admin en Generar / Caja) ── */
+            .btn-navbar-menu {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 42px;
+                height: 42px;
+                flex-shrink: 0;
+                background-color: rgba(0, 0, 0, 0.18);
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                border-radius: 10px;
+                color: #ffffff;
+                cursor: pointer;
+                transition: background-color 0.15s, transform 0.12s;
+            }
+
+            .btn-navbar-menu svg {
+                width: 21px;
+                height: 21px;
+                fill: currentColor;
+            }
+
+            .btn-navbar-menu:hover {
+                background-color: rgba(255, 255, 255, 0.22);
+                transform: translateY(-1px);
+            }
+
+            /* ── SIDEBAR DESPLEGABLE (admin con navbar) ── */
+            /* Se despliega bajo el navbar para que el botón hamburguesa siga accesible. */
+            body.admin-navbar-mode .sidebar {
+                position: fixed;
+                top: 64px;
+                left: -260px;
+                height: calc(100vh - 64px);
+                z-index: 1100;
+                transition: left 0.25s ease;
+                box-shadow: 4px 0 18px rgba(0, 0, 0, 0.18);
+            }
+
+            body.admin-navbar-mode .sidebar.open {
+                left: 0;
+            }
+
+            body.admin-navbar-mode .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 64px;
+                right: 0;
+                bottom: 0;
+                left: 0;
+                background: rgba(0, 0, 0, 0.45);
+                z-index: 1099;
+            }
+
+            body.admin-navbar-mode .sidebar-overlay.open {
+                display: block;
+            }
+
             /* ── TOGGLE SIDEBAR MÓVIL (flotante) ── */
             .sidebar-toggle {
                 display: none;
@@ -709,18 +767,34 @@
     bool esAdmin       = tipoUsuario == "Administrador";
     bool esVendedor    = tipoUsuario == "Vendedor";
     bool esCajero      = tipoUsuario == "Cajero";
-    bool useNavbar     = esVendedor || esCajero;
+
+    // Vistas de operación (Generar venta / Caja / Historial): el administrador las ve
+    // igual que vendedor y cajero — con navbar — pero con acceso al sidebar por
+    // hamburguesa. Historial se alcanza tanto desde el navbar como desde el sidebar
+    // y en ambos casos se muestra con este mismo shell.
+    bool vistaOperacion = IsActive("Ventas", "Generar")
+                       || IsActive("Ventas", "Caja")
+                       || IsActive("Ventas", "Historial");
+    bool adminNavbar    = esAdmin && IsArea("Ventas") && vistaOperacion;
+    bool useNavbar      = esVendedor || esCajero || adminNavbar;
+
+    // El sidebar se renderiza siempre salvo para vendedor y cajero; en modo
+    // admin-navbar queda oculto como menú lateral desplegable.
+    bool mostrarSidebar = !esVendedor && !esCajero;
+
+    ViewData["MostrarMenuLateral"] = adminNavbar;
 }
 
-<body class="@densityClass @(useNavbar ? "vendedor-mode" : "")">
+<body class="@densityClass @(useNavbar ? "vendedor-mode" : "") @(adminNavbar ? "admin-navbar-mode" : "")">
 
     @if (useNavbar)
     {
         <partial name="_Navbar" />
     }
-    else
+
+    @if (mostrarSidebar)
     {
-        <!-- Overlay móvil -->
+        <!-- Overlay del menú lateral -->
         <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
         <!-- SIDEBAR -->
@@ -785,8 +859,8 @@
                 @if (esAdmin || esVendedor)
                 {
                     <li class="nav-item">
-                        <a class="nav-link @(IsActive("Ventas", "Generar") ? "active" : "")" asp-area="Ventas"
-                               asp-controller="Ventas" asp-action="Generar">
+                        <a class="nav-link @(IsActive("Ventas", "Generar") ? "active" : "")" data-full-nav="true"
+                               asp-area="Ventas" asp-controller="Ventas" asp-action="Generar">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" />
                             </svg>
@@ -798,8 +872,8 @@
                 @if (esAdmin || esCajero)
                 {
                     <li class="nav-item">
-                        <a class="nav-link @(IsActive("Ventas", "Caja") ? "active" : "")" asp-area="Ventas"
-                               asp-controller="Ventas" asp-action="Caja">
+                        <a class="nav-link @(IsActive("Ventas", "Caja") ? "active" : "")" data-full-nav="true"
+                               asp-area="Ventas" asp-controller="Ventas" asp-action="Caja">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
                             </svg>
@@ -811,8 +885,8 @@
                 @if (esAdmin || esVendedor)
                 {
                     <li class="nav-item">
-                        <a class="nav-link @(IsActive("Ventas", "Historial") ? "active" : "")" asp-area="Ventas"
-                               asp-controller="Ventas" asp-action="Historial">
+                        <a class="nav-link @(IsActive("Ventas", "Historial") ? "active" : "")" data-full-nav="true"
+                               asp-area="Ventas" asp-controller="Ventas" asp-action="Historial">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
                             </svg>
@@ -833,29 +907,6 @@
                         </a>
                     </li>
                 }
-
-                <li class="nav-divider"></li>
-
-                <!-- CATÁLOGO (todos los roles) -->
-                <li class="nav-category">Catálogo</li>
-                <li class="nav-item">
-                    <a class="nav-link @(IsActive("Catalogo", "Productos") ? "active" : "")" asp-area="Ventas"
-                           asp-controller="Catalogo" asp-action="Productos">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/>
-                        </svg>
-                        Productos
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(IsActive("Catalogo", "Promociones") ? "active" : "")" asp-area="Ventas"
-                           asp-controller="Catalogo" asp-action="Promociones">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" />
-                        </svg>
-                        Promociones
-                    </a>
-                </li>
 
                 @if (esAdmin)
                 {
@@ -975,7 +1026,7 @@
         </footer>
     </div>
 
-    @if (!esVendedor)
+    @if (!useNavbar)
     {
         <!-- Botón hamburguesa flotante (solo móvil) -->
         <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Abrir menú">
@@ -1006,10 +1057,19 @@
             updateClock();
             setInterval(updateClock, 1000);
 
-            function toggleSidebar() {
-                document.getElementById('sidebar').classList.toggle('open');
-                document.getElementById('sidebarOverlay').classList.toggle('open');
+            function toggleSidebar(forzarCerrar) {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar) return;
+                const overlay = document.getElementById('sidebarOverlay');
+                const abrir = forzarCerrar === true ? false : !sidebar.classList.contains('open');
+                sidebar.classList.toggle('open', abrir);
+                overlay?.classList.toggle('open', abrir);
             }
+
+            // Cerrar el menú lateral desplegable con Escape
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') toggleSidebar(true);
+            });
 
             function toggleSubmenu(parentEl) {
                 const submenu = parentEl.nextElementSibling;
