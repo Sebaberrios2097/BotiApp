@@ -27,13 +27,7 @@ namespace BotiApp.Controllers
         // GET: /Login/Login
         public IActionResult Login()
         {
-            var model = new LoginViewModel();
-            if (Request.Cookies.TryGetValue("RecordarUsuario", out string? usuarioGuardado))
-            {
-                model.Usuario = usuarioGuardado ?? string.Empty;
-                model.Recordar = true;
-            }
-            return View(model);
+            return View(new LoginViewModel());
         }
 
         // POST: /Login/Login
@@ -56,29 +50,12 @@ namespace BotiApp.Controllers
 
                 var principal = ClaimHelper.BuildPrincipal(
                     model.Usuario, nombreEmpleado, rutEmpleado, tipoUsuario, usuario.IdUsuario);
-                var authProperties = ClaimHelper.BuildAuthProperties(model.Recordar);
+                var authProperties = ClaimHelper.BuildAuthProperties(false);
 
                 await HttpContext.SignInAsync(
                     CookieAuthenticationDefaults.AuthenticationScheme,
                     principal,
                     authProperties);
-
-                // Manejo de la cookie para recordar el nombre de usuario
-                if (model.Recordar)
-                {
-                    var cookieOptions = new CookieOptions
-                    {
-                        Expires = DateTimeOffset.UtcNow.AddDays(30),
-                        HttpOnly = true,
-                        Secure = Request.IsHttps,
-                        SameSite = SameSiteMode.Lax
-                    };
-                    Response.Cookies.Append("RecordarUsuario", model.Usuario, cookieOptions);
-                }
-                else
-                {
-                    Response.Cookies.Delete("RecordarUsuario");
-                }
 
                 if (tipoUsuario == "Vendedor")
                 {

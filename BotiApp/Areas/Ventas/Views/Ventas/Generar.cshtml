@@ -178,8 +178,8 @@
 .prod-card-qty-btn span { font-size:.72rem; font-weight:700; min-width:18px; text-align:center; color:var(--color-secundario); }
 
 /* Promo cards */
-.promo-grid { padding:.85rem 1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:.85rem; overflow-y:auto; flex:1; min-height:200px; }
-.promo-card { border:1.5px solid #d97706; border-radius:12px; background:#fff; cursor:pointer; transition:border-color .15s,box-shadow .15s,transform .12s; overflow:hidden; display:flex; flex-direction:column; user-select:none; min-height:170px; box-shadow:0 2px 8px rgba(217,119,6,.08); }
+.promo-grid { padding:.85rem 1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); grid-auto-rows:max-content; gap:.85rem; overflow-y:auto; flex:1; min-height:200px; }
+.promo-card { border:1.5px solid #d97706; border-radius:12px; background:#fff; cursor:pointer; transition:border-color .15s,box-shadow .15s,transform .12s; overflow:hidden; display:flex; flex-direction:column; user-select:none; box-shadow:0 2px 8px rgba(217,119,6,.08); }
 .promo-card:hover { border-color:#b45309; box-shadow:0 3px 14px rgba(217,119,6,.2); transform:translateY(-2px); }
 .promo-card.en-carrito { border-color:#16a34a; background:#f0fdf4; }
 .promo-card.sin-stock-promo { border-color:#dc2626; background:#fff5f5; opacity:.85; }
@@ -205,7 +205,7 @@
 .promo-card-qty-btn span { font-size:.8rem; font-weight:800; min-width:20px; text-align:center; color:#92400e; }
 
 /* Desglose de productos dentro de la promo card */
-.promo-prod-list { padding:.5rem .75rem; display:flex; flex-direction:column; gap:.3rem; flex:1; max-height:140px; overflow-y:auto; background:#fff; }
+.promo-prod-list { padding:.5rem .75rem; display:flex; flex-direction:column; gap:.3rem; flex:1; background:#fff; }
 .promo-card.en-carrito .promo-prod-list { background:rgba(240,253,244,.4); }
 .promo-card.sin-stock-promo .promo-prod-list { background:rgba(255,245,245,.4); }
 .promo-card.en-carrito .promo-prod-list { background:rgba(240,253,244,.4); }
@@ -642,11 +642,17 @@
                 Sin productos para los filtros aplicados</div>`;
             return;
         }
+
+        const { consumidoEnPromo } = calcularDescuentos();
+
         grid.innerHTML = lista.map(p => {
-            const enCart   = carrito.has(p.id);
-            const cant     = enCart ? carrito.get(p.id).cantidad : 0;
-            const oferta   = OFERTAS_MAP[p.id];
-            const sinStock = false;
+            const it        = carrito.get(p.id);
+            const totalCant = it ? it.cantidad : 0;
+            const consumido = consumidoEnPromo.get(p.id) ?? 0;
+            const cantFuera = Math.max(0, totalCant - consumido);
+            const enCart    = cantFuera > 0;
+            const oferta    = OFERTAS_MAP[p.id];
+            const sinStock  = false;
             const imgHtml = p.tieneImagen
                 ? `<img src="${URL_IMG}/${p.id}" alt="${x(p.nombre)}" loading="lazy">`
                 : `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`;
@@ -655,12 +661,12 @@
                 ? `<span class="prod-card-precio tachado">$${fmt(p.precio)}</span>
                    <span class="prod-card-oferta">$${fmt(oferta)}</span>`
                 : `<span class="prod-card-precio">$${fmt(p.precio)}</span>`;
-            const stockClass = cant > p.stock ? 'prod-card-stock-num' : 'prod-card-stock-num ok';
+            const stockClass = totalCant > p.stock ? 'prod-card-stock-num' : 'prod-card-stock-num ok';
             const badgeHtml = enCart
                 ? `<div class="prod-card-stock-qty">
                        <div class="prod-card-qty-btn">
                            <button onclick="event.stopPropagation();cambiarCantidad(${p.id},-1)">−</button>
-                           <span>${cant}</span>
+                           <span>${cantFuera}</span>
                            <button onclick="event.stopPropagation();cambiarCantidad(${p.id},+1)">+</button>
                        </div>
                        <span class="prod-card-stock-lbl">/ Stock: <span class="${stockClass}">${p.stock}</span></span>
@@ -709,6 +715,8 @@
             }));
             return prodMatchGrupo;
         });
+
+        promosFiltradas.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
 
         if (promosFiltradas.length === 0) {
             grid.innerHTML = `<div class="grid-empty" style="grid-column: 1/-1; text-align:center; padding:2rem; color:#b8a898;">
@@ -1120,30 +1128,46 @@
         actualizarTarjetasProductos();
     };
 
-    window.quitarDePromoAuto = function (idPromoStr) {
-        const idPromo = parseInt(idPromoStr);
-        const promo = PROMOS.find(p => p.id === idPromo);
-        if (!promo) return;
-        promo.productosBase.forEach(req => {
-            quitarDePromo(req.idProducto, req.cantidad);
-        });
-        promo.grupos.forEach(g => {
-            quitarDePromo(g.productos[0].idProducto, g.productos[0].cantidad);
-        });
+    window.borrarPromoTotalmente = function (idPromoInput) {
+        const idPromo = parseInt(idPromoInput);
+
+        if (promoCarrito.has(idPromo)) {
+            eliminarPromoCompleta(idPromo);
+        }
+
+        let maxLoops = 100;
+        while (maxLoops-- > 0) {
+            const { instancias } = calcularDescuentos();
+            const inst = instancias.find(i => i.promoId === idPromo);
+            if (!inst) break;
+            inst.itemsActivos.forEach(({ id, cantReq }) => {
+                if (carrito.has(id)) {
+                    const it = carrito.get(id);
+                    const nueva = it.cantidad - cantReq;
+                    if (nueva <= 0) {
+                        carrito.delete(id);
+                        envasesMap.delete(id);
+                    } else {
+                        it.cantidad = nueva;
+                    }
+                }
+            });
+        }
+
         renderCarrito();
         renderPromoGrid();
         actualizarTarjetasProductos();
     };
+
+    window.quitarDePromoAuto = window.borrarPromoTotalmente;
 
     function eliminarPromoCompleta(idPromo) {
         const entry = promoCarrito.get(idPromo);
         if (!entry || entry.cantidad === 0) { promoCarrito.delete(idPromo); return; }
 
         if (entry.unidades && entry.unidades.length > 0) {
-            // Revertir cada unidad usando su selección individual
             entry.unidades.forEach(sel => removerUnaUnidadDePromo(idPromo, sel));
         } else {
-            // Fallback: sin array de unidades (entradas antiguas sin dialogo)
             const selAct = entry.seleccionGrupos ?? {};
             for (let i = 0; i < entry.cantidad; i++) {
                 removerUnaUnidadDePromo(idPromo, selAct);
@@ -1158,36 +1182,31 @@
         aplicarFiltros();
     }
 
-    window.quitarPromoCompleta = function (idPromo) {
-        eliminarPromoCompleta(idPromo);
-        renderPromoGrid();
-        renderCarrito();
-        actualizarTarjetasProductos();
-    };
+    window.quitarPromoCompleta = window.borrarPromoTotalmente;
 
     /* ══════════════════════════════════════════════════════════════════════
        CARRITO
     ══════════════════════════════════════════════════════════════════════ */
     window.toggleProducto = function (id, nombre, precio, stock) {
+        if (RETORNABLES_MAP[id] != null) {
+            pendingEnvase = { id, nombre, precio, stock };
+            mostrarDialogoEnvase(nombre, RETORNABLES_MAP[id].valorEnvase, RETORNABLES_MAP[id].soloEfectivo);
+            return;
+        }
+
         if (carrito.has(id)) {
             const it = carrito.get(id);
             it.cantidad++;
             it._seq = ++cartSeqCounter;
             carrito.delete(id);
             carrito.set(id, it);
-            renderCarrito();
-            actualizarTarjeta(id);
-            renderPromoGrid();
-        } else if (RETORNABLES_MAP[id]) {
-            pendingEnvase = { id, nombre, precio, stock };
-            mostrarDialogoEnvase(nombre, RETORNABLES_MAP[id].valorEnvase, RETORNABLES_MAP[id].soloEfectivo);
         } else {
             carrito.delete(id);
             carrito.set(id, { id, nombre, precio, cantidad: 1, stock, _seq: ++cartSeqCounter });
-            renderCarrito();
-            actualizarTarjeta(id);
-            renderPromoGrid();
         }
+        renderCarrito();
+        actualizarTarjeta(id);
+        renderPromoGrid();
     };
 
     window.confirmarEnvase = function (trajoEnvase) {
@@ -1195,7 +1214,19 @@
         if (!pendingEnvase) return;
         const { id, nombre, precio, stock } = pendingEnvase;
         pendingEnvase = null;
-        if (!trajoEnvase) envasesMap.set(id, { ...RETORNABLES_MAP[id] });
+
+        const retData = RETORNABLES_MAP[id];
+        const currentEnv = envasesMap.get(id) || {
+            cobrados: 0,
+            valorEnvase: retData ? retData.valorEnvase : 0,
+            soloEfectivo: retData ? retData.soloEfectivo : false
+        };
+
+        if (!trajoEnvase) {
+            currentEnv.cobrados++;
+        }
+        envasesMap.set(id, currentEnv);
+
         if (carrito.has(id)) {
             const it = carrito.get(id);
             it.cantidad++;
@@ -1206,6 +1237,7 @@
             carrito.delete(id);
             carrito.set(id, { id, nombre, precio, cantidad: 1, stock, _seq: ++cartSeqCounter });
         }
+
         renderCarrito();
         actualizarTarjeta(id);
         renderPromoGrid();
@@ -1244,7 +1276,19 @@
 
     window.cambiarCantidad = function (id, delta) {
         if (!carrito.has(id)) return;
-        const it    = carrito.get(id);
+        const it = carrito.get(id);
+
+        if (delta > 0 && RETORNABLES_MAP[id] != null) {
+            const p = CATALOGO.find(c => c.id === id);
+            pendingEnvase = { id, nombre: p ? p.nombre : it.nombre, precio: it.precio, stock: it.stock };
+            mostrarDialogoEnvase(
+                p ? p.nombre : it.nombre,
+                RETORNABLES_MAP[id].valorEnvase,
+                RETORNABLES_MAP[id].soloEfectivo
+            );
+            return;
+        }
+
         const nueva = it.cantidad + delta;
         if (nueva <= 0) {
             carrito.delete(id);
@@ -1254,6 +1298,11 @@
             it._seq = ++cartSeqCounter;
             carrito.delete(id);
             carrito.set(id, it);
+            if (envasesMap.has(id)) {
+                const env = envasesMap.get(id);
+                if (env.cobrados > nueva) env.cobrados = Math.max(0, nueva);
+                if (env.cobrados <= 0 && nueva <= 0) envasesMap.delete(id);
+            }
         }
         renderCarrito();
         actualizarTarjeta(id);
@@ -1284,16 +1333,24 @@
     function actualizarTarjeta(id) {
         const card = document.getElementById(`pc-${id}`);
         if (!card) return;
-        const enCart = carrito.has(id);
-        const cant   = enCart ? carrito.get(id).cantidad : 0;
-        const p      = CATALOGO.find(c => c.id === id);
+        const p = CATALOGO.find(c => c.id === id);
         if (!p) return;
+
+        const { consumidoEnPromo } = calcularDescuentos();
+        const it        = carrito.get(id);
+        const totalCant = it ? it.cantidad : 0;
+        const consumido = consumidoEnPromo.get(id) ?? 0;
+        const cantFuera = Math.max(0, totalCant - consumido);
+        const enCart    = cantFuera > 0;
+
         const oferta   = OFERTAS_MAP[id];
         const sinStock = false;
+
         card.classList.remove('en-carrito', 'tiene-oferta', 'sin-stock');
         if (enCart) card.classList.add('en-carrito');
         else if (sinStock) card.classList.add('sin-stock');
         else if (oferta != null) card.classList.add('tiene-oferta');
+
         // Actualizar onclick
         if (sinStock) {
             card.removeAttribute('onclick');
@@ -1301,23 +1358,26 @@
             const nomSafe = p.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
             card.setAttribute('onclick', `toggleProducto(${p.id},'${nomSafe}',${p.precio},${p.stock})`);
         }
+
         const footer   = card.querySelector('.prod-card-footer');
-        const oldBadge = footer.querySelector('.prod-card-stock, .prod-card-stock-qty, .prod-card-sin-stock-lbl');
-        if (oldBadge) oldBadge.remove();
-        const stockClass = cant > p.stock ? 'prod-card-stock-num' : 'prod-card-stock-num ok';
-        const badgeHtml = enCart
-            ? `<div class="prod-card-stock-qty">
-                   <div class="prod-card-qty-btn">
-                       <button onclick="event.stopPropagation();cambiarCantidad(${p.id},-1)">−</button>
-                       <span>${cant}</span>
-                       <button onclick="event.stopPropagation();cambiarCantidad(${p.id},+1)">+</button>
-                   </div>
-                   <span class="prod-card-stock-lbl">/ Stock: <span class="${stockClass}">${p.stock}</span></span>
-               </div>`
-            : sinStock
-            ? `<span class="prod-card-sin-stock-lbl">Sin stock</span>`
-            : `<span class="prod-card-stock">Stock: ${p.stock}</span>`;
-        footer.insertAdjacentHTML('beforeend', badgeHtml);
+        if (footer) {
+            const oldBadge = footer.querySelector('.prod-card-stock, .prod-card-stock-qty, .prod-card-sin-stock-lbl');
+            if (oldBadge) oldBadge.remove();
+            const stockClass = totalCant > p.stock ? 'prod-card-stock-num' : 'prod-card-stock-num ok';
+            const badgeHtml = enCart
+                ? `<div class="prod-card-stock-qty">
+                       <div class="prod-card-qty-btn">
+                           <button onclick="event.stopPropagation();cambiarCantidad(${p.id},-1)">−</button>
+                           <span>${cantFuera}</span>
+                           <button onclick="event.stopPropagation();cambiarCantidad(${p.id},+1)">+</button>
+                       </div>
+                       <span class="prod-card-stock-lbl">/ Stock: <span class="${stockClass}">${p.stock}</span></span>
+                   </div>`
+                : sinStock
+                ? `<span class="prod-card-sin-stock-lbl">Sin stock</span>`
+                : `<span class="prod-card-stock">Stock: ${p.stock}</span>`;
+            footer.insertAdjacentHTML('beforeend', badgeHtml);
+        }
     }
 
     /* ══════════════════════════════════════════════════════════════════════
@@ -1509,104 +1569,72 @@
         const { instancias, remaining } = calcularDescuentos();
         const entries = [];
 
-        // Contador de promos directamente seleccionadas
-        const promosDirectas = new Map();
-        promoCarrito.forEach(p => {
-            promosDirectas.set(p.idPromo, (promosDirectas.get(p.idPromo) ?? 0) + p.cantidad);
-        });
+        // ── 0 & 1. Promociones Unificadas (Directas + Automáticas por Promo ID) ──
+        const allPromoIds = new Set([
+            ...promoCarrito.keys(),
+            ...instancias.map(i => i.promoId)
+        ]);
 
-        // ── 0. Promociones directas ────
-        if (promoCarrito.size > 0) {
-            promoCarrito.forEach((p) => {
-                const promoInfo = PROMOS.find(pr => pr.id === p.idPromo);
-                if (!promoInfo) return;
-                const subtotal = p.precio * p.cantidad;
+        allPromoIds.forEach((idPromo) => {
+            const promoInfo = PROMOS.find(pr => pr.id === idPromo);
+            if (!promoInfo) return;
 
-                const prodRowsHtml = buildPromoProdBreakdownHtml(promoInfo, p.unidades, p.cantidad, p.seleccionGrupos);
+            const pDirect = promoCarrito.get(idPromo);
+            const cantDirect = pDirect ? pDirect.cantidad : 0;
 
-                let pHtml = `
-                <div class="ci-promo-card">
-                    <div class="ci-promo-main-row">
-                        <div class="ci-nombre-wrap">
-                            <span class="ci-promo-tag">🎁 Promo</span>
-                            <span class="ci-nombre" title="${x(p.nombre)}">${x(p.nombre)}</span>
-                        </div>
-                        <div class="ci-qty-wrap">
-                            <span class="ci-qty-label">Cantidad:</span>
-                            <div class="ci-qty">
-                                <button onclick="cambiarCantidadPromo(${p.idPromo},-1)">−</button>
-                                <span>${p.cantidad}</span>
-                                <button onclick="cambiarCantidadPromo(${p.idPromo},+1)">+</button>
-                            </div>
-                        </div>
-                        <div class="ci-unit-price">
-                            <span class="ci-price-current">$${fmt(p.precio)} c/u</span>
-                        </div>
-                        <div class="ci-subtotal">$${fmt(subtotal)}</div>
-                        <button class="ci-del" onclick="quitarPromoCompleta(${p.idPromo})" title="Eliminar promoción">
-                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                        </button>
-                    </div>
-                    <div class="ci-promo-body">
-                        <div class="ci-promo-body-title">Productos incluidos:</div>
-                        ${prodRowsHtml}
-                    </div>
-                </div>`;
+            const instList = instancias.filter(i => i.promoId === idPromo);
+            const cantAuto = instList.length;
 
-                entries.push({ seq: p._seq ?? 0, html: pHtml });
-            });
-        }
+            const totalCantidad = Math.max(cantDirect, cantAuto);
+            if (totalCantidad <= 0) return;
 
-        // ── 1. Bloques de cada instancia de promo (promociones automáticas) ─
-        const instanciasOcultas = new Map();
-        instancias.forEach((inst, idx) => {
-            const cantidadOcultar = promosDirectas.get(inst.promoId) ?? 0;
-            const yaOculta = instanciasOcultas.get(inst.promoId) ?? 0;
-            if (yaOculta < cantidadOcultar) {
-                instanciasOcultas.set(inst.promoId, yaOculta + 1);
-                return;
-            }
+            const tagText = cantDirect > 0 ? '🎁 Promo' : '🏷️ Promo';
+            const subtotal = promoInfo.precio * totalCantidad;
 
-            let prodRowsHtml = '';
-            inst.itemsActivos.forEach(({ id, nombre, cantReq }) => {
-                prodRowsHtml += `
-                <div class="ci-promo-item-row">
-                    <span class="ci-promo-item-nombre">• ${x(nombre)}</span>
-                    <span class="ci-promo-item-cant">${cantReq} u.</span>
-                </div>`;
-            });
+            const prodRowsHtml = buildPromoProdBreakdownHtml(
+                promoInfo,
+                pDirect ? pDirect.unidades : null,
+                totalCantidad,
+                pDirect ? pDirect.seleccionGrupos : null
+            );
 
-            let aHtml = `
+            const seqDirect = pDirect ? (pDirect._seq || 0) : 0;
+            const seqAuto = Math.max(...instList.flatMap(i => (i.itemsActivos || []).map(it => carrito.get(it.id)?._seq || 0)), 0);
+            const maxSeq = Math.max(seqDirect, seqAuto);
+
+            const deleteOnClick = `borrarPromoTotalmente(${idPromo})`;
+            const changeQtyOnClick = cantDirect > 0 ? `cambiarCantidadPromo(${idPromo}` : `cambiarCantidadPromoAuto('${idPromo}'`;
+
+            let pHtml = `
             <div class="ci-promo-card">
                 <div class="ci-promo-main-row">
                     <div class="ci-nombre-wrap">
-                        <span class="ci-promo-tag">🏷️ Promo</span>
-                        <span class="ci-nombre" title="${x(inst.promoNombre)}">${x(inst.promoNombre)}</span>
+                        <span class="ci-promo-tag">${tagText}</span>
+                        <span class="ci-nombre" title="${x(promoInfo.nombre)}">${x(promoInfo.nombre)}</span>
                     </div>
                     <div class="ci-qty-wrap">
                         <span class="ci-qty-label">Cantidad:</span>
                         <div class="ci-qty">
-                            <button onclick="cambiarCantidadPromoAuto('${inst.promoId}',-1)">−</button>
-                            <span>1</span>
-                            <button onclick="cambiarCantidadPromoAuto('${inst.promoId}',+1)">+</button>
+                            <button onclick="${changeQtyOnClick},-1)">−</button>
+                            <span>${totalCantidad}</span>
+                            <button onclick="${changeQtyOnClick},+1)">+</button>
                         </div>
                     </div>
                     <div class="ci-unit-price">
-                        <span class="ci-price-current">$${fmt(inst.promoPrecio)} c/u</span>
+                        <span class="ci-price-current">$${fmt(promoInfo.precio)} c/u</span>
                     </div>
-                    <div class="ci-subtotal">$${fmt(inst.promoPrecio)}</div>
-                    <button class="ci-del" onclick="quitarDePromoAuto('${inst.promoId}')" title="Eliminar promoción">
+                    <div class="ci-subtotal">$${fmt(subtotal)}</div>
+                    <button class="ci-del" onclick="${deleteOnClick}" title="Eliminar promoción">
                         <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                     </button>
                 </div>
                 <div class="ci-promo-body">
-                    <div class="ci-promo-body-title">Productos incluidos (Ahorro: $${fmt(inst.ahorro)}):</div>
+                    <div class="ci-promo-body-title">Productos incluidos:</div>
                     ${prodRowsHtml}
                 </div>
             </div>`;
 
-            const maxSeq = Math.max(...inst.itemsActivos.map(i => (carrito.get(i.id) ? carrito.get(i.id)._seq || 0 : 0)), 0);
-            entries.push({ seq: maxSeq, html: aHtml });
+            entries.push({ seq: maxSeq, html: pHtml });
         });
 
         // ── 2. Ítems individuales ────
@@ -1642,13 +1670,14 @@
             </div>`;
 
             const envase = envasesMap.get(it.id);
-            if (envase) {
+            if (envase && envase.cobrados > 0) {
+                const totalEnvaseVal = envase.valorEnvase * envase.cobrados;
                 const efHtml = envase.soloEfectivo ? ' <em class="ci-envase-ef">solo efectivo</em>' : '';
                 iHtml += `
             <div class="ci-envase${envase.soloEfectivo ? ' solo-ef' : ''}">
                 <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-                <span class="ci-envase-lbl">Envase${efHtml}</span>
-                <span class="ci-envase-precio">$${fmt(envase.valorEnvase * it.cantidad)}</span>
+                <span class="ci-envase-lbl">Envase (${envase.cobrados} u. cobrada${envase.cobrados > 1 ? 's' : ''})${efHtml}</span>
+                <span class="ci-envase-precio">$${fmt(totalEnvaseVal)}</span>
             </div>`;
             }
 
@@ -1703,8 +1732,9 @@
         // Cargo de envases
         let totalEnvases = 0;
         envasesMap.forEach((env, id) => {
-            const it = carrito.get(id);
-            if (it) totalEnvases += env.valorEnvase * it.cantidad;
+            if (carrito.has(id) && env.cobrados > 0) {
+                totalEnvases += env.valorEnvase * env.cobrados;
+            }
         });
 
         const totalFinal = Math.max(0, subtotal - descTotal) + totalEnvases;
@@ -2182,7 +2212,55 @@
             return;
         }
 
-        // 1. Atajos absolutos (NumpadEnter, F1, F2)
+        // 0. Si el modal de envase está abierto:
+        const envaseOverlay = document.getElementById('envaseOverlay');
+        if (envaseOverlay && envaseOverlay.style.display === 'flex') {
+            if (e.key === 'Enter' || e.code === 'NumpadEnter') {
+                e.preventDefault();
+                e.stopPropagation();
+                confirmarEnvase(true);
+                return;
+            }
+            if (e.key === ' ' || e.code === 'Space' || e.key === 'Spacebar') {
+                e.preventDefault();
+                e.stopPropagation();
+                confirmarEnvase(false);
+                return;
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                cerrarDialogoEnvase();
+                return;
+            }
+        }
+
+        // 1. Si SweetAlert2 está visible (confirmaciones)
+        if (Swal.isVisible()) {
+            if (e.key === 'Enter' || e.code === 'NumpadEnter') {
+                e.preventDefault();
+                e.stopPropagation();
+                Swal.clickConfirm();
+                return;
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                Swal.clickCancel();
+                return;
+            }
+        }
+
+        // 2. Tecla Delete / Suprimir -> Limpiar carrito
+        if (e.key === 'Delete' || e.code === 'Delete') {
+            if (carrito.size > 0 || promoCarrito.size > 0) {
+                e.preventDefault();
+                e.stopPropagation();
+                confirmarLimpiarCarrito();
+            }
+            return;
+        }
+
+        // 3. Atajos absolutos (NumpadEnter, F1, F2)
         if (e.code === 'NumpadEnter' || e.key === 'F1' || e.key === 'F2') {
             if (carrito.size === 0 && promoCarrito.size === 0) return;
             e.preventDefault();
