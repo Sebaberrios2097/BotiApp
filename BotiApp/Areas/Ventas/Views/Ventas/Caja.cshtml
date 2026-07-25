@@ -776,7 +776,7 @@
 
 @if (Model.PuedeCobrar)
 {
-    <div class="modal-overlay" id="cobroModalOverlay" style="display:none;" onclick="if(event.target===this) cerrarModalCobro()">
+    <div class="modal-overlay" id="cobroModalOverlay" style="display:none;">
         <div class="modal-box cobro-modal-box" onclick="event.stopPropagation()">
             
             <!-- Encabezado Limpio sin Fondo Negro -->
@@ -2701,6 +2701,38 @@
     window.cerrarModalCobro = function () {
         const overlay = document.getElementById('cobroModalOverlay');
         if (overlay) overlay.style.display = 'none';
+
+        // Limpieza completa de campos e inputs
+        const inputPagaCon = document.getElementById('inputPagaConModal');
+        if (inputPagaCon) inputPagaCon.value = '';
+
+        const inputAdicional = document.getElementById('inputMontoAdicional');
+        if (inputAdicional) inputAdicional.value = '';
+
+        const secAdicional = document.getElementById('cobroAdicionalSection');
+        if (secAdicional) secAdicional.style.display = 'none';
+
+        const btnToggle = document.getElementById('btnToggleAdicional');
+        if (btnToggle) {
+            btnToggle.textContent = '+ Pago Dividido';
+            btnToggle.style.background = '#faf7f5';
+            btnToggle.style.color = 'var(--color-primario)';
+        }
+
+        metodosCobro = [];
+        activeMetodoPagoId = null;
+
+        const vueltoDisplay = document.getElementById('vueltoModalDisplay');
+        if (vueltoDisplay) vueltoDisplay.textContent = '$0';
+
+        const vueltoStatus = document.getElementById('vueltoStatusMsg');
+        if (vueltoStatus) {
+            vueltoStatus.textContent = '';
+            vueltoStatus.style.display = 'none';
+        }
+
+        const modalBox = document.querySelector('.cobro-modal-box');
+        if (modalBox) modalBox.classList.remove('con-efectivo');
     };
 
     window.agregarBilleteRapido = function (monto) {
