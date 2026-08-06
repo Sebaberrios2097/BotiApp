@@ -239,6 +239,8 @@
 .btn-finalizar:hover:not(:disabled) { background:#cf5f22; transform:translateY(-1px); }
 .btn-finalizar:disabled { opacity:.45; cursor:not-allowed; }
 
+.btn-metodo-pago-card.mp-oculto { display: none; }
+
 /* Tarjetas de método de pago en modal cobro (alta legibilidad y ultra compacto) */
 .btn-metodo-pago-card {
     display: flex;
@@ -796,16 +798,10 @@
                 <!-- COLUMNA IZQUIERDA: Resumen & Selección de Método de Pago -->
                 <div style="display:flex; flex-direction:column; gap:0.6rem;">
                     
-                    <!-- Resumen Totales (Fila Compacta Centrada) -->
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
-                        <div style="background:var(--color-secundario); border-radius:8px; padding:0.5rem 0.7rem; text-align:center; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:56px;">
-                            <div style="font-size:0.68rem; font-weight:800; color:var(--color-primario); text-transform:uppercase; margin-bottom:0.15rem;">TOTAL TICKET</div>
-                            <div style="font-size:1.5rem; font-weight:900; line-height:1;" id="resTotalBoletaModal">$0</div>
-                        </div>
-                        <div style="background:#faf7f5; border:1.5px solid #e0d5cc; border-radius:8px; padding:0.5rem 0.7rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:56px;">
-                            <div style="font-size:0.68rem; font-weight:800; color:#7a6050; text-transform:uppercase; margin-bottom:0.15rem;" id="lblEstadoSaldo">SALDO PENDIENTE</div>
-                            <div style="font-size:1.35rem; font-weight:900; color:#16a34a; line-height:1;" id="resSaldoRestanteModal">$0</div>
-                        </div>
+                    <!-- Resumen Totales (Centrado) -->
+                    <div style="background:var(--color-secundario); border-radius:8px; padding:0.55rem 0.7rem; text-align:center; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:56px;">
+                        <div style="font-size:0.68rem; font-weight:800; color:var(--color-primario); text-transform:uppercase; margin-bottom:0.15rem;">TOTAL TICKET</div>
+                        <div style="font-size:1.5rem; font-weight:900; line-height:1;" id="resTotalBoletaModal">$0</div>
                     </div>
 
                     <!-- Alerta Envase (Si Aplica) -->
@@ -814,20 +810,52 @@
                         <span id="cobroEnvaseAlertaMsg" style="font-weight:700;">Garantía de envase cobrada en efectivo.</span>
                     </div>
 
-                    <!-- Métodos de Pago Principal -->
-                    <div style="background:#ffffff; border:1.5px solid #ede5df; border-radius:8px; padding:0.65rem; display:flex; flex-direction:column; gap:0.45rem;">
+                    <!-- Bloque Método de Pago #1 (siempre visible) -->
+                    <div id="bloqueMetodo1" style="background:#ffffff; border:1.5px solid #ede5df; border-radius:8px; padding:0.65rem; display:flex; flex-direction:column; gap:0.45rem;">
                         <div style="display:flex; align-items:center; justify-content:space-between;">
-                            <span style="font-size:0.8rem; font-weight:800; color:var(--color-secundario); text-transform:uppercase;">Método de Pago:</span>
-                            <button type="button" onclick="toggleAdicional()" id="btnToggleAdicional" style="background:#faf7f5; border:1px solid var(--color-primario); border-radius:5px; font-size:0.73rem; font-weight:800; color:var(--color-primario); cursor:pointer; padding:0.2rem 0.45rem;">
-                                + Pago Dividido
-                            </button>
+                            <span style="font-size:0.8rem; font-weight:800; color:var(--color-secundario); text-transform:uppercase;">Método de Pago 1:</span>
                         </div>
 
-                        <!-- Grid de Tarjetas de Pago -->
+                        <!-- Grid de Tarjetas de Pago 1 -->
                         <div class="cobro-metodos-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(95px, 1fr)); gap:0.4rem; width:100%;">
                             @foreach (var m in Model.MetodosPago)
                             {
-                                <button type="button" class="btn-metodo-pago-card" data-id="@m.IdMetodoPago" data-nombre="@m.NombreMetodoPago" onclick="seleccionarMetodoPrincipalBtn(this)" style="min-height:50px; padding:0.35rem 0.25rem;">
+                                <button type="button" class="btn-metodo-pago-card mp-bloque-1" data-id="@m.IdMetodoPago" data-nombre="@m.NombreMetodoPago" onclick="seleccionarMetodoBloque(this, 1)" style="min-height:50px; padding:0.35rem 0.25rem;">
+                                    <div class="mp-icon" style="width:18px; height:18px;">
+                                        @if (m.NombreMetodoPago.Contains("Efectivo", StringComparison.OrdinalIgnoreCase)) {
+                                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+                                        } else if (m.NombreMetodoPago.Contains("Débito", StringComparison.OrdinalIgnoreCase) || m.NombreMetodoPago.Contains("Tarjeta", StringComparison.OrdinalIgnoreCase)) {
+                                            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                                        } else if (m.NombreMetodoPago.Contains("Crédito", StringComparison.OrdinalIgnoreCase)) {
+                                            <svg viewBox="0 0 24 24"><path d="M21 4H3c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h18c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H3V8h18v10z"/></svg>
+                                        } else {
+                                            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                                        }
+                                    </div>
+                                    <span class="mp-name" style="font-size:0.78rem; font-weight:800;">@m.NombreMetodoPago</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Botón: Agregar otro método de pago (ancho completo) -->
+                    <button type="button" id="btnAgregarMetodo2" onclick="agregarBloqueMetodo2()" style="width:100%; padding:0.55rem 0.7rem; background:#faf7f5; border:1.5px dashed var(--color-primario); border-radius:8px; color:var(--color-primario); font-size:0.85rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:background .15s;">
+                        <svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:currentColor;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                        Agregar otro método de pago
+                    </button>
+
+                    <!-- Bloque Método de Pago #2 (oculto hasta pulsar el botón) -->
+                    <div id="bloqueMetodo2" style="background:#ffffff; border:1.5px solid #ede5df; border-radius:8px; padding:0.65rem; display:none; flex-direction:column; gap:0.45rem;">
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <span style="font-size:0.8rem; font-weight:800; color:var(--color-secundario); text-transform:uppercase;">Método de Pago 2:</span>
+                            <button type="button" onclick="quitarBloqueMetodo2()" title="Quitar método 2" style="background:rgba(239,68,68,0.08); border:none; border-radius:5px; color:#dc2626; font-size:0.7rem; font-weight:800; cursor:pointer; padding:0.2rem 0.45rem;">✕ Quitar</button>
+                        </div>
+
+                        <!-- Grid de Tarjetas de Pago 2 -->
+                        <div class="cobro-metodos-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(95px, 1fr)); gap:0.4rem; width:100%;">
+                            @foreach (var m in Model.MetodosPago)
+                            {
+                                <button type="button" class="btn-metodo-pago-card mp-bloque-2" data-id="@m.IdMetodoPago" data-nombre="@m.NombreMetodoPago" onclick="seleccionarMetodoBloque(this, 2)" style="min-height:50px; padding:0.35rem 0.25rem;">
                                     <div class="mp-icon" style="width:18px; height:18px;">
                                         @if (m.NombreMetodoPago.Contains("Efectivo", StringComparison.OrdinalIgnoreCase)) {
                                             <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
@@ -844,26 +872,17 @@
                             }
                         </div>
 
-                        <!-- Panel desplegable de Pago Dividido -->
-                        <div class="cobro-adicional" id="cobroAdicionalSection" style="display:none; background:#faf7f5; border:1.5px dashed #d4c4b7; border-radius:7px; padding:0.45rem; flex-direction:column; gap:0.35rem;">
-                            <div style="font-size:0.72rem; font-weight:800; color:#7a6050; text-transform:uppercase;">Agregar pago secundario:</div>
-                            <div style="display:flex; gap:0.35rem; align-items:center;">
-                                <select id="selMetodoAdicional" style="flex:1; padding:0.3rem; border:1.5px solid #e0d5cc; border-radius:5px; font-size:0.8rem; font-weight:700;">
-                                    @foreach (var m in Model.MetodosPago)
-                                    {
-                                        <option value="@m.IdMetodoPago" data-nombre="@m.NombreMetodoPago">@m.NombreMetodoPago</option>
-                                    }
-                                </select>
-                                <input type="number" class="cobro-monto-input" id="inputMontoAdicional" placeholder="Monto $" min="1" style="width:85px; padding:0.3rem; border:1.5px solid #e0d5cc; border-radius:5px; font-size:0.82rem; font-weight:800;" />
-                                <button class="btn-add-metodo" onclick="agregarMetodoAdicional()" style="padding:0.3rem 0.6rem; background:var(--color-secundario); color:#fff; border:none; border-radius:5px; font-weight:800; font-size:0.78rem; cursor:pointer;">+ Agregar</button>
-                            </div>
+                        <!-- Input monto del segundo método -->
+                        <div style="display:flex; gap:0.4rem; align-items:center; padding:0.45rem; background:#faf7f5; border:1.5px dashed #d4c4b7; border-radius:7px;">
+                            <span style="font-size:0.75rem; font-weight:800; color:#7a6050; text-transform:uppercase;">Monto a pagar:</span>
+                            <input type="number" id="inputMontoMetodo2" placeholder="$" min="1" oninput="onCambioMontoMetodo2()" style="flex:1; padding:0.35rem 0.5rem; border:1.5px solid #e0d5cc; border-radius:5px; font-size:0.85rem; font-weight:800; text-align:right; color:var(--color-secundario);" />
                         </div>
+                    </div>
 
-                        <!-- Lista de Desglose Asignado -->
-                        <div>
-                            <div style="font-size:0.72rem; font-weight:800; color:#a89080; text-transform:uppercase; margin-bottom:0.2rem;">Desglose de Pago:</div>
-                            <div class="cobro-list" id="cobroList" style="display:flex; flex-direction:column; gap:0.25rem;"></div>
-                        </div>
+                    <!-- Lista de Desglose Asignado -->
+                    <div>
+                        <div style="font-size:0.72rem; font-weight:800; color:#a89080; text-transform:uppercase; margin-bottom:0.2rem;">Desglose de Pago:</div>
+                        <div class="cobro-list" id="cobroList" style="display:flex; flex-direction:column; gap:0.25rem;"></div>
                     </div>
 
                 </div>
@@ -889,19 +908,6 @@
                         <div style="position:relative; display:flex; align-items:center;">
                             <span style="position:absolute; left:10px; font-size:1.15rem; font-weight:800; color:#7a6050;">$</span>
                             <input type="number" id="inputPagaConModal" class="cobro-monto-input" style="width:100%; height:40px; font-size:1.25rem; font-weight:900; text-align:left; padding:0 0.6rem 0 1.8rem; border-radius:7px; border:2px solid #d4c4b7; background:#fff; color:var(--color-secundario); outline:none;" placeholder="0" min="0" oninput="calcularVueltoModal()" />
-                        </div>
-                    </div>
-
-                    <!-- Billetes Rápidos (Grid 3x2) -->
-                    <div>
-                        <div style="font-size:0.7rem; font-weight:800; color:#7a6050; text-transform:uppercase; margin-bottom:0.2rem;">Billetes Rápidos:</div>
-                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.3rem;">
-                            <button type="button" class="btn-billete-rapido" onclick="agregarBilleteRapido(1000)" style="padding:0.35rem 0.15rem; font-size:0.8rem;">$1.000</button>
-                            <button type="button" class="btn-billete-rapido" onclick="agregarBilleteRapido(2000)" style="padding:0.35rem 0.15rem; font-size:0.8rem;">$2.000</button>
-                            <button type="button" class="btn-billete-rapido" onclick="agregarBilleteRapido(5000)" style="padding:0.35rem 0.15rem; font-size:0.8rem;">$5.000</button>
-                            <button type="button" class="btn-billete-rapido" onclick="agregarBilleteRapido(10000)" style="padding:0.35rem 0.15rem; font-size:0.8rem;">$10.000</button>
-                            <button type="button" class="btn-billete-rapido" onclick="agregarBilleteRapido(20000)" style="padding:0.35rem 0.15rem; font-size:0.8rem;">$20.000</button>
-                            <button type="button" class="btn-billete-rapido exacto" onclick="establecerMontoExacto()" style="padding:0.35rem 0.15rem; font-size:0.8rem;">Exacto</button>
                         </div>
                     </div>
 
@@ -964,10 +970,12 @@
     /* ── Estado ──────────────────────────────────────────────────────────── */
     let boletaActual  = null;
     let detalleActual = [];
-    let metodosCobro  = [];   // [{idMetodoPago, nombre, monto, esEfectivo}]
+    let metodosCobro  = [];   // [{idMetodoPago, nombre, monto, esEfectivo, bloque}]
     let modalProdSel  = null; // producto seleccionado en el modal
     let modalQty      = 1;
     let adicionalVisible = false;
+    let bloque2Activo  = false;
+    let metodoBloque2Id = null;
     let pendingEnvase    = null;  // producto retornable pendiente de confirmación
     let _promoInstCounter = 0;   // Unique ID per promo instance added to detalleActual
     let modalSelectedProds = new Map();
@@ -1890,7 +1898,7 @@
         if (btnCobrar) btnCobrar.disabled = !esEditable;
         const btnFiado = document.getElementById('btnFiado');
         if (btnFiado) btnFiado.disabled = !esEditable;
-        const buttons = document.querySelectorAll('.btn-metodo-pago');
+        const buttons = document.querySelectorAll('.mp-bloque-1, .mp-bloque-2, #btnAgregarMetodo2');
         buttons.forEach(btn => btn.disabled = !esEditable);
         const inputOtros = document.getElementById('inputOtrosMonto');
         if (inputOtros) {
@@ -1938,11 +1946,19 @@
     function inicializarCobro(montoTotal) {
         metodosCobro = [];
         adicionalVisible = false;
-        const cAdic = document.getElementById('cobroAdicionalSection');
-        if (cAdic) cAdic.style.display = 'none';
-        const btnTog = document.getElementById('btnToggleAdicional');
-        if (btnTog) btnTog.textContent = '+ Pago Dividido / Múltiples Métodos';
-        
+        bloque2Activo = false;
+        metodoBloque2Id = null;
+
+        const bloque2 = document.getElementById('bloqueMetodo2');
+        if (bloque2) bloque2.style.display = 'none';
+
+        const btnAgr2 = document.getElementById('btnAgregarMetodo2');
+        if (btnAgr2) btnAgr2.style.display = 'flex';
+
+        document.querySelectorAll('.mp-bloque-2').forEach(b => b.classList.remove('active'));
+        const inpMonto2 = document.getElementById('inputMontoMetodo2');
+        if (inpMonto2) inpMonto2.value = '';
+
         const montoSoloEf = calcMontoSoloEfectivo();
         if (montoSoloEf > 0) {
             const efecMet = METODOS_PAGO.find(m => m.esEfectivo);
@@ -1954,7 +1970,7 @@
                     esEfectivo: true,
                     esEnvase: true,
                     bloqueado: true,
-                    esPrincipal: false
+                    bloque: 0
                 });
             }
         }
@@ -1972,6 +1988,142 @@
         }
     }
 
+    /* Selección de método de pago para un bloque específico (1 o 2) */
+    window.seleccionarMetodoBloque = function (btn, bloque) {
+        if (!boletaActual || boletaActual.idEstado !== 1) return;
+        const id = parseInt(btn.dataset.id);
+        if (bloque === 1) {
+            seleccionarMetodoPrincipal(id);
+        } else if (bloque === 2) {
+            const princ = metodosCobro.find(m => m.bloque === 1);
+            if (princ && princ.idMetodoPago === id) {
+                toast('Este método de pago ya está seleccionado como principal.', 'error');
+                return;
+            }
+            metodoBloque2Id = id;
+            const targetMetodo = METODOS_PAGO.find(m => m.id === id);
+            if (!targetMetodo) return;
+
+            /* Marcar visualmente */
+            document.querySelectorAll('.mp-bloque-2').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            /* Actualizar/insertar el método bloque 2 en metodosCobro */
+            const idx = metodosCobro.findIndex(m => m.bloque === 2);
+            const totalBol = boletaActual?.montoTotal ?? 0;
+            const montoActual2 = idx >= 0 ? metodosCobro[idx].monto : 0;
+            const entry = {
+                idMetodoPago: id,
+                nombre: targetMetodo.nombre,
+                monto: montoActual2,
+                esEfectivo: targetMetodo.esEfectivo,
+                bloque: 2
+            };
+            if (idx >= 0) {
+                metodosCobro[idx] = entry;
+            } else {
+                metodosCobro.push(entry);
+            }
+            /* Reajustar método principal */
+            const extras = metodosCobro
+                .filter(m => m.bloque !== 1 && !m.bloqueado)
+                .reduce((s, m) => s + m.monto, 0);
+            const nuevoPrinc = metodosCobro.find(m => m.bloque === 1);
+            if (nuevoPrinc) nuevoPrinc.monto = Math.max(0, totalBol - extras);
+            renderMetodosCobro();
+        }
+    };
+
+    window.agregarBloqueMetodo2 = function () {
+        if (!boletaActual || boletaActual.idEstado !== 1) return;
+        const bloque2 = document.getElementById('bloqueMetodo2');
+        const btnAgr2 = document.getElementById('btnAgregarMetodo2');
+        if (!bloque2) return;
+        bloque2Activo = true;
+        bloque2.style.display = 'flex';
+        if (btnAgr2) btnAgr2.style.display = 'none';
+        actualizarVisibilidadMetodosBloque2();
+        renderMetodosCobro();
+    };
+
+    /* Oculta en el bloque 2 el método ya seleccionado en el bloque 1.
+       Si el bloque 2 tenía seleccionado el método ahora bloqueado, se deselecciona. */
+    window.actualizarVisibilidadMetodosBloque2 = function () {
+        const princ = metodosCobro.find(m => m.bloque === 1);
+        const princId = princ ? princ.idMetodoPago : null;
+        const cards = document.querySelectorAll('.mp-bloque-2');
+        cards.forEach(card => {
+            const cardId = parseInt(card.dataset.id);
+            if (princId && cardId === princId) {
+                card.classList.add('mp-oculto');
+            } else {
+                card.classList.remove('mp-oculto');
+            }
+        });
+
+        /* Si el bloque 2 tenía seleccionado el mismo método que ahora ocupa el principal,
+           limpiar su selección para evitar inconsistencia. */
+        if (princId && metodoBloque2Id === princId) {
+            metodoBloque2Id = null;
+            metodosCobro = metodosCobro.filter(m => m.bloque !== 2);
+            cards.forEach(c => c.classList.remove('active'));
+            const inpMonto2 = document.getElementById('inputMontoMetodo2');
+            if (inpMonto2) inpMonto2.value = '';
+        }
+    };
+
+    window.quitarBloqueMetodo2 = function () {
+        bloque2Activo = false;
+        metodoBloque2Id = null;
+        const bloque2 = document.getElementById('bloqueMetodo2');
+        const btnAgr2 = document.getElementById('btnAgregarMetodo2');
+        if (bloque2) bloque2.style.display = 'none';
+        if (btnAgr2) btnAgr2.style.display = 'flex';
+
+        /* Quitar método bloque 2 de metodosCobro y devolver su monto al principal */
+        const quitado = metodosCobro.find(m => m.bloque === 2);
+        metodosCobro = metodosCobro.filter(m => m.bloque !== 2);
+
+        document.querySelectorAll('.mp-bloque-2').forEach(b => b.classList.remove('active'));
+        const inpMonto2 = document.getElementById('inputMontoMetodo2');
+        if (inpMonto2) inpMonto2.value = '';
+
+        if (quitado) {
+            const princ = metodosCobro.find(m => m.bloque === 1);
+            if (princ) princ.monto += quitado.monto;
+        }
+        renderMetodosCobro();
+    };
+
+    window.onCambioMontoMetodo2 = function () {
+        const inp = document.getElementById('inputMontoMetodo2');
+        if (!inp) return;
+        const monto = Math.max(0, parseInt(inp.value) || 0);
+        const totalBol = boletaActual?.montoTotal ?? 0;
+        const idx = metodosCobro.findIndex(m => m.bloque === 2);
+        if (idx >= 0) {
+            metodosCobro[idx].monto = monto;
+        } else if (metodoBloque2Id) {
+            const target = METODOS_PAGO.find(m => m.id === metodoBloque2Id);
+            if (target) {
+                metodosCobro.push({
+                    idMetodoPago: target.id,
+                    nombre: target.nombre,
+                    monto: monto,
+                    esEfectivo: target.esEfectivo,
+                    bloque: 2
+                });
+            }
+        }
+        /* Reajustar método principal para no superar el total */
+        const extras = metodosCobro
+            .filter(m => m.bloque !== 1 && !m.bloqueado)
+            .reduce((s, m) => s + m.monto, 0);
+        const princ = metodosCobro.find(m => m.bloque === 1);
+        if (princ) princ.monto = Math.max(0, totalBol - extras);
+        renderMetodosCobro();
+    };
+
     window.seleccionarMetodoPrincipalBtn = function (btn) {
         if (!boletaActual || boletaActual.idEstado !== 1) return;
         const id = parseInt(btn.dataset.id);
@@ -1982,15 +2134,11 @@
         if (!id) return;
         activeMetodoPagoId = id;
 
-        // Update active class on buttons / cards
-        const buttons = document.querySelectorAll('.btn-metodo-pago-card, .btn-metodo-pago');
-        buttons.forEach(btn => {
+        // Update active class on cards del bloque 1
+        document.querySelectorAll('.mp-bloque-1').forEach(btn => {
             const btnId = parseInt(btn.dataset.id);
-            if (btnId === id) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            if (btnId === id) btn.classList.add('active');
+            else btn.classList.remove('active');
         });
 
         const targetMetodo = METODOS_PAGO.find(m => m.id === id);
@@ -1999,63 +2147,22 @@
         const nombre = targetMetodo.nombre;
         const efec   = targetMetodo.esEfectivo;
 
-        // Mantener únicamente filas adicionales no-principales (incluyendo envases bloqueados)
-        const extrasNoP = metodosCobro.filter(m => !m.esPrincipal).reduce((s, m) => s + m.monto, 0);
+        // Mantener únicamente filas adicionales no-bloque1 (incluyendo envases bloqueados y bloque 2)
+        const extrasNoP = metodosCobro
+            .filter(m => m.bloque !== 1 && !m.bloqueado)
+            .reduce((s, m) => s + m.monto, 0);
         const totalBol  = boletaActual?.montoTotal ?? (montoForzado || 0);
         const montoPrinc = Math.max(0, totalBol - extrasNoP);
 
-        /* Actualizar o insertar el método principal */
-        const idxPrinc = metodosCobro.findIndex(m => m.esPrincipal);
+        /* Actualizar o insertar el método principal (bloque 1) */
+        const idxPrinc = metodosCobro.findIndex(m => m.bloque === 1);
         if (idxPrinc >= 0) {
-            metodosCobro[idxPrinc] = { idMetodoPago: id, nombre, monto: montoPrinc, esEfectivo: efec, esPrincipal: true };
+            metodosCobro[idxPrinc] = { idMetodoPago: id, nombre, monto: montoPrinc, esEfectivo: efec, bloque: 1 };
         } else {
-            metodosCobro.unshift({ idMetodoPago: id, nombre, monto: montoPrinc, esEfectivo: efec, esPrincipal: true });
+            metodosCobro.unshift({ idMetodoPago: id, nombre, monto: montoPrinc, esEfectivo: efec, bloque: 1 });
         }
 
-        renderMetodosCobro();
-    };
-
-    window.toggleAdicional = function () {
-        adicionalVisible = !adicionalVisible;
-        const cAdic = document.getElementById('cobroAdicionalSection');
-        if (cAdic) cAdic.style.display = adicionalVisible ? 'flex' : 'none';
-        const btnTog = document.getElementById('btnToggleAdicional');
-        if (btnTog) btnTog.textContent = adicionalVisible
-            ? '− Ocultar pago dividido'
-            : '+ Pago Dividido / Múltiples Métodos';
-    };
-
-    window.agregarMetodoAdicional = function () {
-        const sel   = document.getElementById('selMetodoAdicional');
-        if (!sel) return;
-        const inpM  = document.getElementById('inputMontoAdicional');
-        const monto = parseInt(inpM?.value);
-        if (!monto || monto < 1) { toast('Ingresa un monto válido.', 'error'); return; }
-        const id     = parseInt(sel.value);
-        const nombre = sel.selectedOptions[0].dataset.nombre;
-        const efec   = METODOS_PAGO.find(m => m.id === id)?.esEfectivo ?? false;
-
-        /* Ajustar el método principal para cubrir solo el resto */
-        const totalExtra  = metodosCobro.filter(m => !m.esPrincipal).reduce((s, m) => s + m.monto, 0) + monto;
-        const totalBoleta = boletaActual?.montoTotal ?? 0;
-        const nuevoPrinc  = Math.max(0, totalBoleta - totalExtra);
-
-        metodosCobro = metodosCobro.map(m => m.esPrincipal ? { ...m, monto: nuevoPrinc } : m);
-        metodosCobro.push({ idMetodoPago: id, nombre, monto, esEfectivo: efec, esPrincipal: false });
-
-        if (inpM) inpM.value = '';
-        renderMetodosCobro();
-    };
-
-    window.quitarMetodo = function (i) {
-        if (metodosCobro[i]?.bloqueado) return;  // pago obligatorio, no se puede quitar
-        const quitado = metodosCobro[i];
-        metodosCobro.splice(i, 1);
-        /* Si quita uno adicional, devolver su monto al principal */
-        if (!quitado.esPrincipal) {
-            const princ = metodosCobro.find(m => m.esPrincipal);
-            if (princ) princ.monto += quitado.monto;
-        }
+        actualizarVisibilidadMetodosBloque2();
         renderMetodosCobro();
     };
 
@@ -2064,19 +2171,20 @@
         if (list) {
             list.innerHTML = '';
             metodosCobro.forEach((m, i) => {
-                if (m.monto <= 0 && m.esPrincipal && metodosCobro.length > 1) return;
+                if (m.monto <= 0 && m.bloque === 1 && metodosCobro.length > 1) return;
                 const div = document.createElement('div');
                 div.className = 'cobro-item' + (m.bloqueado ? ' bloqueado' : '');
                 const envaseTag = m.bloqueado ? '<span class="cobro-item-envase-tag" style="background:#fee2e2; color:#dc2626; padding:0.15rem 0.4rem; border-radius:4px; font-weight:800; font-size:0.75rem; margin-left:0.4rem;">Garantía Envase (Efectivo)</span>' : '';
-                const princTag = (m.esPrincipal && !m.bloqueado) ? '<span style="background:#eef2ff; color:#4f46e5; padding:0.15rem 0.4rem; border-radius:4px; font-weight:800; font-size:0.75rem; margin-left:0.4rem;">Principal</span>' : '';
+                const princTag = (m.bloque === 1 && !m.bloqueado) ? '<span style="background:#eef2ff; color:#4f46e5; padding:0.15rem 0.4rem; border-radius:4px; font-weight:800; font-size:0.75rem; margin-left:0.4rem;">Principal</span>' : '';
+                const bloque2Tag = (m.bloque === 2) ? '<span style="background:#fef3c7; color:#d97706; padding:0.15rem 0.4rem; border-radius:4px; font-weight:800; font-size:0.75rem; margin-left:0.4rem;">Adicional</span>' : '';
                 
                 div.innerHTML =
-                    `<span class="cobro-item-nombre" style="font-weight:700; font-size:0.9rem;">${x(m.nombre)}${envaseTag}${princTag}</span>` +
+                    `<span class="cobro-item-nombre" style="font-weight:700; font-size:0.9rem;">${x(m.nombre)}${envaseTag}${princTag}${bloque2Tag}</span>` +
                     `<span class="cobro-item-monto" style="font-weight:900; font-size:1rem; color:var(--color-primario); margin-left:auto;">${fmt(m.monto)}</span>` +
                     (m.bloqueado
                         ? `<span class="cobro-item-lock" title="Pago obligatorio en efectivo" style="color:#dc2626; margin-left:0.5rem;"><svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:currentColor;"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></span>`
-                        : (!m.esPrincipal
-                            ? `<button class="btn-quitar-metodo" onclick="quitarMetodo(${i})" title="Quitar método" style="margin-left:0.5rem; background:rgba(239,68,68,0.1); border:none; border-radius:6px; color:#dc2626; padding:0.25rem 0.45rem; cursor:pointer; font-weight:800;">✕</button>`
+                        : (m.bloque === 2
+                            ? `<button class="btn-quitar-metodo" onclick="quitarBloqueMetodo2()" title="Quitar método 2" style="margin-left:0.5rem; background:rgba(239,68,68,0.1); border:none; border-radius:6px; color:#dc2626; padding:0.25rem 0.45rem; cursor:pointer; font-weight:800;">✕</button>`
                             : ''));
                 list.appendChild(div);
             });
@@ -2084,20 +2192,7 @@
 
         const totalReg = metodosCobro.reduce((s, m) => s + m.monto, 0);
         const total = boletaActual?.montoTotal ?? 0;
-        const saldoRestante = Math.max(0, total - totalReg);
         const totalEfectivo = metodosCobro.filter(m => m.esEfectivo).reduce((s, m) => s + m.monto, 0);
-
-        // Actualizar tarjetas de resumen en modal
-        const resSaldoModal = document.getElementById('resSaldoRestanteModal');
-        if (resSaldoModal) {
-            resSaldoModal.textContent = fmt(saldoRestante);
-            resSaldoModal.style.color = saldoRestante > 0 ? "#dc2626" : "#16a34a";
-        }
-        const lblEstadoSaldo = document.getElementById('lblEstadoSaldo');
-        if (lblEstadoSaldo) {
-            lblEstadoSaldo.textContent = "SALDO PENDIENTE";
-            lblEstadoSaldo.style.color = saldoRestante > 0 ? "#dc2626" : "#16a34a";
-        }
 
         // Actualizar sección de efectivo y layout dinámico del modal
         const lblTotEfec = document.getElementById('lblTotalEfectivoRequerido');
@@ -2375,9 +2470,11 @@
             boletaActual.montoTotal = total;
             const resTot = document.getElementById('resTotalBoletaModal') || document.getElementById('resTotalBoleta');
             if (resTot) resTot.textContent = fmt(total);
-            const princ = metodosCobro.find(m => m.esPrincipal);
+            const princ = metodosCobro.find(m => m.bloque === 1);
             if (princ) {
-                const extras = metodosCobro.filter(m => !m.esPrincipal).reduce((s, m) => s + m.monto, 0);
+                const extras = metodosCobro
+                    .filter(m => m.bloque !== 1 && !m.bloqueado)
+                    .reduce((s, m) => s + m.monto, 0);
                 princ.monto  = Math.max(0, total - extras);
                 renderMetodosCobro();
             }
@@ -2605,7 +2702,8 @@
             cancelButtonText: 'Cancelar',
             confirmButtonColor: '#dc2626',
             cancelButtonColor: '#6b7280',
-            reverseButtons: true
+            reverseButtons: true,
+            allowEnterKey: true
         });
         if (!result.isConfirmed) return;
         anularBoleta(result.value);
@@ -2951,21 +3049,19 @@
         const inputPagaCon = document.getElementById('inputPagaConModal');
         if (inputPagaCon) inputPagaCon.value = '';
 
-        const inputAdicional = document.getElementById('inputMontoAdicional');
-        if (inputAdicional) inputAdicional.value = '';
+        const inputMonto2 = document.getElementById('inputMontoMetodo2');
+        if (inputMonto2) inputMonto2.value = '';
 
-        const secAdicional = document.getElementById('cobroAdicionalSection');
-        if (secAdicional) secAdicional.style.display = 'none';
-
-        const btnToggle = document.getElementById('btnToggleAdicional');
-        if (btnToggle) {
-            btnToggle.textContent = '+ Pago Dividido';
-            btnToggle.style.background = '#faf7f5';
-            btnToggle.style.color = 'var(--color-primario)';
-        }
+        const bloque2 = document.getElementById('bloqueMetodo2');
+        if (bloque2) bloque2.style.display = 'none';
+        const btnAgr2 = document.getElementById('btnAgregarMetodo2');
+        if (btnAgr2) btnAgr2.style.display = 'flex';
+        document.querySelectorAll('.mp-bloque-2').forEach(b => b.classList.remove('active'));
 
         metodosCobro = [];
         activeMetodoPagoId = null;
+        bloque2Activo = false;
+        metodoBloque2Id = null;
 
         const vueltoDisplay = document.getElementById('vueltoModalDisplay');
         if (vueltoDisplay) vueltoDisplay.textContent = '$0';
@@ -2978,28 +3074,6 @@
 
         const modalBox = document.querySelector('.cobro-modal-box');
         if (modalBox) modalBox.classList.remove('con-efectivo');
-    };
-
-    window.agregarBilleteRapido = function (monto) {
-        const input = document.getElementById('inputPagaConModal');
-        if (!input) return;
-        const current = parseInt(input.value) || 0;
-        const totalEfec = metodosCobro.filter(m => m.esEfectivo).reduce((s, m) => s + m.monto, 0);
-
-        if (current === 0 || current >= totalEfec) {
-            input.value = monto;
-        } else {
-            input.value = current + monto;
-        }
-        calcularVueltoModal();
-    };
-
-    window.establecerMontoExacto = function () {
-        const input = document.getElementById('inputPagaConModal');
-        if (!input) return;
-        const totalEfec = metodosCobro.filter(m => m.esEfectivo).reduce((s, m) => s + m.monto, 0);
-        input.value = totalEfec;
-        calcularVueltoModal();
     };
 
     window.calcularVueltoModal = function () {
@@ -3088,7 +3162,9 @@
 
         const btn = document.getElementById('btnCobrar');
         setBotonCargando(btn, true);
-        const pagos = metodosCobro.filter(m => m.monto > 0).map(m => ({ idMetodoPago: m.idMetodoPago, monto: m.monto }));
+        const pagos = metodosCobro
+            .filter(m => m.monto > 0 && !m.bloqueado)
+            .map(m => ({ idMetodoPago: m.idMetodoPago, monto: m.monto }));
         const res = await post(URL_COBRAR, { idBoleta: boletaActual.idBoleta, metodosPago: pagos });
         setBotonCargando(btn, false);
         if (!res.ok) { toast(res.mensaje, 'error'); return; }
@@ -3120,6 +3196,22 @@
             if (cobroOverlay && cobroOverlay.style.display === 'flex') {
                 cerrarModalCobro();
                 return;
+            }
+        }
+
+        if (e.key === 'Delete' || e.key === 'Suprimir' || (e.key === 'Backspace' && e.ctrlKey)) {
+            const activeTag = document.activeElement ? document.activeElement.tagName : '';
+            if (activeTag !== 'INPUT' && activeTag !== 'SELECT' && activeTag !== 'TEXTAREA') {
+                const cobroOverlay = document.getElementById('cobroModalOverlay');
+                if (cobroOverlay && cobroOverlay.style.display === 'flex') {
+                    return;
+                }
+                if (boletaActual && boletaActual.idEstado !== 2) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    confirmarAnular();
+                    return;
+                }
             }
         }
 

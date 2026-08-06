@@ -74,6 +74,22 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EliminarAjax(int id)
+    {
+        var promo = await promoRepo.ObtenerPorIdAsync(id);
+        if (promo is null)
+            return Json(new { ok = false, mensaje = "Promoción no encontrada." });
+
+        var nombre = promo.Nombre;
+        var ok = await promoRepo.EliminarAsync(id);
+        if (!ok)
+            return Json(new { ok = false, mensaje = "No se pudo eliminar la promoción." });
+
+        return Json(new { ok = true, mensaje = $"Promoción «{nombre}» eliminada." });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> AgregarProductoAjax(
         int idPromocion, int idProducto, int cantidad = 1, int? idGrupo = null)
     {
@@ -128,7 +144,31 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
         return Json(new
         {
             ok,
-            mensaje = ok ? "Grupo eliminado." : "Grupo no encontrado."
+            mensaje = ok ? "Grupo y sus productos fueron eliminados." : "Grupo no encontrado."
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RenombrarGrupoAjax(int idGrupo, string descripcion, bool esExcluyente)
+    {
+        if (string.IsNullOrWhiteSpace(descripcion))
+            return Json(new { ok = false, mensaje = "La descripción del grupo es requerida." });
+
+        var grupo = await promoRepo.RenombrarGrupoAsync(idGrupo, descripcion, esExcluyente);
+        if (grupo is null)
+            return Json(new { ok = false, mensaje = "Grupo no encontrado." });
+
+        return Json(new
+        {
+            ok = true,
+            mensaje = $"Grupo «{grupo.Descripcion}» actualizado.",
+            grupo = new
+            {
+                grupo.IdGrupo,
+                grupo.Descripcion,
+                grupo.EsExcluyente
+            }
         });
     }
 
@@ -139,16 +179,25 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
             return Json(Array.Empty<object>());
 
         var productos = await promoRepo.BuscarProductosAsync(q);
-        return Json(productos.Select(p => new
-        {
-            p.IdProducto,
-            p.NombreProducto,
-            nombreMarca = p.IdMarcaNavigation?.NombreMarca ?? "—",
-            p.Precio,
-            p.Stock,
-            tieneImagen = p.Imagen is { Length: > 0 }
-        }));
+        return Json(productos.Select(p => MapProductoListado(p)));
     }
+
+    [HttpGet]
+    public async Task<IActionResult> ListarProductos()
+    {
+        var productos = await promoRepo.ListarProductosActivosAsync();
+        return Json(productos.Select(p => MapProductoListado(p)));
+    }
+
+    private static object MapProductoListado(ProProductos p) => new
+    {
+        p.IdProducto,
+        p.NombreProducto,
+        nombreMarca = p.IdMarcaNavigation?.NombreMarca ?? "—",
+        p.Precio,
+        p.Stock,
+        tieneImagen = p.Imagen is { Length: > 0 }
+    };
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     private Dictionary<string, string> ObtenerErrores()

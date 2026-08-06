@@ -50,6 +50,24 @@ public class PromocionesRepository(BotiAppContext context) : IPromocionesReposit
         return promo.Estado;
     }
 
+    public async Task<bool> EliminarAsync(int id)
+    {
+        var promo = await context.ProPromocion
+            .Include(p => p.ProPromocionGrupo)
+            .Include(p => p.ProPromocionDetalle)
+            .FirstOrDefaultAsync(p => p.IdPromocion == id);
+        if (promo is null) return false;
+
+        if (promo.ProPromocionDetalle.Any())
+            context.ProPromocionDetalle.RemoveRange(promo.ProPromocionDetalle);
+        if (promo.ProPromocionGrupo.Any())
+            context.ProPromocionGrupo.RemoveRange(promo.ProPromocionGrupo);
+
+        context.ProPromocion.Remove(promo);
+        await context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<ProPromocionGrupo> CrearGrupoAsync(
         int idPromocion, string descripcion, bool esExcluyente = true)
     {
@@ -66,12 +84,26 @@ public class PromocionesRepository(BotiAppContext context) : IPromocionesReposit
 
     public async Task<bool> EliminarGrupoAsync(int idGrupo)
     {
-        var grupo = await context.ProPromocionGrupo.FindAsync(idGrupo);
+        var grupo = await context.ProPromocionGrupo
+            .Include(g => g.ProPromocionDetalle)
+            .FirstOrDefaultAsync(g => g.IdGrupo == idGrupo);
         if (grupo is null) return false;
-        // Los detalles quedan con IdGrupo = NULL por el ON DELETE SET NULL
+        // Al eliminar el grupo también se eliminan los productos asociados
+        if (grupo.ProPromocionDetalle.Any())
+            context.ProPromocionDetalle.RemoveRange(grupo.ProPromocionDetalle);
         context.ProPromocionGrupo.Remove(grupo);
         await context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<ProPromocionGrupo?> RenombrarGrupoAsync(int idGrupo, string descripcion, bool esExcluyente)
+    {
+        var grupo = await context.ProPromocionGrupo.FindAsync(idGrupo);
+        if (grupo is null) return null;
+        grupo.Descripcion  = descripcion.Trim();
+        grupo.EsExcluyente = esExcluyente;
+        await context.SaveChangesAsync();
+        return grupo;
     }
 
     public async Task<ProPromocionDetalle> AgregarProductoAsync(
@@ -133,6 +165,15 @@ public class PromocionesRepository(BotiAppContext context) : IPromocionesReposit
             .OrderBy(p => p.NombreProducto)
             .Take(20);
     }
+
+    public async Task<IEnumerable<ProProductos>> ListarProductosActivosAsync()
+        => await context.ProProductos
+            .AsNoTracking()
+            .Include(p => p.IdMarcaNavigation)
+            .Include(p => p.IdTipoProductoNavigation)
+            .Where(p => p.Estado)
+            .OrderBy(p => p.NombreProducto)
+            .ToListAsync();
 
     /// <summary>
     /// Normaliza un texto para búsquedas: minúsculas, sin acentos, sin separadores

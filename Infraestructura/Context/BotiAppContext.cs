@@ -40,6 +40,8 @@ public partial class BotiAppContext : DbContext
 
     public virtual DbSet<ProProductosRetornables> ProProductosRetornables { get; set; }
 
+    public virtual DbSet<ProProductoPack> ProProductoPack { get; set; }
+
     public virtual DbSet<ProPromocion> ProPromocion { get; set; }
 
     public virtual DbSet<ProPromocionDetalle> ProPromocionDetalle { get; set; }
@@ -157,6 +159,24 @@ public partial class BotiAppContext : DbContext
             entity.HasOne(d => d.IdProductoNavigation).WithOne(p => p.ProProductosRetornables)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Pro_Productos_Retornables_Pro_Productos");
+        });
+
+        modelBuilder.Entity<ProProductoPack>(entity =>
+        {
+            entity.HasKey(e => e.IdProductoPack).HasName("PK_Pro_Producto_Pack");
+
+            entity.Property(e => e.FechaCreacion)
+                .HasDefaultValueSql("(getdate())", "DF_Pro_Producto_Pack_Fecha_Creacion");
+
+            entity.Property(e => e.Estado).HasDefaultValue(true);
+
+            entity.HasOne(d => d.IdProductoPackProductoNavigation).WithMany(p => p.ProProductoPackComoPack)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Pro_Producto_Pack_Pack_Pro_Productos");
+
+            entity.HasOne(d => d.IdProductoUnidadNavigation).WithMany(p => p.ProProductoPackComoUnidad)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Pro_Producto_Pack_Unidad_Pro_Productos");
         });
 
         modelBuilder.Entity<ProPromocion>(entity =>

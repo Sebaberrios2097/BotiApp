@@ -18,6 +18,13 @@ public interface IProductosRepository
     Task<IEnumerable<ProProductosRetornables>> ObtenerRetornablesAsync();
     Task<ProProductosRetornables> AgregarRetornableAsync(ProProductosRetornables retornable);
     Task<bool> EliminarRetornableAsync(int idProducto);
+    // Pack de un producto
+    Task<ProProductoPack?> ObtenerPackPorProductoAsync(int idProducto);
+    Task<ProProductoPack> UpsertPackAsync(ProProductoPack pack);
+    Task<bool> EliminarPackPorProductoAsync(int idProducto);
+    Task<HashSet<int>> ObtenerIdsUnidadOcupadosAsync();
+    // Aplica un delta al stock de un producto manteniendo pack/unidad sincronizados.
+    Task AplicarDeltaStockAsync(int idProducto, int delta);
     // Búsqueda por nombre o código (coincidencia parcial, ignora tildes/case)
     Task<IEnumerable<ProProductos>> BuscarAsync(string filtro);
     // Verifica si ya existe un producto con un código determinado

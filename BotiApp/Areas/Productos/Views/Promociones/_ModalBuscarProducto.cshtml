@@ -7,107 +7,274 @@
 }
 <style>
     .mb-header {
-        display:flex; align-items:center; justify-content:space-between;
-        padding:1.1rem 1.5rem; border-bottom:1px solid #f0ebe5;
-        background:var(--color-secundario); border-radius:16px 16px 0 0;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1.1rem 1.5rem; border-bottom: 1px solid #f0ebe5;
+        background: var(--color-secundario); border-radius: 16px 16px 0 0;
     }
-    .mb-header-left { display:flex; align-items:center; gap:.65rem; }
-    .mb-header-left svg { width:20px; height:20px; fill:var(--color-primario); }
-    .mb-header-left h2 { font-size:1rem; font-weight:700; color:#fff; margin:0; }
+    .mb-header-left { display: flex; align-items: center; gap: .65rem; }
+    .mb-header-left svg { width: 20px; height: 20px; fill: var(--color-primario); }
+    .mb-header-left h2 { font-size: 1rem; font-weight: 700; color: #fff; margin: 0; }
     .mb-close {
-        width:32px; height:32px; border-radius:8px; border:none; cursor:pointer;
-        background:rgba(255,255,255,.08); color:rgba(255,255,255,.7);
-        display:flex; align-items:center; justify-content:center;
+        width: 32px; height: 32px; border-radius: 8px; border: none; cursor: pointer;
+        background: rgba(255, 255, 255, .08); color: rgba(255, 255, 255, .7);
+        display: flex; align-items: center; justify-content: center;
     }
-    .mb-close:hover { background:rgba(255,255,255,.15); color:#fff; }
-    .mb-close svg { width:18px; height:18px; fill:currentColor; }
+    .mb-close:hover { background: rgba(255, 255, 255, .15); color: #fff; }
+    .mb-close svg { width: 18px; height: 18px; fill: currentColor; }
 
-    .mb-body { padding:1.25rem 1.5rem; }
-
-    /* Selector de grupo */
-    .mb-grupo-row {
-        display:flex; align-items:center; gap:.6rem;
-        margin-bottom:1rem; flex-wrap:wrap;
+    /* Layout: el modal es un flex column con header / body (2 cols) / footer */
+    .mb-shell {
+        display: flex; flex-direction: column;
+        max-height: 88vh;
     }
-    .mb-grupo-row label { font-size:.82rem; font-weight:600; color:var(--color-secundario); white-space:nowrap; }
+
+    /* Layout 2 columnas dentro del body */
+    .mb-body {
+        display: grid; grid-template-columns: 320px 1fr;
+        flex: 1; min-height: 0;
+        overflow: hidden;
+    }
+    @@media (max-width: 760px) {
+        .mb-body { grid-template-columns: 1fr; }
+    }
+
+    /* ════════ Columna izquierda: grupo + seleccionados ════════ */
+    .mb-left {
+        padding: 1.15rem 1.25rem; border-right: 1px solid #f0ebe5;
+        background: #faf7f5; display: flex; flex-direction: column; gap: 1rem;
+        overflow: hidden; min-height: 0;
+    }
+    @@media (max-width: 760px) { .mb-left { border-right: none; border-bottom: 1px solid #f0ebe5; } }
+
+    .mb-block-title {
+        display: flex; align-items: center; gap: .4rem;
+        font-size: .72rem; font-weight: 800; text-transform: uppercase;
+        letter-spacing: .6px; color: #7a6050;
+    }
+    .mb-block-title svg { width: 13px; height: 13px; fill: var(--color-primario); }
+
     .mb-grupo-select {
-        flex:1; min-width:160px; padding:.45rem .75rem;
-        border:1.5px solid #e0d5cc; border-radius:8px; font-size:.85rem;
-        color:var(--color-secundario); background:#fff; outline:none; cursor:pointer;
+        width: 100%; padding: .55rem .7rem;
+        border: 1.5px solid #e0d5cc; border-radius: 8px; font-size: .85rem;
+        color: var(--color-secundario); background: #fff; outline: none; cursor: pointer;
     }
-    .mb-grupo-select:focus { border-color:var(--color-primario); }
+    .mb-grupo-select:focus { border-color: var(--color-primario); }
     .badge-excl {
-        display:inline-flex; align-items:center; padding:.2rem .55rem;
-        border-radius:20px; font-size:.72rem; font-weight:600;
+        display: inline-flex; align-items: center; padding: .2rem .55rem;
+        border-radius: 20px; font-size: .7rem; font-weight: 700;
     }
-    .badge-excl.si { background:rgba(239,68,68,.1);  color:#dc2626; }
-    .badge-excl.no { background:rgba(34,197,94,.12); color:#16a34a; }
+    .badge-excl.si { background: rgba(239, 68, 68, .1);  color: #dc2626; }
+    .badge-excl.no { background: rgba(34, 197, 94, .12); color: #16a34a; }
 
-    /* Buscador */
+    .mb-selected {
+        flex: 1; display: flex; flex-direction: column; gap: .5rem;
+        overflow-y: auto; min-height: 0;
+    }
+    .mb-sel-empty {
+        text-align: center; padding: 1.5rem .5rem; color: #b8a898;
+        font-size: .82rem; background: #fff; border: 1.5px dashed #ede5df; border-radius: 9px;
+    }
+    .mb-sel-empty svg { width: 28px; height: 28px; fill: #ddd0c4; display: block; margin: 0 auto .35rem; }
+
+    .mb-sel-item {
+        display: flex; align-items: center; gap: .55rem;
+        background: #fff; border: 1.5px solid #ede5df; border-radius: 9px;
+        padding: .5rem .65rem; transition: border-color .15s, transform .12s;
+    }
+    .mb-sel-item:hover { border-color: var(--color-primario); }
+    .mb-sel-item.just-added { animation: mbSelPulse .6s ease; }
+    @@keyframes mbSelPulse { 0% { background: #fdf6f1; transform: scale(1.02); } 100% { background: #fff; transform: scale(1); } }
+    .mb-sel-img {
+        width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0;
+        background: #f5f0eb; overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .mb-sel-img img { width: 100%; height: 100%; object-fit: cover; }
+    .mb-sel-img svg { width: 18px; height: 18px; fill: #c9b8a8; }
+    .mb-sel-info { flex: 1; min-width: 0; }
+    .mb-sel-name {
+        font-size: .8rem; font-weight: 700; color: var(--color-secundario);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mb-sel-meta { font-size: .68rem; color: #a89080; }
+    .mb-sel-cant {
+        display: inline-flex; align-items: center;
+        background: #faf7f5; border: 1.5px solid #e0d5cc; border-radius: 6px;
+        padding: 1px; flex-shrink: 0;
+    }
+    .mb-sel-cant button {
+        width: 22px; height: 22px; border: none; background: transparent;
+        color: var(--color-secundario); font-size: .95rem; font-weight: 700;
+        cursor: pointer; border-radius: 4px; line-height: 1;
+    }
+    .mb-sel-cant button:hover { background: #ede5df; }
+    .mb-sel-cant input {
+        width: 36px; height: 22px; border: none; background: transparent;
+        text-align: center; font-size: .78rem; font-weight: 700;
+        color: var(--color-secundario); outline: none; -moz-appearance: textfield;
+    }
+    .mb-sel-cant input::-webkit-outer-spin-button,
+    .mb-sel-cant input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .mb-sel-del {
+        width: 26px; height: 26px; border-radius: 6px; border: none;
+        background: rgba(239, 68, 68, .08); color: #dc2626;
+        display: inline-flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: background .12s; flex-shrink: 0;
+    }
+    .mb-sel-del:hover { background: rgba(239, 68, 68, .2); }
+    .mb-sel-del svg { width: 12px; height: 12px; fill: currentColor; }
+
+    /* ════════ Columna derecha: buscador + catálogo ════════ */
+    .mb-right {
+        padding: 1.15rem 1.35rem; display: flex; flex-direction: column; gap: .85rem;
+        overflow: hidden; min-height: 0;
+    }
     .mb-search {
-        display:flex; align-items:center; gap:.6rem;
-        background:#fff; border:1.5px solid #e8ddd4; border-radius:8px;
-        padding:.5rem .85rem; margin-bottom:1rem;
+        display: flex; align-items: center; gap: .6rem;
+        background: #fff; border: 1.5px solid #e0d5cc; border-radius: 9px;
+        padding: .5rem .85rem; transition: border-color .15s, box-shadow .15s;
     }
-    .mb-search svg   { width:18px; height:18px; fill:var(--color-primario); opacity:.7; flex-shrink:0; }
-    .mb-search input { border:none; outline:none; font-size:.9rem; width:100%; background:transparent; color:var(--color-secundario); }
-
-    .mb-results { max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:.5rem; }
-
-    .mb-prod-item {
-        display:flex; align-items:center; gap:.85rem;
-        padding:.7rem .9rem; background:#fff; border:1px solid #ede5df; border-radius:8px;
-        cursor:pointer; transition:background .15s, border-color .15s;
+    .mb-search:focus-within {
+        border-color: var(--color-primario);
+        box-shadow: 0 0 0 3px rgba(231, 111, 46, .1);
     }
-    .mb-prod-item:hover  { background:#fdf6f1; border-color:var(--color-primario); }
-    .mb-prod-item.activo { background:#fdf6f1; border-color:var(--color-primario);
-                           box-shadow:0 0 0 2px rgba(231,111,46,.15); }
-
-    .mb-prod-img { width:40px; height:40px; border-radius:6px; object-fit:cover;
-        border:1px solid #e8ddd4; background:#f5f0eb; flex-shrink:0; }
-    .mb-prod-ph  { width:40px; height:40px; border-radius:6px; background:#f5f0eb;
-        border:1px solid #e8ddd4; flex-shrink:0;
-        display:flex; align-items:center; justify-content:center; }
-    .mb-prod-ph svg { width:20px; height:20px; fill:#c9b8a8; }
-
-    .mb-prod-info  { flex:1; min-width:0; }
-    .mb-prod-nombre{ font-size:.88rem; font-weight:600; color:var(--color-secundario); }
-    .mb-prod-meta  { font-size:.75rem; color:#a89080; }
-    .mb-prod-precio{ font-size:.88rem; font-weight:700; color:var(--color-primario); white-space:nowrap; }
-
-    .mb-footer {
-        display:flex; align-items:center; gap:.75rem;
-        margin-top:1rem; padding-top:1rem; border-top:1px solid #f0ebe5; flex-wrap:wrap;
+    .mb-search svg { width: 16px; height: 16px; fill: #a89080; flex-shrink: 0; }
+    .mb-search input {
+        border: none; outline: none; font-size: .88rem; width: 100%;
+        background: transparent; color: var(--color-secundario);
     }
-    .mb-footer label { font-size:.82rem; font-weight:600; color:var(--color-secundario); }
-    .mb-cant-input {
-        width:80px; padding:.45rem .6rem; border:1.5px solid #e0d5cc;
-        border-radius:8px; font-size:.88rem; outline:none;
-    }
-    .mb-cant-input:focus { border-color:var(--color-primario); }
-    .btn-mb-agregar {
-        margin-left:auto; padding:.5rem 1.3rem; background:var(--color-primario); color:#fff;
-        border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:.88rem;
-        transition:background .15s;
-    }
-    .btn-mb-agregar:hover    { background:#cf5f22; }
-    .btn-mb-agregar:disabled { opacity:.5; cursor:not-allowed; }
+    .mb-search-meta { font-size: .75rem; color: #a89080; }
 
-    .mb-empty       { text-align:center; padding:2rem; color:#b8a898; font-size:.85rem; }
-    .mb-placeholder { text-align:center; padding:2rem; color:#c9b8a8; font-size:.85rem; }
-    .mb-spinner-sm  { display:flex; justify-content:center; padding:1.5rem; }
+    .mb-results {
+        flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: .6rem; padding: 2px; align-content: start;
+    }
+    .mb-prod-card {
+        background: #fff; border: 1.5px solid #ede5df; border-radius: 10px;
+        padding: .65rem; display: flex; flex-direction: column; gap: .45rem;
+        transition: border-color .15s, box-shadow .15s, transform .12s;
+    }
+    .mb-prod-card:hover {
+        border-color: var(--color-primario);
+        box-shadow: 0 3px 12px rgba(231, 111, 46, .12);
+    }
+    .mb-prod-card.selected {
+        border-color: var(--color-primario);
+        background: #fdf6f1;
+        box-shadow: 0 0 0 2px rgba(231, 111, 46, .2);
+    }
+    .mb-prod-card.sin-stock { opacity: .55; }
+    .mb-prod-card.sin-stock:hover {
+        border-color: #ede5df; box-shadow: none; cursor: not-allowed;
+    }
+    .mb-prod-head { display: flex; align-items: center; gap: .5rem; }
+    .mb-prod-img {
+        width: 40px; height: 40px; border-radius: 6px; flex-shrink: 0;
+        background: #f5f0eb; overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .mb-prod-img img { width: 100%; height: 100%; object-fit: cover; }
+    .mb-prod-img svg { width: 20px; height: 20px; fill: #c9b8a8; }
+    .mb-prod-info { flex: 1; min-width: 0; }
+    .mb-prod-name {
+        font-size: .82rem; font-weight: 700; color: var(--color-secundario);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mb-prod-meta { font-size: .68rem; color: #a89080; }
+    .mb-prod-precio {
+        font-size: .82rem; font-weight: 800; color: var(--color-primario);
+        white-space: nowrap;
+    }
+    .mb-prod-actions {
+        display: flex; align-items: center; gap: .4rem; justify-content: space-between;
+    }
+    .mb-prod-stock {
+        font-size: .7rem; color: #a89080; font-weight: 600;
+    }
+    .mb-prod-stock.poco { color: #d97706; }
+    .mb-prod-stock.sin  { color: #dc2626; }
+
+    .mb-add-btn {
+        display: inline-flex; align-items: center; gap: .25rem;
+        padding: .35rem .65rem; background: var(--color-primario); color: #fff;
+        border: none; border-radius: 6px; font-size: .74rem; font-weight: 700;
+        cursor: pointer; transition: background .12s, transform .12s;
+    }
+    .mb-add-btn svg { width: 12px; height: 12px; fill: currentColor; }
+    .mb-add-btn:hover:not(:disabled) { background: #cf5f22; transform: translateY(-1px); }
+    .mb-add-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* Controles de cantidad por producto (cuando está seleccionado) */
+    .mb-qty-ctrl {
+        display: inline-flex; align-items: center;
+        background: #faf7f5; border: 1.5px solid #e0d5cc; border-radius: 6px;
+        padding: 1px; gap: 1px;
+    }
+    .mb-qty-ctrl button {
+        width: 24px; height: 24px; border: none; background: transparent;
+        color: var(--color-secundario); font-size: .95rem; font-weight: 700;
+        cursor: pointer; border-radius: 4px; line-height: 1;
+    }
+    .mb-qty-ctrl button:hover { background: #ede5df; }
+    .mb-qty-ctrl input {
+        width: 38px; height: 24px; border: none; background: transparent;
+        text-align: center; font-size: .78rem; font-weight: 700;
+        color: var(--color-secundario); outline: none; -moz-appearance: textfield;
+    }
+    .mb-qty-ctrl input::-webkit-outer-spin-button,
+    .mb-qty-ctrl input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .mb-prod-card.selected .mb-add-btn { display: none; }
+    .mb-prod-card .mb-qty-ctrl { display: none; }
+    .mb-prod-card.selected .mb-qty-ctrl { display: inline-flex; }
+
+    /* Estado vacío / loading */
+    .mb-empty, .mb-placeholder {
+        grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem;
+        color: #b8a898; font-size: .85rem;
+    }
+    .mb-empty svg, .mb-placeholder svg { width: 40px; height: 40px; fill: #ddd0c4; display: block; margin: 0 auto .5rem; }
+    .mb-spinner-sm { display: flex; justify-content: center; padding: 1.5rem; grid-column: 1 / -1; }
     .spinner-sm {
-        width:28px; height:28px; border:2.5px solid #f0ebe5;
-        border-top-color:var(--color-primario); border-radius:50%;
-        animation:spin .7s linear infinite;
+        width: 28px; height: 28px; border: 2.5px solid #f0ebe5;
+        border-top-color: var(--color-primario); border-radius: 50%;
+        animation: spin .7s linear infinite;
     }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Footer */
+    .mb-footer {
+        flex-shrink: 0;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: .75rem; padding: .85rem 1.5rem; border-top: 1px solid #f0ebe5;
+        background: #faf7f5;
+    }
+    .mb-footer-info { font-size: .82rem; color: #7a6050; }
+    .mb-footer-info strong { color: var(--color-secundario); font-size: 1rem; }
+    .mb-footer-actions { display: flex; gap: .55rem; }
+    .btn-mb {
+        padding: .55rem 1.3rem; border: none; border-radius: 8px;
+        font-weight: 700; font-size: .88rem; cursor: pointer; transition: background .15s;
+    }
+    .btn-mb-cancel  { background: #f0ebe5; color: var(--color-secundario); }
+    .btn-mb-cancel:hover { background: #e8ddd4; }
+    .btn-mb-confirm {
+        background: var(--color-primario); color: #fff;
+        display: inline-flex; align-items: center; gap: .4rem;
+    }
+    .btn-mb-confirm svg { width: 14px; height: 14px; fill: currentColor; }
+    .btn-mb-confirm:hover:not(:disabled) { background: #cf5f22; }
+    .btn-mb-confirm:disabled { opacity: .45; cursor: not-allowed; }
 </style>
 
 <!-- Header -->
+<div class="mb-shell">
 <div class="mb-header">
     <div class="mb-header-left">
-        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        <h2>Agregar producto a la promoción</h2>
+        <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+        <h2>Agregar productos a la promoción</h2>
     </div>
     <button class="mb-close" onclick="cerrarModal()">
         <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
@@ -115,50 +282,83 @@
 </div>
 
 <div class="mb-body">
+    <!-- ════════ Izquierda: Grupo + Seleccionados ════════ -->
+    <div class="mb-left">
+        <div>
+            <div class="mb-block-title">
+                <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                Grupo
+            </div>
+            <select class="mb-grupo-select" id="mbGrupoSelect" onchange="actualizarBadgeGrupo()" style="margin-top:.4rem">
+                <option value="">— Sin grupo (siempre incluido) —</option>
+                @foreach (var g in grupos)
+                {
+                    <option value="@g.IdGrupo"
+                            selected="@(idGrupoPresel == g.IdGrupo ? "selected" : null)"
+                            data-excl="@g.EsExcluyente.ToString().ToLower()">
+                        @g.Descripcion
+                    </option>
+                }
+            </select>
+            <div style="margin-top:.4rem" id="mbBadgeExcl"></div>
+        </div>
 
-    <div class="mb-grupo-row">
-        <label>Asignar a grupo:</label>
-        <select class="mb-grupo-select" id="mbGrupoSelect" onchange="actualizarBadgeGrupo()">
-            <option value="">— Sin grupo (siempre incluido) —</option>
-            @foreach (var g in grupos)
-            {
-                <option value="@g.IdGrupo"
-                        selected="@(idGrupoPresel == g.IdGrupo ? "selected" : null)"
-                        data-excl="@g.EsExcluyente.ToString().ToLower()">
-                    @g.Descripcion
-                </option>
-            }
-        </select>
-        <span id="mbBadgeExcl"></span>
+        <div style="display:flex; flex-direction:column; flex:1; min-height:0;">
+            <div class="mb-block-title" style="margin-bottom:.5rem;">
+                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                Seleccionados (<span id="mbSelCount">0</span>)
+            </div>
+            <div class="mb-selected" id="mbSelected">
+                <div class="mb-sel-empty" id="mbSelEmpty">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+                    Aún no has seleccionado productos.
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="mb-search">
-        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        <input type="text" id="mbInput" placeholder="Buscar por nombre o marca…"
-               oninput="buscarProductos()" autocomplete="off" />
-    </div>
+    <!-- ════════ Derecha: Buscador + Catálogo ════════ -->
+    <div class="mb-right">
+        <div class="mb-search">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" id="mbInput" placeholder="Buscar por nombre, marca o código…"
+                   oninput="filtrarCatalogo()" autocomplete="off" />
+        </div>
+        <div class="mb-search-meta" id="mbResultsMeta">Cargando catálogo…</div>
 
-    <div class="mb-results" id="mbResultados">
-        <div class="mb-placeholder">Escribe para buscar productos activos.</div>
+        <div class="mb-results" id="mbResultados"></div>
     </div>
+</div>
 
-    <div class="mb-footer">
-        <label for="mbCant">Cantidad:</label>
-        <input class="mb-cant-input" type="number" id="mbCant" value="1" min="1" />
-        <button class="btn-mb-agregar" id="mbBtnAgregar" disabled onclick="confirmarAgregar()">
-            Agregar a promoción
+<div class="mb-footer">
+    <div class="mb-footer-info">
+        <span id="mbSelSummary">No hay productos seleccionados</span>
+    </div>
+    <div class="mb-footer-actions">
+        <button class="btn-mb btn-mb-cancel" onclick="cerrarModal()">Cancelar</button>
+        <button class="btn-mb btn-mb-confirm" id="mbBtnConfirmar" disabled onclick="confirmarAgregarTodos()">
+            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+            Agregar <span id="mbBtnCount">0</span> a la promoción
         </button>
     </div>
-
 </div>
+</div><!-- /.mb-shell -->
 
 <script>
 (function () {
     const idPromocion = @idPromocion;
-    let seleccionado  = null;
-    let debounceTimer = null;
 
-    // Muestra badge excluyente/libre según el grupo seleccionado
+    /** Catálogo completo de productos activos (se carga una vez) */
+    let catalogo = [];
+
+    /** Mapa idProducto -> { idProducto, nombreProducto, nombreMarca, precio, stock, tieneImagen, cantidad } */
+    const seleccionados = new Map();
+
+    function escMb(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── Badge de grupo (excluyente / libre) ──────────────────────────────────
     window.actualizarBadgeGrupo = function () {
         const sel   = document.getElementById('mbGrupoSelect');
         const badge = document.getElementById('mbBadgeExcl');
@@ -168,75 +368,273 @@
             ? '<span class="badge-excl si">Excluyente — elige uno</span>'
             : '<span class="badge-excl no">Libre — todos van</span>';
     };
-
-    // Ejecutar al cargar para mostrar el badge del grupo pre-seleccionado
     actualizarBadgeGrupo();
 
-    // Búsqueda con debounce
-    window.buscarProductos = function () {
-        const q = document.getElementById('mbInput').value.trim();
-        clearTimeout(debounceTimer);
-        if (q.length < 2) {
-            document.getElementById('mbResultados').innerHTML =
-                '<div class="mb-placeholder">Escribe al menos 2 caracteres.</div>';
-            seleccionado = null;
-            document.getElementById('mbBtnAgregar').disabled = true;
-            return;
-        }
-        debounceTimer = setTimeout(async () => {
-            document.getElementById('mbResultados').innerHTML =
-                '<div class="mb-spinner-sm"><div class="spinner-sm"></div></div>';
-            try {
-                const r    = await fetch(`/Productos/Promociones/BuscarProductos?q=${encodeURIComponent(q)}`);
-                const data = await r.json();
-                renderResultados(data);
-            } catch {
-                document.getElementById('mbResultados').innerHTML =
-                    '<div class="mb-empty">Error al buscar productos.</div>';
-            }
-        }, 300);
-    };
-
-    function renderResultados(productos) {
+    // ── Carga inicial del catálogo ───────────────────────────────────────────
+    async function cargarCatalogo() {
         const cont = document.getElementById('mbResultados');
-        if (!productos.length) {
-            cont.innerHTML = '<div class="mb-empty">Sin resultados.</div>';
+        cont.innerHTML = '<div class="mb-spinner-sm"><div class="spinner-sm"></div></div>';
+        try {
+            const r = await fetch('/Productos/Promociones/ListarProductos');
+            if (!r.ok) throw new Error(r.status);
+            catalogo = await r.json();
+        } catch {
+            cont.innerHTML = '<div class="mb-empty"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>Error al cargar el catálogo de productos.</div>';
             return;
         }
-        cont.innerHTML = productos.map(p => {
+        filtrarCatalogo();
+    }
+
+    // ── Filtrado en vivo por texto ───────────────────────────────────────────
+    window.filtrarCatalogo = function () {
+        const q = (document.getElementById('mbInput').value || '').toLowerCase().trim();
+        const cont = document.getElementById('mbResultados');
+        const meta = document.getElementById('mbResultsMeta');
+
+        const lista = !q
+            ? catalogo
+            : catalogo.filter(p =>
+                (p.nombreProducto || '').toLowerCase().includes(q) ||
+                (p.nombreMarca    || '').toLowerCase().includes(q)
+            );
+
+        meta.textContent = !q
+            ? `Mostrando los ${catalogo.length} productos del catálogo`
+            : `${lista.length} de ${catalogo.length} producto(s) — filtro: «${q}»`;
+
+        if (!catalogo.length) {
+            cont.innerHTML = '<div class="mb-placeholder"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>No hay productos activos en el sistema.</div>';
+            return;
+        }
+        if (!lista.length) {
+            cont.innerHTML = '<div class="mb-empty"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>Sin resultados para «' + escMb(q) + '».</div>';
+            return;
+        }
+
+        cont.innerHTML = lista.map(p => {
             const img = p.tieneImagen
-                ? `<img class="mb-prod-img" src="/Productos/Productos/Imagen/${p.idProducto}" alt="">`
-                : `<div class="mb-prod-ph"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg></div>`;
+                ? `<img src="/Productos/Productos/Imagen/${p.idProducto}" alt="" />`
+                : `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`;
+            const sinStock  = p.stock <= 0;
+            const stockPoca = p.stock > 0 && p.stock <= 3;
+            const stockCls  = sinStock ? 'sin' : (stockPoca ? 'poco' : '');
+            const isSel     = seleccionados.has(p.idProducto);
+            const cardCls   = 'mb-prod-card'
+                            + (isSel ? ' selected' : '')
+                            + (sinStock ? ' sin-stock' : '');
+            const stockTxt  = sinStock ? 'Sin stock' : `Stock: ${p.stock}`;
+
             return `
-<div class="mb-prod-item" data-id="${p.idProducto}" onclick="seleccionarProducto(${p.idProducto})">
-  ${img}
-  <div class="mb-prod-info">
-    <div class="mb-prod-nombre">${escMb(p.nombreProducto)}</div>
-    <div class="mb-prod-meta">${escMb(p.nombreMarca)} · Stock: ${p.stock}</div>
+<div class="${cardCls}" data-id="${p.idProducto}">
+  <div class="mb-prod-head">
+    <div class="mb-prod-img">${img}</div>
+    <div class="mb-prod-info">
+      <div class="mb-prod-name" title="${escMb(p.nombreProducto)}">${escMb(p.nombreProducto)}</div>
+      <div class="mb-prod-meta">${escMb(p.nombreMarca)}</div>
+    </div>
   </div>
-  <div class="mb-prod-precio">$${Number(p.precio).toLocaleString('es-CL')}</div>
+  <div class="mb-prod-actions">
+    <span class="mb-prod-precio">$${Number(p.precio).toLocaleString('es-CL')}</span>
+    <span class="mb-prod-stock ${stockCls}">${stockTxt}</span>
+    ${sinStock ? '' : `
+      <button class="mb-add-btn" onclick="agregarASeleccion(${p.idProducto})" title="Agregar a la selección">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        Agregar
+      </button>
+      <span class="mb-qty-ctrl">
+        <button onclick="cambiarCantidad(${p.idProducto}, -1)">−</button>
+        <input type="number" min="1" max="${p.stock}" value="${(seleccionados.get(p.idProducto)?.cantidad) || 1}"
+               oninput="cambiarCantidadInput(${p.idProducto}, this.value)" onclick="event.stopPropagation()" />
+        <button onclick="cambiarCantidad(${p.idProducto}, 1)">+</button>
+      </span>`}
+  </div>
 </div>`;
         }).join('');
-    }
-
-    window.seleccionarProducto = function (id) {
-        seleccionado = id;
-        document.querySelectorAll('.mb-prod-item').forEach(el =>
-            el.classList.toggle('activo', el.dataset.id == id));
-        document.getElementById('mbBtnAgregar').disabled = false;
-        document.getElementById('mbCant').focus();
     };
 
-    window.confirmarAgregar = function () {
-        if (!seleccionado) return;
-        const cantidad = parseInt(document.getElementById('mbCant').value) || 1;
-        // ← Lee el grupo seleccionado; null si es "Sin grupo"
-        const idGrupo  = document.getElementById('mbGrupoSelect').value || null;
-        ejecutarAgregarProducto(idPromocion, seleccionado, cantidad, idGrupo);
+    // ── Manejo de seleccionados ──────────────────────────────────────────────
+    window.agregarASeleccion = function (idProducto) {
+        const p = catalogo.find(x => x.idProducto === idProducto);
+        if (!p || p.stock <= 0) return;
+        if (!seleccionados.has(idProducto)) {
+            seleccionados.set(idProducto, { ...p, cantidad: 1 });
+            renderSeleccionados(idProducto);
+        }
+        // Refrescar la card para mostrar el control de cantidad
+        const card = document.querySelector(`.mb-prod-card[data-id="${idProducto}"]`);
+        if (card) {
+            card.classList.add('selected');
+            const input = card.querySelector('.mb-qty-ctrl input');
+            if (input) input.value = 1;
+        }
+        actualizarFooter();
     };
 
-    function escMb(s) {
-        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    window.cambiarCantidad = function (idProducto, delta) {
+        const sel = seleccionados.get(idProducto);
+        if (!sel) return;
+        const nuevo = Math.max(1, Math.min(sel.stock, (sel.cantidad || 1) + delta));
+        sel.cantidad = nuevo;
+        const card = document.querySelector(`.mb-prod-card[data-id="${idProducto}"] .mb-qty-ctrl input`);
+        if (card) card.value = nuevo;
+        // Reflejar en la lista lateral
+        const li = document.querySelector(`.mb-sel-item[data-id="${idProducto}"] .mb-sel-cant-input`);
+        if (li) li.value = nuevo;
+        actualizarFooter();
+    };
+
+    window.cambiarCantidadInput = function (idProducto, value) {
+        const sel = seleccionados.get(idProducto);
+        if (!sel) return;
+        let n = parseInt(value);
+        if (isNaN(n) || n < 1) n = 1;
+        if (n > sel.stock) n = sel.stock;
+        sel.cantidad = n;
+        // Sincronizar el otro input (lateral o card)
+        const card = document.querySelector(`.mb-prod-card[data-id="${idProducto}"] .mb-qty-ctrl input`);
+        if (card && card !== document.activeElement) card.value = n;
+        const li = document.querySelector(`.mb-sel-item[data-id="${idProducto}"] .mb-sel-cant-input`);
+        if (li && li !== document.activeElement) li.value = n;
+        actualizarFooter();
+    };
+
+    window.quitarDeSeleccion = function (idProducto) {
+        seleccionados.delete(idProducto);
+        const item = document.querySelector(`.mb-sel-item[data-id="${idProducto}"]`);
+        if (item) item.remove();
+        // Devolver la card al estado "agregar"
+        const card = document.querySelector(`.mb-prod-card[data-id="${idProducto}"]`);
+        if (card) {
+            card.classList.remove('selected');
+            const input = card.querySelector('.mb-qty-ctrl input');
+            if (input) input.value = 1;
+        }
+        actualizarFooter();
+    };
+
+    function renderSeleccionados(highlightId) {
+        const cont = document.getElementById('mbSelected');
+        const empty = document.getElementById('mbSelEmpty');
+        if (seleccionados.size === 0) {
+            if (empty) empty.style.display = '';
+            cont.querySelectorAll('.mb-sel-item').forEach(el => el.remove());
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+
+        const id = highlightId;
+        if (id && !cont.querySelector(`.mb-sel-item[data-id="${id}"]`)) {
+            const p = seleccionados.get(id);
+            const img = p.tieneImagen
+                ? `<img src="/Productos/Productos/Imagen/${p.idProducto}" alt="" />`
+                : `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`;
+            const html = `
+<div class="mb-sel-item just-added" data-id="${p.idProducto}">
+  <div class="mb-sel-img">${img}</div>
+  <div class="mb-sel-info">
+    <div class="mb-sel-name" title="${escMb(p.nombreProducto)}">${escMb(p.nombreProducto)}</div>
+    <div class="mb-sel-meta">${escMb(p.nombreMarca)} · $${Number(p.precio).toLocaleString('es-CL')}</div>
+  </div>
+  <span class="mb-sel-cant">
+    <button onclick="cambiarCantidad(${p.idProducto}, -1)">−</button>
+    <input type="number" class="mb-sel-cant-input" min="1" max="${p.stock}" value="${p.cantidad}"
+           oninput="cambiarCantidadInput(${p.idProducto}, this.value)" onclick="event.stopPropagation()" />
+    <button onclick="cambiarCantidad(${p.idProducto}, 1)">+</button>
+  </span>
+  <button class="mb-sel-del" title="Quitar de la selección" onclick="quitarDeSeleccion(${p.idProducto})">
+    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+  </button>
+</div>`;
+            cont.insertAdjacentHTML('beforeend', html);
+            // Quitar la clase de animación después
+            setTimeout(() => {
+                cont.querySelector(`.mb-sel-item[data-id="${id}"]`)?.classList.remove('just-added');
+            }, 700);
+        }
     }
+
+    function actualizarFooter() {
+        const n = seleccionados.size;
+        document.getElementById('mbSelCount').textContent = n;
+        document.getElementById('mbBtnCount').textContent  = n;
+        const btnConfirm = document.getElementById('mbBtnConfirmar');
+        if (btnConfirm) btnConfirm.disabled = n === 0;
+
+        const summary = document.getElementById('mbSelSummary');
+        if (n === 0) {
+            summary.textContent = 'No hay productos seleccionados';
+        } else if (n === 1) {
+            const [p] = seleccionados.values();
+            summary.innerHTML = `1 producto · <strong>${p.cantidad}</strong> unidad(es)`;
+        } else {
+            let totalUnidades = 0;
+            seleccionados.forEach(p => totalUnidades += p.cantidad);
+            summary.innerHTML = `${n} productos · <strong>${totalUnidades}</strong> unidades en total`;
+        }
+    }
+
+    // ── Confirmar: agrega todos los productos seleccionados uno a uno ─────────
+    window.confirmarAgregarTodos = async function () {
+        if (seleccionados.size === 0) return;
+        const idGrupo = document.getElementById('mbGrupoSelect').value || null;
+        const btn = document.getElementById('mbBtnConfirmar');
+        const oldHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-sm" style="width:14px;height:14px;border-width:2px"></span> Agregando…';
+
+        const items = Array.from(seleccionados.values());
+        let okCount = 0;
+        let lastError = null;
+        for (const p of items) {
+            try {
+                const fd = new FormData();
+                fd.append('idPromocion', idPromocion);
+                fd.append('idProducto',  p.idProducto);
+                fd.append('cantidad',    p.cantidad);
+                if (idGrupo) fd.append('idGrupo', idGrupo);
+                const r = await fetch('/Productos/Promociones/AgregarProductoAjax', {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': document.querySelector('[name=__RequestVerificationToken]')?.value ?? '' },
+                    body: fd
+                });
+                const data = await r.json();
+                if (data.ok) {
+                    okCount++;
+                    if (typeof window.agregarFilaProducto === 'function') {
+                        window.agregarFilaProducto(idPromocion, data.detalle);
+                    }
+                } else {
+                    lastError = data.mensaje;
+                }
+            } catch (e) {
+                lastError = 'Error de red';
+            }
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+
+        if (okCount === items.length) {
+            cerrarModal();
+            if (typeof window.toast === 'function') {
+                window.toast(items.length === 1
+                    ? 'Producto agregado a la promoción.'
+                    : `${items.length} productos agregados a la promoción.`, 'exito');
+            }
+        } else if (okCount > 0) {
+            cerrarModal();
+            if (typeof window.toast === 'function') {
+                window.toast(`Se agregaron ${okCount} de ${items.length}. ${lastError ?? ''}`, 'error');
+            }
+        } else {
+            if (typeof window.toast === 'function') {
+                window.toast(lastError ?? 'No se pudo agregar ningún producto.', 'error');
+            }
+        }
+    };
+
+    // Init
+    cargarCatalogo();
+    actualizarFooter();
 })();
 </script>

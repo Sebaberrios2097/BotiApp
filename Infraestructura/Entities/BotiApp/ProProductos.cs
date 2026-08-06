@@ -60,6 +60,12 @@ public partial class ProProductos
     [InverseProperty("IdProductoNavigation")]
     public virtual ProProductosRetornables? ProProductosRetornables { get; set; }
 
+    [InverseProperty("IdProductoPackProductoNavigation")]
+    public virtual ICollection<ProProductoPack> ProProductoPackComoPack { get; set; } = new List<ProProductoPack>();
+
+    [InverseProperty("IdProductoUnidadNavigation")]
+    public virtual ICollection<ProProductoPack> ProProductoPackComoUnidad { get; set; } = new List<ProProductoPack>();
+
     [InverseProperty("IdProductoNavigation")]
     public virtual ICollection<ProPromocionDetalle> ProPromocionDetalle { get; set; } = new List<ProPromocionDetalle>();
 

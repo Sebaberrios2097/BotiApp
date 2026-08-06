@@ -5,8 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infraestructura.Repositories.BotiApp;
 
-public class VentasRepository(BotiAppContext context) : IVentasRepository
+public class VentasRepository(BotiAppContext context, IProductosRepository productosRepository) : IVentasRepository
 {
+    // ── Stock pack-aware ──────────────────────────────────────────────────────
+    // La lógica de stock pack-aware vive en ProductosRepository.AplicarDeltaStockAsync.
+
+
     // ── Boletas ───────────────────────────────────────────────────────────────
 
     private IQueryable<VenBoletas> BoletasConIncludes()
@@ -97,9 +101,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
 
             if (item.IdProducto != 0 && item.PrecioNormal > 0)
             {
-                var producto = await context.ProProductos.FindAsync(item.IdProducto);
-                if (producto is not null)
-                    producto.Stock -= item.Cantidad;
+                await productosRepository.AplicarDeltaStockAsync(item.IdProducto, -item.Cantidad);
             }
         }
 
@@ -125,8 +127,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         {
             if (old.IdProducto != 0 && old.PrecioNormal > 0)
             {
-                var prod = await context.ProProductos.FindAsync(old.IdProducto);
-                if (prod != null) prod.Stock += old.Cantidad;
+                await productosRepository.AplicarDeltaStockAsync(old.IdProducto, +old.Cantidad);
             }
         }
 
@@ -141,8 +142,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
             context.VenBoletaDetalle.Add(item);
             if (item.IdProducto != 0 && item.PrecioNormal > 0)
             {
-                var prod = await context.ProProductos.FindAsync(item.IdProducto);
-                if (prod != null) prod.Stock -= item.Cantidad;
+                await productosRepository.AplicarDeltaStockAsync(item.IdProducto, -item.Cantidad);
             }
         }
 
@@ -217,8 +217,7 @@ public class VentasRepository(BotiAppContext context) : IVentasRepository
         {
             if (d.IdProducto != 0 && d.PrecioNormal > 0)
             {
-                var prod = await context.ProProductos.FindAsync(d.IdProducto);
-                if (prod != null) prod.Stock += d.Cantidad;
+                await productosRepository.AplicarDeltaStockAsync(d.IdProducto, +d.Cantidad);
             }
         }
 

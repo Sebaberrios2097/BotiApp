@@ -52,7 +52,7 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
 
     public async Task<ProProductos?> ObtenerPorIdAsync(int id)
         => await context.ProProductos
-            .AsNoTracking()  // 👈 evita el tracking
+            .AsNoTracking()
             .Include(p => p.IdMarcaNavigation)
             .Include(p => p.IdTipoProductoNavigation)
             .FirstOrDefaultAsync(p => p.IdProducto == id);
@@ -218,6 +218,117 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
         context.ProProductosRetornables.Remove(r);
         await context.SaveChangesAsync();
         return true;
+    }
+
+    // ── Packs ────────────────────────────────────────────────────────────────
+    public async Task<ProProductoPack?> ObtenerPackPorProductoAsync(int idProducto)
+        => await context.ProProductoPack
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.IdProductoPackProducto == idProducto);
+
+    public async Task<ProProductoPack> UpsertPackAsync(ProProductoPack pack)
+    {
+        var existente = await context.ProProductoPack
+            .FirstOrDefaultAsync(p => p.IdProductoPackProducto == pack.IdProductoPackProducto);
+        if (existente is null)
+        {
+            pack.FechaCreacion = DateTime.Now;
+            pack.Estado = true;
+            context.ProProductoPack.Add(pack);
+        }
+        else
+        {
+            existente.IdProductoUnidad = pack.IdProductoUnidad;
+            existente.CantidadUnidades = pack.CantidadUnidades;
+            existente.Estado = pack.Estado;
+            context.ProProductoPack.Update(existente);
+            pack = existente;
+        }
+
+        // Sincronizar stock del producto pack con la unidad base.
+        // El stock del pack SIEMPRE equivale a floor(stock_unidad / cantidad).
+        if (pack.CantidadUnidades > 0)
+        {
+            var unidad = await context.ProProductos.FindAsync(pack.IdProductoUnidad);
+            var packProd = await context.ProProductos.FindAsync(pack.IdProductoPackProducto);
+            if (unidad is not null && packProd is not null)
+                packProd.Stock = unidad.Stock / pack.CantidadUnidades;
+        }
+
+        await context.SaveChangesAsync();
+        return pack;
+    }
+
+    public async Task<bool> EliminarPackPorProductoAsync(int idProducto)
+    {
+        var p = await context.ProProductoPack
+            .FirstOrDefaultAsync(x => x.IdProductoPackProducto == idProducto);
+        if (p is null) return false;
+        context.ProProductoPack.Remove(p);
+        await context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<HashSet<int>> ObtenerIdsUnidadOcupadosAsync()
+    {
+        var ids = await context.ProProductoPack
+            .AsNoTracking()
+            .Select(p => p.IdProductoUnidad)
+            .ToListAsync();
+        return ids.ToHashSet();
+    }
+
+    /// <summary>
+    /// Aplica un delta al stock de un producto y mantiene sincronizado el stock del pack
+    /// asociado (tanto si el producto es pack como si es unidad de un pack).
+    ///
+    /// Reglas:
+    ///   • Si el producto es un PACK: descuenta/suma `delta` al pack, y propaga
+    ///     `delta * CantidadUnidades` a la unidad base. Ambos stocks quedan persistidos.
+    ///   • Si el producto es la UNIDAD de un pack: aplica el delta a la unidad y
+    ///     recalcula el stock del pack como `floor(StockUnidad / CantidadUnidades)`,
+    ///     aplicando el delta resultante al pack.
+    ///   • Si no es ni pack ni unidad de pack: solo aplica el delta al producto.
+    ///
+    /// `delta` positivo = entrada de stock; negativo = salida.
+    /// </summary>
+    public async Task AplicarDeltaStockAsync(int idProducto, int delta)
+    {
+        if (delta == 0) return;
+        var prod = await context.ProProductos.FindAsync(idProducto);
+        if (prod is null) throw new InvalidOperationException($"Producto {idProducto} no encontrado.");
+
+        var packComoPack = await context.ProProductoPack
+            .FirstOrDefaultAsync(pk => pk.IdProductoPackProducto == idProducto);
+        var packComoUnidad = await context.ProProductoPack
+            .FirstOrDefaultAsync(pk => pk.IdProductoUnidad == idProducto);
+
+        // Caso 1: el producto ES un pack
+        if (packComoPack is not null)
+        {
+            prod.Stock += delta;
+            var unidad = await context.ProProductos.FindAsync(packComoPack.IdProductoUnidad)
+                ?? throw new InvalidOperationException($"Unidad base del pack {idProducto} no encontrada.");
+            unidad.Stock += delta * packComoPack.CantidadUnidades;
+            return;
+        }
+
+        // Caso 2: el producto es la UNIDAD de un pack
+        if (packComoUnidad is not null)
+        {
+            prod.Stock += delta;
+            var packProd = await context.ProProductos.FindAsync(packComoUnidad.IdProductoPackProducto)
+                ?? throw new InvalidOperationException($"Producto pack {packComoUnidad.IdProductoPackProducto} no encontrado.");
+            var stockPackNuevo = packComoUnidad.CantidadUnidades > 0
+                ? prod.Stock / packComoUnidad.CantidadUnidades
+                : 0;
+            var deltaPack = stockPackNuevo - packProd.Stock;
+            if (deltaPack != 0) packProd.Stock += deltaPack;
+            return;
+        }
+
+        // Caso 3: producto independiente
+        prod.Stock += delta;
     }
 
     public async Task<IEnumerable<ProProductos>> BuscarAsync(string filtro)

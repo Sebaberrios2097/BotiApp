@@ -34,6 +34,7 @@ public class ProductosController(
         await CargarSelectListsAsync();
         ViewBag.UltimosProductos = await productosRepository.ObtenerUltimosIngresadosAsync(5);
         ViewBag.CodigoInicial = codigo;
+        ViewBag.ProductosUnidadDisponibles = await ObtenerProductosUnidadDisponiblesAsync(excluirId: 0);
         return PartialView("_ModalCrear", new ProProductos { Estado = true, FechaIngreso = DateTime.Now });
     }
 
@@ -45,6 +46,9 @@ public class ProductosController(
 
         await CargarSelectListsAsync(producto.IdMarca, producto.IdTipoProducto);
         ViewBag.Auditoria = await productosRepository.ObtenerAuditoriaAsync(id);
+        var packActual = await productosRepository.ObtenerPackPorProductoAsync(id);
+        ViewBag.PackActual = packActual;
+        ViewBag.ProductosUnidadDisponibles = await ObtenerProductosUnidadDisponiblesAsync(excluirId: id, incluirAdicionalId: packActual?.IdProductoUnidad);
         return PartialView("_ModalEditar", producto);
     }
 
@@ -62,7 +66,8 @@ public class ProductosController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CrearAjax(ProProductos producto, IFormFile? imagenFile)
+    public async Task<IActionResult> CrearAjax(ProProductos producto, IFormFile? imagenFile,
+        bool esPack = false, int idProductoUnidad = 0, int cantidadUnidades = 0)
     {
         ModelState.Remove(nameof(producto.Imagen));
         ModelState.Remove(nameof(producto.IdMarcaNavigation));
@@ -70,6 +75,12 @@ public class ProductosController(
 
         if (!ModelState.IsValid)
             return Json(new { ok = false, errores = ObtenerErrores() });
+
+        if (esPack)
+        {
+            if (idProductoUnidad <= 0 || cantidadUnidades <= 1)
+                return Json(new { ok = false, mensaje = "Para definir un pack debe seleccionar una unidad y una cantidad mayor a 1." });
+        }
 
         if (imagenFile is { Length: > 0 })
         {
@@ -81,6 +92,16 @@ public class ProductosController(
         var creado = await productosRepository.CrearAsync(producto);
         var completo = await productosRepository.ObtenerPorIdAsync(creado.IdProducto);
 
+        if (esPack)
+        {
+            await productosRepository.UpsertPackAsync(new ProProductoPack
+            {
+                IdProductoPackProducto = creado.IdProducto,
+                IdProductoUnidad = idProductoUnidad,
+                CantidadUnidades = cantidadUnidades
+            });
+        }
+
         return Json(new
         {
             ok = true,
@@ -91,7 +112,8 @@ public class ProductosController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditarAjax(int id, ProProductos producto, IFormFile? imagenFile)
+    public async Task<IActionResult> EditarAjax(int id, ProProductos producto, IFormFile? imagenFile,
+        bool esPack = false, int idProductoUnidad = 0, int cantidadUnidades = 0)
     {
         if (id != producto.IdProducto) return BadRequest();
 
@@ -103,6 +125,15 @@ public class ProductosController(
             return Json(new { ok = false, errores = ObtenerErrores() });
 
         var existente = await productosRepository.ObtenerPorIdAsync(id);
+        var packPrevio = await productosRepository.ObtenerPackPorProductoAsync(id);
+
+        if (esPack)
+        {
+            if (idProductoUnidad <= 0 || cantidadUnidades <= 1)
+                return Json(new { ok = false, mensaje = "Para definir un pack debe seleccionar una unidad y una cantidad mayor a 1." });
+            if (idProductoUnidad == id)
+                return Json(new { ok = false, mensaje = "Un producto no puede ser pack de sí mismo." });
+        }
 
         if (imagenFile is { Length: > 0 })
         {
@@ -119,6 +150,21 @@ public class ProductosController(
             producto.FechaIngreso = existente.FechaIngreso;
 
         await productosRepository.ActualizarAsync(producto);
+
+        if (esPack)
+        {
+            await productosRepository.UpsertPackAsync(new ProProductoPack
+            {
+                IdProductoPackProducto = id,
+                IdProductoUnidad = idProductoUnidad,
+                CantidadUnidades = cantidadUnidades
+            });
+        }
+        else if (packPrevio is not null)
+        {
+            await productosRepository.EliminarPackPorProductoAsync(id);
+        }
+
         var completo = await productosRepository.ObtenerPorIdAsync(id);
 
         return Json(new
@@ -338,6 +384,31 @@ public class ProductosController(
         var tipos = await productosRepository.ObtenerTiposProductosAsync();
         ViewBag.Marcas = new SelectList(marcas, "IdMarca", "NombreMarca", idMarca);
         ViewBag.Tipos = new SelectList(tipos, "IdTipoProducto", "NombreTipoProducto", idTipo);
+    }
+
+    /// <summary>
+    /// Devuelve los productos que pueden ser elegidos como "unidad base" de un pack:
+    /// activos, distintos de IdProducto (para evitar autoreferencia), y que NO estén
+    /// ya asignados como unidad de otro pack (constraint UNIQUE en BD).
+    /// Si <paramref name="incluirAdicionalId"/> viene (caso edición), fuerza a que ese
+    /// producto aparezca aunque esté inactivo o sea la unidad actualmente seleccionada.
+    /// </summary>
+    private async Task<List<ProProductos>> ObtenerProductosUnidadDisponiblesAsync(int excluirId, int? incluirAdicionalId = null)
+    {
+        var productos = await productosRepository.ObtenerTodosAsync();
+        var idsUnidadOcupados = await productosRepository.ObtenerIdsUnidadOcupadosAsync();
+        var lista = productos
+            .Where(p => p.IdProducto != 0
+                        && p.IdProducto != excluirId
+                        && p.Estado
+                        && !idsUnidadOcupados.Contains(p.IdProducto))
+            .ToList();
+        if (incluirAdicionalId is int idExtra && idExtra > 0 && idExtra != excluirId && !lista.Any(p => p.IdProducto == idExtra))
+        {
+            var extra = productos.FirstOrDefault(p => p.IdProducto == idExtra);
+            if (extra is not null) lista.Add(extra);
+        }
+        return lista.OrderBy(p => p.NombreProducto).ToList();
     }
 
     private Dictionary<string, string> ObtenerErrores()

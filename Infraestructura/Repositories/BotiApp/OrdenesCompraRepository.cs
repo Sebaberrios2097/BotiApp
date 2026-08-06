@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infraestructura.Repositories.BotiApp;
 
-public class OrdenesCompraRepository(BotiAppContext context) : IOrdenesCompraRepository
+public class OrdenesCompraRepository(BotiAppContext context, IProductosRepository productosRepository) : IOrdenesCompraRepository
 {
     private IQueryable<ComOrdenCompra> OrdenesConIncludes()
         => context.ComOrdenCompra
@@ -82,7 +82,7 @@ public class OrdenesCompraRepository(BotiAppContext context) : IOrdenesCompraRep
             {
                 var producto = detalle.IdProveedorProductoNavigation?.IdProductoNavigation;
                 if (producto is not null)
-                    producto.Stock += detalle.Cantidad;
+                    await productosRepository.AplicarDeltaStockAsync(producto.IdProducto, detalle.Cantidad);
             }
         }
         await context.SaveChangesAsync();

@@ -86,6 +86,92 @@
     .form-control:focus { border-color:var(--color-primario); box-shadow:0 0 0 3px rgba(231,111,46,.13); background:#fff; }
     .form-control.input-error { border-color:#dc2626; }
     .field-error { font-size:.76rem; color:#dc2626; }
+    .form-hint { font-size:.74rem; color:#a89080; }
+    .pack-preview-box { padding:.55rem .8rem; border:1.5px solid #e0d5cc; border-radius:8px; background:#fff; font-weight:700; color:var(--color-primario); font-size:1.05rem; min-height:42px; display:flex; align-items:center; }
+    .input-readonly { background:#f0ebe5 !important; color:#a89080 !important; cursor:not-allowed; }
+
+    /* Stock + toggle "es pack" en la misma celda */
+    .stock-with-pack { display:flex; align-items:center; gap:.6rem; }
+    .stock-with-pack .form-control { flex:1; }
+    .pack-toggle-label { display:inline-flex; align-items:center; gap:.45rem; cursor:pointer; padding:.35rem .55rem; border-radius:8px; transition:background .15s; user-select:none; flex-shrink:0; }
+    .pack-toggle-label:hover { background:rgba(231,111,46,.06); }
+    .pack-toggle-text { font-size:.78rem; font-weight:600; color:var(--color-secundario); text-transform:uppercase; letter-spacing:.4px; }
+    .pack-inline-toggle { flex-shrink:0; }
+    .pack-inline-toggle .toggle-sl:before { width:15px; height:15px; left:2px; top:2px; }
+    .pack-inline-toggle input:checked + .toggle-sl:before { transform:translateX(16px); }
+    .pack-inline-toggle .toggle-sl { width:36px; height:20px; }
+
+    /* Selector de unidad (clickable display) */
+    .pack-unidad-display {
+        display:flex; align-items:center; gap:.65rem; cursor:pointer;
+        padding:.6rem .85rem; border:1.5px solid #e0d5cc; border-radius:8px;
+        background:#faf7f5; min-height:54px;
+        transition:border-color .15s, box-shadow .15s, background .15s;
+    }
+    .pack-unidad-display:hover { border-color:var(--color-primario); background:#fff; box-shadow:0 2px 8px rgba(231,111,46,.08); }
+    .pack-unidad-display:focus { outline:none; border-color:var(--color-primario); box-shadow:0 0 0 3px rgba(231,111,46,.13); }
+    .pack-unidad-display.has-value { background:#fff; border-color:var(--color-primario); }
+    .pack-unidad-empty { color:#a89080; font-size:.88rem; font-style:italic; }
+    .pack-unidad-thumb { width:40px; height:40px; border-radius:7px; object-fit:cover; background:#f0ebe5; flex-shrink:0; }
+    .pack-unidad-info { flex:1; min-width:0; }
+    .pack-unidad-nombre { font-size:.9rem; font-weight:600; color:var(--color-secundario); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pack-unidad-meta { font-size:.74rem; color:#a89080; margin-top:.15rem; }
+    .pack-unidad-clear { background:transparent; border:none; color:#a89080; cursor:pointer; padding:6px; border-radius:6px; display:flex; flex-shrink:0; }
+    .pack-unidad-clear:hover { background:#f0ebe5; color:#dc2626; }
+    .pack-unidad-clear svg { width:16px; height:16px; fill:currentColor; }
+
+    /* Fila horizontal: display a la izquierda, cantidad a la derecha */
+    .pack-unidad-row { display:flex; align-items:stretch; gap:.55rem; }
+    .pack-unidad-row .pack-unidad-display { flex:1; min-width:0; }
+    .pack-cantidad-wrap {
+        display:flex; align-items:center; gap:.4rem;
+        padding:0 .6rem; background:#faf7f5; border:1.5px solid #e0d5cc; border-radius:8px;
+        flex-shrink:0; transition:border-color .15s;
+    }
+    .pack-cantidad-wrap:focus-within { border-color:var(--color-primario); background:#fff; }
+    .pack-cantidad-label { font-size:.72rem; font-weight:700; color:var(--color-secundario); white-space:nowrap; text-transform:uppercase; letter-spacing:.3px; }
+    .pack-cantidad-wrap .form-control {
+        width:64px; padding:.45rem .35rem; border:1.5px solid transparent;
+        background:transparent; text-align:center; font-weight:700; color:var(--color-secundario);
+        -moz-appearance:textfield;
+    }
+    .pack-cantidad-wrap .form-control::-webkit-outer-spin-button,
+    .pack-cantidad-wrap .form-control::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+    .pack-cantidad-wrap .form-control:focus { border-color:transparent; box-shadow:none; background:transparent; }
+
+    /* Vista de selección de unidad (reemplaza el form) */
+    .mc-unidad-view { display:flex; flex-direction:column; min-height:70vh; }
+    .mc-unidad-header { display:flex; align-items:center; gap:.85rem; padding:1rem 1.5rem; border-bottom:1.5px solid #f0ebe5; }
+    .btn-back-unidad { display:inline-flex; align-items:center; gap:.35rem; background:transparent; border:none; color:var(--color-primario); font-size:.86rem; font-weight:600; cursor:pointer; padding:.4rem .6rem; border-radius:7px; }
+    .btn-back-unidad:hover { background:rgba(231,111,46,.08); }
+    .btn-back-unidad svg { width:18px; height:18px; fill:currentColor; }
+    .mc-unidad-title { font-size:1rem; font-weight:700; color:var(--color-secundario); }
+    .mc-unidad-search { padding:.85rem 1.5rem; border-bottom:1.5px solid #f0ebe5; display:flex; align-items:center; gap:.5rem; background:#faf7f5; }
+    .mc-unidad-search svg { width:18px; height:18px; fill:var(--color-primario); opacity:.7; flex-shrink:0; }
+    .mc-unidad-search input { flex:1; border:none; outline:none; font-size:.92rem; padding:.55rem .75rem; border-radius:8px; border:1.5px solid #e0d5cc; background:#fff; color:var(--color-secundario); }
+    .mc-unidad-search input:focus { border-color:var(--color-primario); }
+    .mc-unidad-body { flex:1; overflow-y:auto; padding:1.25rem 1.5rem; }
+
+    /* Empty state reutilizado */
+    .pk-empty { text-align:center; padding:3rem 1rem; color:#a89080; grid-column:1/-1; }
+    .pk-empty svg { width:44px; height:44px; fill:#ddd0c4; margin:0 auto .5rem; display:block; }
+    .pk-empty p { font-size:.88rem; }
+
+    /* Cards de selección (reusables) */
+    .pkm-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(148px,1fr)); gap:.75rem; }
+    .pk-sel-card { border:2px solid #e8ddd4; border-radius:12px; background:#faf8f6; cursor:pointer; transition:border-color .15s,box-shadow .15s,background .15s; overflow:hidden; position:relative; user-select:none; }
+    .pk-sel-card:hover { border-color:var(--color-primario); box-shadow:0 2px 10px rgba(231,111,46,.12); }
+    .pk-sel-card.selected { border-color:var(--color-primario); background:rgba(231,111,46,.04); box-shadow:0 3px 12px rgba(231,111,46,.18); }
+    .pk-sel-card .pksc-check { position:absolute; top:.4rem; right:.4rem; width:22px; height:22px; border-radius:50%; background:#e8ddd4; border:2px solid #e8ddd4; display:flex; align-items:center; justify-content:center; transition:background .15s,border-color .15s; }
+    .pk-sel-card.selected .pksc-check { background:var(--color-primario); border-color:var(--color-primario); }
+    .pk-sel-card .pksc-check svg { width:13px; height:13px; fill:#fff; opacity:0; transition:opacity .15s; }
+    .pk-sel-card.selected .pksc-check svg { opacity:1; }
+    .pk-sel-card .pksc-img-wrap { width:100%; aspect-ratio:1; background:#f0ebe5; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .pk-sel-card .pksc-img-wrap img { width:100%; height:100%; object-fit:cover; }
+    .pk-sel-card .pksc-img-wrap svg { width:40px; height:40px; fill:#c9b8a8; }
+    .pk-sel-card .pksc-body { padding:.5rem .6rem; }
+    .pk-sel-card .pksc-nombre { font-size:.78rem; font-weight:700; color:var(--color-secundario); line-height:1.3; margin-bottom:.2rem; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+    .pk-sel-card .pksc-marca { font-size:.7rem; color:#a89080; }
 
     .img-drop {
         border:2px dashed #e0d5cc; border-radius:10px; padding:1rem;
@@ -377,8 +463,32 @@
 
                 <div class="form-group">
                     <label class="form-label" asp-for="Stock">Stock <span class="req">*</span></label>
-                    <input asp-for="Stock" type="number" min="0" class="form-control" placeholder="0" />
+                    <div class="stock-with-pack">
+                        <input asp-for="Stock" type="number" min="0" class="form-control" placeholder="0" id="crearStockInput" />
+                        <label class="pack-toggle-label" title="Marcar este producto como pack">
+                            <span class="pack-toggle-text">Es pack</span>
+                            <span class="toggle-sw pack-inline-toggle">
+                                <input type="checkbox" id="crearEsPack" name="EsPack" value="true" onchange="togglePackCrear()" />
+                                <span class="toggle-sl"></span>
+                            </span>
+                        </label>
+                    </div>
                     <span asp-validation-for="Stock" class="field-error"></span>
+                </div>
+
+                <div class="form-group full pack-section" id="crearPackFields" style="display:none">
+                    <label class="form-label">Unidad base del pack <span class="req">*</span></label>
+                    <div class="pack-unidad-row">
+                        <input type="hidden" id="crearIdProductoUnidad" name="IdProductoUnidad" value="" />
+                        <div class="pack-unidad-display" id="crearPackUnidadDisplay" role="button" tabindex="0"
+                             onclick="abrirSelectorUnidadCrear()" onkeydown="if(event.key==='Enter'||event.key===' ')abrirSelectorUnidadCrear()">
+                            <span class="pack-unidad-empty">Click aquí para seleccionar el producto unidad…</span>
+                        </div>
+                        <div class="pack-cantidad-wrap">
+                            <label class="pack-cantidad-label">Cant. unidades <span class="req">*</span></label>
+                            <input type="number" id="crearCantidadUnidades" name="CantidadUnidades" min="2" step="1" value="6" class="form-control" oninput="actualizarPackPreviewCrear()" title="Típico: 6 (SixPack). Mínimo 2." />
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-group full">
@@ -450,6 +560,24 @@
             }
         </div>
     </aside>
+</div>
+
+<!-- Vista de selección de unidad (transición interna) -->
+<div id="crearUnidadSelectorView" class="mc-unidad-view" style="display:none">
+    <div class="mc-unidad-header">
+        <button type="button" class="btn-back-unidad" onclick="cerrarVistaUnidadCrear()">
+            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            Volver al formulario
+        </button>
+        <span class="mc-unidad-title">Selecciona el producto unidad</span>
+    </div>
+    <div class="mc-unidad-search">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" id="crearUnidadBuscador" placeholder="Buscar por nombre o marca…" oninput="filtrarUnidadCrear()" autocomplete="off" />
+    </div>
+    <div class="mc-unidad-body">
+        <div class="pkm-grid" id="crearUnidadGrid"></div>
+    </div>
 </div>
 
 <!-- Footer -->
@@ -767,4 +895,156 @@ function prevImg(input, previewId) {
         if (hint) hint.textContent = 'Toca para tomar una foto (JPG, PNG)';
     }
 })();
+
+/* ── Pack: lógica del toggle, bloqueo de Stock y selección de unidad ── */
+function togglePackCrear() {
+    const chk = document.getElementById('crearEsPack');
+    const stockInput = document.getElementById('crearStockInput');
+    const packFields = document.getElementById('crearPackFields');
+    if (packFields) packFields.style.display = chk.checked ? '' : 'none';
+    if (stockInput) {
+        if (chk.checked) {
+            stockInput.readOnly = true;
+            stockInput.classList.add('input-readonly');
+            actualizarStockPackCrear();
+        } else {
+            stockInput.readOnly = false;
+            stockInput.classList.remove('input-readonly');
+        }
+    }
+}
+
+function actualizarStockPackCrear() {
+    const stockInput = document.getElementById('crearStockInput');
+    if (!stockInput) return;
+    if (PK_UNIDAD_SELECCIONADA_ID_CREAR && PK_UNIDAD_SELECCIONADA_STOCK_CREAR > 0) {
+        const cant = parseInt(document.getElementById('crearCantidadUnidades')?.value) || 0;
+        if (cant > 0) stockInput.value = Math.floor(PK_UNIDAD_SELECCIONADA_STOCK_CREAR / cant);
+    } else {
+        stockInput.value = 0;
+    }
+}
+
+function actualizarPackPreviewCrear() {
+    const chk = document.getElementById('crearEsPack');
+    if (chk?.checked) actualizarStockPackCrear();
+}
+
+/* Datos serializados desde el servidor (productos disponibles como unidad) */
+const PK_UNIDADES_DATA_CREAR = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    (ViewBag.ProductosUnidadDisponibles as List<Infraestructura.Entities.BotiApp.ProProductos>
+     ?? new List<Infraestructura.Entities.BotiApp.ProProductos>())
+    .Select(p => new {
+        id          = p.IdProducto,
+        nombre      = p.NombreProducto,
+        marca       = p.IdMarcaNavigation != null ? p.IdMarcaNavigation.NombreMarca : "—",
+        precio      = p.Precio,
+        stock       = p.Stock,
+        tieneImagen = p.Imagen != null && p.Imagen.Length > 0
+    })
+).Replace("</", "<\\/"));
+let PK_UNIDAD_SELECCIONADA_ID_CREAR = null;
+let PK_UNIDAD_SELECCIONADA_NOMBRE_CREAR = '';
+let PK_UNIDAD_SELECCIONADA_STOCK_CREAR = 0;
+
+function setUnidadSeleccionadaCrear(p) {
+    PK_UNIDAD_SELECCIONADA_ID_CREAR = p.id;
+    PK_UNIDAD_SELECCIONADA_NOMBRE_CREAR = p.nombre;
+    PK_UNIDAD_SELECCIONADA_STOCK_CREAR = p.stock;
+    document.getElementById('crearIdProductoUnidad').value = p.id;
+    const display = document.getElementById('crearPackUnidadDisplay');
+    display.innerHTML = `
+        <img class="pack-unidad-thumb" src="/Productos/Productos/Imagen/${p.id}" onerror="this.style.display='none'" alt="" />
+        <div class="pack-unidad-info">
+            <div class="pack-unidad-nombre">${esc(p.nombre)}</div>
+            <div class="pack-unidad-meta">${esc(p.marca)} · Stock: <strong>${p.stock}</strong></div>
+        </div>
+        <button type="button" class="pack-unidad-clear" onclick="event.stopPropagation(); limpiarUnidadCrear()" title="Quitar">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>`;
+    display.classList.add('has-value');
+    const chk = document.getElementById('crearEsPack');
+    if (chk?.checked) actualizarStockPackCrear();
+    actualizarPackPreviewCrear();
+    cerrarVistaUnidadCrear();
+}
+
+function limpiarUnidadCrear() {
+    PK_UNIDAD_SELECCIONADA_ID_CREAR = null;
+    PK_UNIDAD_SELECCIONADA_NOMBRE_CREAR = '';
+    PK_UNIDAD_SELECCIONADA_STOCK_CREAR = 0;
+    document.getElementById('crearIdProductoUnidad').value = '';
+    const display = document.getElementById('crearPackUnidadDisplay');
+    display.innerHTML = '<span class="pack-unidad-empty">Ningún producto seleccionado</span>';
+    display.classList.remove('has-value');
+    actualizarPackPreviewCrear();
+}
+
+function abrirSelectorUnidadCrear() {
+    const form = document.getElementById('formCrear');
+    const aside = document.querySelector('#modalBody .mc-aside');
+    const view = document.getElementById('crearUnidadSelectorView');
+    if (!view) return;
+    form.style.display = 'none';
+    if (aside) aside.style.display = 'none';
+    view.style.display = 'flex';
+    renderUnidadGridCrear(PK_UNIDADES_DATA_CREAR);
+    setTimeout(() => document.getElementById('crearUnidadBuscador')?.focus(), 50);
+}
+
+function cerrarVistaUnidadCrear() {
+    const form = document.getElementById('formCrear');
+    const aside = document.querySelector('#modalBody .mc-aside');
+    const view = document.getElementById('crearUnidadSelectorView');
+    if (form) form.style.display = '';
+    if (aside) aside.style.display = '';
+    if (view) view.style.display = 'none';
+}
+
+function renderUnidadGridCrear(lista) {
+    const grid = document.getElementById('crearUnidadGrid');
+    if (!grid) return;
+    if (!lista.length) {
+        grid.innerHTML = `<div class="pk-empty"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><p>Sin productos disponibles.</p></div>`;
+        return;
+    }
+    grid.innerHTML = lista.map(p => unidadCardHtmlCrear(p)).join('');
+}
+
+function unidadCardHtmlCrear(p) {
+    const selected = PK_UNIDAD_SELECCIONADA_ID_CREAR === p.id;
+    const imgHtml = p.tieneImagen
+        ? `<img src="/Productos/Productos/Imagen/${p.id}" alt="${esc(p.nombre)}">`
+        : `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`;
+    return `
+    <div class="pk-sel-card${selected ? ' selected' : ''}" onclick="confirmarUnidadCrear(${p.id})">
+        <div class="pksc-check"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>
+        <div class="pksc-img-wrap">${imgHtml}</div>
+        <div class="pksc-body">
+            <div class="pksc-nombre">${esc(p.nombre)}</div>
+            <div class="pksc-marca">${esc(p.marca)} · Stock: <strong>${p.stock}</strong></div>
+        </div>
+    </div>`;
+}
+
+function confirmarUnidadCrear(id) {
+    const p = PK_UNIDADES_DATA_CREAR.find(x => x.id === id);
+    if (!p) return;
+    setUnidadSeleccionadaCrear(p);
+}
+
+function filtrarUnidadCrear() {
+    const q = normalizarBusqueda(document.getElementById('crearUnidadBuscador')?.value ?? '');
+    const filtrados = PK_UNIDADES_DATA_CREAR.filter(p =>
+        normalizarBusqueda(p.nombre).includes(q) ||
+        normalizarBusqueda(p.marca).includes(q)
+    );
+    renderUnidadGridCrear(filtrados);
+}
+
+function normalizarBusqueda(texto) {
+    if (!texto) return '';
+    return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+</script>
 </script>
