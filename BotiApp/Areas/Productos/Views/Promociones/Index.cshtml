@@ -1,373 +1,212 @@
 @model IEnumerable<Infraestructura.Entities.BotiApp.ProPromocion>
-@using System.Web
-@using System.Text.Json
 @{
     ViewData["Title"] = "Promociones";
 
-    // Serializamos el catálogo de promos para que JS pueda filtrar, contar, etc.
-    var dataJson = JsonSerializer.Serialize(Model.Select(p => new
-    {
-        idPromocion     = p.IdPromocion,
-        nombre          = p.Nombre,
-        descripcion     = p.Descripcion ?? "",
-        precioPromocion = p.PrecioPromocion,
-        fechaInicio     = p.FechaInicio.ToString("yyyy-MM-dd"),
-        fechaFin        = p.FechaFin?.ToString("yyyy-MM-dd") ?? "",
-        estado          = p.Estado,
-        vigente         = BotiApp.Areas.Productos.Controllers.PromocionesController.EsVigente(p),
-        totalProductos  = p.ProPromocionDetalle.Count,
-        totalGrupos     = p.ProPromocionGrupo.Count
-    }));
+    var promos  = Model.ToList();
+    var conteos = promos.GroupBy(PromocionesController.EstadoClave)
+                        .ToDictionary(g => g.Key, g => g.Count());
+    int Conteo(string clave) => conteos.TryGetValue(clave, out var n) ? n : 0;
 }
 
 <style>
-    /* ════════════════════════════════════════════════════════════════════
-       LAYOUT GENERAL
-       ════════════════════════════════════════════════════════════════════ */
-    .prm-page { max-width: 1200px; margin: 0 auto; }
-
-    /* Encabezado */
-    .prm-header {
+    /* ── Cabecera ───────────────────────────────────────────────────────── */
+    .page-header-card {
+        background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(44, 29, 13, .08);
+        padding: 1.25rem 1.5rem; margin-bottom: 1.25rem;
         display: flex; align-items: center; justify-content: space-between;
-        flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;
+        flex-wrap: wrap; gap: 1rem;
     }
-    .prm-title { display: flex; align-items: center; gap: .75rem; }
-    .prm-title-icon {
-        width: 46px; height: 46px; border-radius: 12px;
-        background: rgba(231, 111, 46, .1);
-        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    .page-header-left { display: flex; align-items: center; gap: .85rem; }
+    .page-header-icon {
+        width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+        background: rgba(231, 111, 46, .12);
+        display: flex; align-items: center; justify-content: center;
     }
-    .prm-title-icon svg { width: 24px; height: 24px; fill: var(--color-primario); }
-    .prm-title h1 {
-        font-size: 1.35rem; font-weight: 800; color: var(--color-secundario);
-        margin: 0; line-height: 1.1;
-    }
-    .prm-title small {
-        display: block; font-size: .78rem; font-weight: 500;
-        color: #a89080; margin-top: .15rem;
-    }
+    .page-header-icon svg { width: 24px; height: 24px; fill: var(--color-primario); }
+    .page-header-title { font-size: 1.3rem; font-weight: 800; color: var(--color-secundario); margin: 0; }
+    .page-header-sub   { font-size: .82rem; color: #9a8070; margin: .1rem 0 0; }
 
-    /* Botón principal */
     .btn-nuevo {
         display: inline-flex; align-items: center; gap: .45rem;
-        padding: .6rem 1.15rem; background: var(--color-primario); color: #fff;
-        border: none; border-radius: 9px; font-size: .88rem; font-weight: 700;
-        cursor: pointer; transition: background .15s, transform .12s;
+        padding: .55rem 1.1rem; background: var(--color-primario); color: #fff;
+        border: none; border-radius: 8px; font-size: .88rem; font-weight: 700;
+        cursor: pointer; transition: background .2s, transform .15s;
     }
     .btn-nuevo svg { width: 16px; height: 16px; fill: currentColor; }
     .btn-nuevo:hover { background: #cf5f22; transform: translateY(-1px); }
 
-    /* Barra de herramientas */
+    /* ── Barra de herramientas ──────────────────────────────────────────── */
     .prm-toolbar {
-        display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
-        background: #fff; border: 1.5px solid #ede5df; border-radius: 12px;
-        padding: .55rem .85rem; margin-bottom: 1.25rem;
-        box-shadow: 0 2px 12px rgba(44, 29, 13, .04);
+        display: flex; align-items: center; gap: .7rem; flex-wrap: wrap;
+        margin-bottom: 1.15rem;
     }
     .prm-search {
-        display: flex; align-items: center; gap: .5rem; flex: 1; min-width: 220px;
-        background: #faf7f5; border: 1.5px solid transparent;
-        border-radius: 8px; padding: .4rem .7rem; transition: border-color .15s;
+        display: flex; align-items: center; gap: .55rem;
+        background: #fff; border: 1.5px solid #e8ddd4; border-radius: 8px;
+        padding: .45rem .85rem; flex: 1; min-width: 230px; max-width: 380px;
+        transition: border-color .15s;
     }
-    .prm-search:focus-within { border-color: var(--color-primario); background: #fff; }
-    .prm-search svg { width: 16px; height: 16px; fill: #a89080; flex-shrink: 0; }
+    .prm-search:focus-within { border-color: var(--color-primario); }
+    .prm-search svg { width: 17px; height: 17px; fill: var(--color-primario); opacity: .7; flex-shrink: 0; }
     .prm-search input {
         border: none; outline: none; background: transparent;
-        font-size: .88rem; width: 100%; color: var(--color-secundario);
+        font-size: .9rem; width: 100%; color: var(--color-secundario);
     }
 
-    /* Toggle de filtro */
-    .prm-filter {
-        display: flex; align-items: center; gap: .55rem;
-        font-size: .82rem; color: #7a6050; user-select: none;
+    .prm-filtros { display: flex; gap: .35rem; flex-wrap: wrap; }
+    .prm-filtro {
+        display: inline-flex; align-items: center; gap: .35rem;
+        padding: .4rem .8rem; border-radius: 20px; border: 1.5px solid #e8ddd4;
+        background: #fff; color: #7a6050; font-size: .8rem; font-weight: 700;
+        cursor: pointer; transition: background .15s, border-color .15s, color .15s;
     }
-    .switch {
-        position: relative; width: 38px; height: 22px; flex-shrink: 0;
+    .prm-filtro:hover { border-color: var(--color-primario); color: var(--color-primario); }
+    .prm-filtro.active {
+        background: var(--color-primario); border-color: var(--color-primario); color: #fff;
     }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider {
-        position: absolute; cursor: pointer; inset: 0;
-        background-color: #d4c4b7; transition: .2s; border-radius: 22px;
+    .prm-filtro-n {
+        font-size: .72rem; font-weight: 800; opacity: .75;
+        background: rgba(0, 0, 0, .07); border-radius: 10px; padding: 0 .35rem;
     }
-    .slider:before {
-        position: absolute; content: ""; height: 16px; width: 16px;
-        left: 3px; bottom: 3px; background-color: #fff; transition: .2s;
-        border-radius: 50%; box-shadow: 0 1px 3px rgba(0, 0, 0, .15);
-    }
-    .switch input:checked + .slider { background-color: var(--color-primario); }
-    .switch input:checked + .slider:before { transform: translateX(16px); }
+    .prm-filtro.active .prm-filtro-n { background: rgba(255, 255, 255, .25); opacity: 1; }
 
-    .prm-counter {
-        font-size: .78rem; color: #a89080; font-weight: 600;
-        padding: .3rem .65rem; background: #faf7f5; border-radius: 20px;
+    .prm-orden {
+        padding: .45rem .7rem; border: 1.5px solid #e8ddd4; border-radius: 8px;
+        background: #fff; font-size: .84rem; color: var(--color-secundario);
+        outline: none; cursor: pointer;
     }
-    .prm-counter strong { color: var(--color-secundario); }
+    .prm-orden:focus { border-color: var(--color-primario); }
+    .prm-conteo { font-size: .8rem; color: #9a8070; margin-left: auto; white-space: nowrap; }
 
-    /* ════════════════════════════════════════════════════════════════════
-       CARDS
-       ════════════════════════════════════════════════════════════════════ */
-    .prm-list { display: flex; flex-direction: column; gap: 1rem; }
-
+    /* ── Grilla de tarjetas ─────────────────────────────────────────────── */
+    .prm-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 1rem; align-items: start;
+    }
     .prm-card {
-        background: #fff; border-radius: 14px;
-        box-shadow: 0 2px 12px rgba(44, 29, 13, .07);
-        overflow: hidden; transition: box-shadow .2s, transform .15s;
+        background: #fff; border-radius: 13px; border: 1.5px solid #ede5df;
+        box-shadow: 0 2px 10px rgba(44, 29, 13, .05);
+        display: flex; flex-direction: column; overflow: hidden;
+        transition: box-shadow .2s, transform .15s, border-color .2s;
     }
-    .prm-card:hover { box-shadow: 0 6px 22px rgba(44, 29, 13, .1); }
-    .prm-card.inactiva { opacity: .8; }
-    .prm-card.inactiva .prm-card-head { background: #faf7f5; }
-
-    .prm-card-head {
-        display: grid; grid-template-columns: 1fr auto;
-        align-items: center; gap: 1rem; padding: 1.1rem 1.35rem;
-        cursor: pointer; user-select: none;
-        border-left: 4px solid var(--color-primario);
+    .prm-card:hover {
+        box-shadow: 0 8px 24px rgba(44, 29, 13, .1);
+        transform: translateY(-2px); border-color: #e0d5cc;
     }
-    .prm-card.inactiva .prm-card-head { border-left-color: #c9b8a8; }
-    .prm-card-head:hover { background: rgba(231, 111, 46, .02); }
+    .prm-card.inactiva { background: #fdfcfb; }
+    .prm-card.inactiva .prm-card-body { opacity: .72; }
+    .prm-card.saliendo { opacity: 0; transform: scale(.97); transition: opacity .22s, transform .22s; }
 
-    .prm-card-name {
-        font-size: 1.05rem; font-weight: 800;
-        color: var(--color-secundario); margin: 0 0 .35rem;
+    .prm-card-body { padding: 1.05rem 1.15rem; flex: 1; }
+
+    .prm-card-top {
+        display: flex; align-items: flex-start; justify-content: space-between;
+        gap: .6rem; margin-bottom: .5rem;
+    }
+    .prm-card-nombre {
+        font-size: 1.02rem; font-weight: 800; color: var(--color-secundario);
+        margin: 0; line-height: 1.25; min-width: 0;
     }
     .prm-card-desc {
-        font-size: .82rem; color: #a89080; margin: 0 0 .55rem;
-        display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
-        overflow: hidden;
+        font-size: .8rem; color: #a89080; margin: 0 0 .8rem; line-height: 1.4;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
-    .prm-card-meta {
-        display: flex; flex-wrap: wrap; gap: .35rem; align-items: center;
-    }
-    .prm-chip {
-        display: inline-flex; align-items: center; gap: .3rem;
-        padding: .22rem .6rem; border-radius: 20px;
-        font-size: .74rem; font-weight: 700;
-        background: rgba(231, 111, 46, .08); color: var(--color-primario);
-    }
-    .prm-chip.muted { background: #f0ebe5; color: #7a6050; }
-    .prm-chip.strong { background: var(--color-secundario); color: #fff; }
-    .prm-chip svg { width: 12px; height: 12px; fill: currentColor; }
-    .prm-chip.precio { font-size: .82rem; }
 
-    /* Badges de estado */
     .badge {
         display: inline-flex; align-items: center; padding: .22rem .6rem;
-        border-radius: 20px; font-size: .72rem; font-weight: 700;
+        border-radius: 20px; font-size: .7rem; font-weight: 800; flex-shrink: 0;
         text-transform: uppercase; letter-spacing: .3px;
     }
-    .badge.vigente  { background: rgba(34, 197, 94, .12); color: #16a34a; }
+    .badge.vigente  { background: rgba(34, 197, 94, .13); color: #16a34a; }
     .badge.vencida  { background: rgba(239, 68, 68, .10); color: #dc2626; }
-    .badge.inactiva { background: rgba(156, 163, 175, .18); color: #6b7280; }
-    .badge.proxima  { background: rgba(234, 179, 8, .12); color: #b45309; }
+    .badge.inactiva { background: rgba(156, 163, 175, .2); color: #6b7280; }
+    .badge.proxima  { background: rgba(234, 179, 8, .15); color: #b45309; }
 
-    /* Acciones cabecera */
-    .prm-card-actions {
-        display: flex; align-items: center; gap: .5rem; flex-shrink: 0;
+    /* Precio */
+    .prm-precio-row {
+        display: flex; align-items: baseline; gap: .55rem;
+        flex-wrap: wrap; margin-bottom: .75rem;
     }
-    .icon-btn {
-        width: 34px; height: 34px; border-radius: 8px; border: none;
-        background: #faf7f5; color: #7a6050;
-        display: inline-flex; align-items: center; justify-content: center;
-        cursor: pointer; transition: background .15s, color .15s, transform .12s;
+    .prm-precio {
+        font-size: 1.5rem; font-weight: 800; color: var(--color-primario);
+        line-height: 1; font-variant-numeric: tabular-nums;
     }
-    .icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
-    .icon-btn:hover { background: #ede5df; color: var(--color-secundario); }
-    .icon-btn.edit:hover { background: rgba(231, 111, 46, .12); color: var(--color-primario); }
-    .icon-btn.del:hover  { background: rgba(239, 68, 68, .12); color: #dc2626; }
-    .icon-btn.active { background: var(--color-primario); color: #fff; }
-    .icon-btn.active:hover { background: #cf5f22; color: #fff; }
+    .prm-antes { font-size: .82rem; color: #a89080; text-decoration: line-through; }
+    .prm-ahorro {
+        font-size: .72rem; font-weight: 800; padding: .16rem .5rem; border-radius: 20px;
+        background: rgba(34, 197, 94, .13); color: #16a34a;
+    }
+    .prm-ahorro.malo { background: rgba(239, 68, 68, .1); color: #dc2626; }
 
-    /* Botón expand */
-    .btn-expand {
-        transition: transform .2s;
+    /* Metadatos */
+    .prm-metas { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .8rem; }
+    .prm-meta {
+        display: flex; align-items: center; gap: .4rem;
+        font-size: .78rem; color: #7a6050;
     }
-    .prm-card.expanded .btn-expand { transform: rotate(180deg); }
+    .prm-meta svg { width: 14px; height: 14px; fill: #c9b8a8; flex-shrink: 0; }
 
-    /* ════════════════════════════════════════════════════════════════════
-       CUERPO EXPANDIDO
-       ════════════════════════════════════════════════════════════════════ */
-    .prm-card-body {
-        display: none; border-top: 1px solid #f0ebe5;
-        background: #fafaf9; padding: 1.15rem 1.35rem 1.35rem;
+    /* Contenido */
+    .prm-contenido { display: flex; flex-wrap: wrap; gap: .3rem; }
+    .prm-chip {
+        display: inline-flex; align-items: center;
+        font-size: .72rem; font-weight: 700; padding: .2rem .55rem;
+        border-radius: 6px; background: #f5f0eb; color: #7a6050;
+        max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .prm-card.expanded .prm-card-body { display: block; }
+    .prm-chip.grupo { background: rgba(99, 102, 241, .1); color: #4f46e5; }
+    .prm-chip.mas   { background: transparent; color: #a89080; }
+    .prm-sin-contenido {
+        display: flex; align-items: center; gap: .4rem;
+        font-size: .76rem; font-weight: 700; color: #b45309;
+        background: rgba(234, 179, 8, .1); border-radius: 8px; padding: .4rem .6rem;
+    }
+    .prm-sin-contenido svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
 
-    /* Banner explicativo de los grupos */
-    .prm-help-banner {
-        display: flex; align-items: flex-start; gap: .65rem;
-        background: rgba(99, 102, 241, .08);
-        border: 1px solid rgba(99, 102, 241, .25);
-        border-radius: 10px; padding: .65rem .85rem;
-        font-size: .78rem; color: #4338ca; line-height: 1.45;
-        margin-bottom: 1rem;
+    /* Pie de tarjeta */
+    .prm-card-foot {
+        display: flex; align-items: center; gap: .4rem;
+        padding: .7rem 1.15rem; border-top: 1px solid #f0ebe5; background: #fdfcfb;
     }
-    .prm-help-banner svg {
-        width: 16px; height: 16px; fill: #4f46e5; flex-shrink: 0; margin-top: 1px;
-    }
-    .prm-help-banner strong { color: #312e81; }
-
-    /* Sección dentro del cuerpo */
-    .prm-section {
-        background: #fff; border: 1.5px solid #ede5df; border-radius: 11px;
-        padding: 1rem 1.15rem; margin-bottom: 1rem;
-    }
-    .prm-section:last-child { margin-bottom: 0; }
-    .prm-section-head {
-        display: flex; align-items: center; justify-content: space-between;
-        gap: .75rem; flex-wrap: wrap; margin-bottom: .75rem;
-    }
-    .prm-section-title {
-        display: flex; align-items: center; gap: .5rem;
-        font-size: .85rem; font-weight: 800;
-        color: var(--color-secundario); text-transform: uppercase;
-        letter-spacing: .4px;
-    }
-    .prm-section-title svg { width: 16px; height: 16px; fill: var(--color-primario); }
-    .prm-section-count {
-        background: #f0ebe5; color: #7a6050;
-        border-radius: 20px; padding: .12rem .5rem;
-        font-size: .72rem; font-weight: 700;
-    }
-
-    .prm-section-actions { display: flex; gap: .45rem; flex-wrap: wrap; }
-    .btn-section {
-        display: inline-flex; align-items: center; gap: .35rem;
-        padding: .4rem .75rem; border: none; border-radius: 7px;
-        font-size: .78rem; font-weight: 700; cursor: pointer;
-        transition: background .15s, transform .12s;
-    }
-    .btn-section svg { width: 13px; height: 13px; fill: currentColor; }
-    .btn-section.primary { background: var(--color-primario); color: #fff; }
-    .btn-section.primary:hover { background: #cf5f22; }
-    .btn-section.secondary {
-        background: rgba(99, 102, 241, .1); color: #4f46e5;
-    }
-    .btn-section.secondary:hover { background: rgba(99, 102, 241, .2); }
-    .btn-section.edit-only { display: none; }
-
-    /* Productos base (sin grupo) */
-    .prm-base-section { background: #fff; }
-
-    /* Grupo */
-    .prm-grupo {
-        background: #faf7f5; border: 1.5px solid #e0d5cc;
-        border-radius: 10px; padding: .85rem 1rem; margin-bottom: .75rem;
-    }
-    .prm-grupo:last-child { margin-bottom: 0; }
-    .prm-grupo-head {
-        display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
-        margin-bottom: .55rem;
-    }
-    .prm-grupo-name {
-        font-size: .85rem; font-weight: 800;
-        color: var(--color-secundario);
-        display: flex; align-items: center; gap: .35rem;
-    }
-    .prm-grupo-name svg { width: 14px; height: 14px; fill: var(--color-primario); }
-    .prm-grupo-tag {
-        font-size: .68rem; font-weight: 700;
-        padding: .1rem .45rem; border-radius: 20px;
-        text-transform: uppercase; letter-spacing: .3px;
-    }
-    .prm-grupo-tag.excl { background: rgba(239, 68, 68, .12); color: #dc2626; }
-    .prm-grupo-tag.libre { background: rgba(34, 197, 94, .14); color: #16a34a; }
-    .prm-grupo-count {
-        margin-left: auto; font-size: .72rem; color: #a89080; font-weight: 600;
-    }
-    .prm-grupo-actions { display: flex; gap: .35rem; }
-    .prm-grupo-actions .icon-btn { width: 28px; height: 28px; }
-    .prm-grupo-actions .icon-btn svg { width: 13px; height: 13px; }
-
-    /* Lista de productos del grupo */
-    .prm-grupo-items {
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: .5rem;
-    }
-    .prm-item {
-        display: flex; align-items: center; gap: .55rem;
-        background: #fff; border: 1px solid #ede5df; border-radius: 8px;
-        padding: .5rem .65rem;
-    }
-    .prm-item-img {
-        width: 38px; height: 38px; border-radius: 6px;
-        background: #f5f0eb; flex-shrink: 0;
-        display: flex; align-items: center; justify-content: center; overflow: hidden;
-    }
-    .prm-item-img img { width: 100%; height: 100%; object-fit: cover; }
-    .prm-item-img svg { width: 18px; height: 18px; fill: #c9b8a8; }
-    .prm-item-info { flex: 1; min-width: 0; }
-    .prm-item-name {
-        font-size: .8rem; font-weight: 700; color: var(--color-secundario);
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .prm-item-meta { font-size: .68rem; color: #a89080; }
-    .prm-item-qty {
-        font-size: .72rem; font-weight: 800;
-        color: var(--color-primario);
-        background: rgba(231, 111, 46, .08);
-        padding: .15rem .45rem; border-radius: 6px;
-        flex-shrink: 0;
-    }
-    .prm-item-del {
-        width: 22px; height: 22px; border-radius: 5px; border: none;
-        background: transparent; color: #dc2626;
-        display: inline-flex; align-items: center; justify-content: center;
-        cursor: pointer; opacity: 0; transition: opacity .12s, background .12s;
-        flex-shrink: 0;
-    }
-    .prm-item-del svg { width: 12px; height: 12px; fill: currentColor; }
-    .prm-item:hover .prm-item-del { opacity: 1; }
-    .prm-item-del:hover { background: rgba(239, 68, 68, .12); }
-    .edit-mode .prm-item-del { opacity: 1; }
-
-    /* Form de nuevo grupo */
-    .prm-new-grupo-form {
-        display: none; align-items: center; gap: .5rem; flex-wrap: wrap;
-        background: #f5f4ff; border: 1.5px solid #c7d2fe; border-radius: 9px;
-        padding: .6rem .8rem; margin-bottom: .75rem;
-    }
-    .prm-new-grupo-form.visible { display: flex; }
-    .prm-new-grupo-form input[type="text"] {
-        flex: 1; min-width: 180px;
-        padding: .45rem .7rem; border: 1.5px solid #c7d2fe; border-radius: 7px;
-        font-size: .85rem; outline: none; background: #fff;
-    }
-    .prm-new-grupo-form input[type="text"]:focus { border-color: #4f46e5; }
-    .prm-new-grupo-form label {
-        display: inline-flex; align-items: center; gap: .35rem;
-        font-size: .8rem; font-weight: 600; color: #4f46e5;
-        cursor: pointer; white-space: nowrap;
-    }
-    .prm-new-grupo-form label input { width: 15px; height: 15px; accent-color: #4f46e5; }
-
-    /* Botón "agregar producto" en hueco */
-    .prm-add-here {
-        display: none; align-items: center; justify-content: center; gap: .4rem;
-        width: 100%; padding: .5rem; margin-top: .5rem;
-        background: transparent; border: 1.5px dashed var(--color-primario);
-        border-radius: 8px; color: var(--color-primario);
-        font-size: .78rem; font-weight: 700; cursor: pointer;
+    .prm-btn-editar {
+        display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+        flex: 1; padding: .5rem .9rem; border-radius: 8px; border: none;
+        background: rgba(231, 111, 46, .1); color: var(--color-primario);
+        font-size: .84rem; font-weight: 700; text-decoration: none;
         transition: background .15s;
     }
-    .prm-add-here svg { width: 13px; height: 13px; fill: currentColor; }
-    .prm-add-here:hover { background: rgba(231, 111, 46, .05); }
-    .edit-mode .prm-add-here { display: inline-flex; }
+    .prm-btn-editar svg { width: 15px; height: 15px; fill: currentColor; }
+    .prm-btn-editar:hover { background: var(--color-primario); color: #fff; }
 
-    /* Estado vacío de sección */
-    .prm-empty {
-        text-align: center; padding: 1.1rem .5rem;
-        color: #b8a898; font-size: .82rem;
-        background: #fafaf9; border: 1.5px dashed #ede5df; border-radius: 8px;
+    .icon-btn {
+        width: 34px; height: 34px; border-radius: 8px; border: none; flex-shrink: 0;
+        background: #f5f0eb; color: #7a6050; cursor: pointer;
+        display: inline-flex; align-items: center; justify-content: center;
+        transition: background .15s, color .15s;
     }
-    .prm-empty svg { width: 26px; height: 26px; fill: #ddd0c4; display: block; margin: 0 auto .35rem; }
+    .icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
+    .icon-btn:hover { background: #e8ddd4; color: var(--color-secundario); }
+    .icon-btn.del:hover { background: rgba(239, 68, 68, .12); color: #dc2626; }
+    .icon-btn.on  { background: rgba(34, 197, 94, .12); color: #16a34a; }
+    .icon-btn.on:hover  { background: rgba(34, 197, 94, .22); color: #16a34a; }
 
-    /* ════════════════════════════════════════════════════════════════════
-       MODAL OVERLAY
-       ════════════════════════════════════════════════════════════════════ */
+    /* ── Estados vacíos ─────────────────────────────────────────────────── */
+    .empty-page {
+        text-align: center; padding: 3.5rem 1rem; background: #fff;
+        border-radius: 14px; border: 1.5px dashed #ede5df; color: #a89080;
+    }
+    .empty-page svg { width: 56px; height: 56px; fill: #ddd0c4; margin-bottom: .75rem; }
+    .empty-page h3 {
+        font-size: 1.05rem; color: var(--color-secundario); font-weight: 800; margin: 0 0 .35rem;
+    }
+    .empty-page p { font-size: .88rem; margin: 0 0 1.15rem; }
+    .empty-page .btn-nuevo { margin: 0 auto; }
+    #sinResultados { display: none; }
+
+    /* ── Modal ──────────────────────────────────────────────────────────── */
     .m-overlay {
-        display: none; position: fixed; inset: 0;
-        background: rgba(0, 0, 0, .5); z-index: 600;
-        align-items: flex-start; justify-content: center;
+        display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, .5);
+        z-index: 600; align-items: flex-start; justify-content: center;
         overflow-y: auto; padding: 2rem 1rem;
     }
     .m-overlay.open { display: flex; animation: fadeOverlay .2s ease; }
@@ -384,14 +223,35 @@
     }
     .spinner-ring {
         width: 40px; height: 40px; border: 3px solid #f0ebe5;
-        border-top-color: var(--color-primario);
-        border-radius: 50%; animation: spin .7s linear infinite;
+        border-top-color: var(--color-primario); border-radius: 50%;
+        animation: spin .7s linear infinite;
     }
     @@keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ════════════════════════════════════════════════════════════════════
-       TOAST
-       ════════════════════════════════════════════════════════════════════ */
+    .m-confirm { padding: 2.2rem 2rem; max-width: 440px; margin: auto; text-align: center; }
+    .m-confirm-icon {
+        width: 58px; height: 58px; border-radius: 50%; margin: 0 auto 1rem;
+        background: rgba(239, 68, 68, .1);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .m-confirm-icon svg { width: 28px; height: 28px; fill: #dc2626; }
+    .m-confirm h3 { font-size: 1.05rem; font-weight: 800; color: var(--color-secundario); margin: 0 0 .5rem; }
+    .m-confirm p  { font-size: .88rem; color: #7a6050; margin: 0 0 .5rem; }
+    .m-confirm .aviso {
+        font-size: .78rem; color: #dc2626; background: #fef2f2;
+        padding: .5rem .75rem; border-radius: 8px; margin-bottom: 1.25rem;
+    }
+    .m-confirm-actions { display: flex; gap: .7rem; justify-content: center; margin-top: 1.25rem; }
+    .m-confirm-actions button {
+        padding: .6rem 1.35rem; border: none; border-radius: 8px;
+        font-size: .88rem; font-weight: 700; cursor: pointer; transition: background .15s;
+    }
+    .btn-cancelar { background: #f0ebe5; color: var(--color-secundario); }
+    .btn-cancelar:hover { background: #e5dad0; }
+    .btn-eliminar { background: #dc2626; color: #fff; }
+    .btn-eliminar:hover { background: #b91c1c; }
+
+    /* ── Toast ──────────────────────────────────────────────────────────── */
     .toast-wrap {
         position: fixed; top: 1.25rem; right: 1.25rem; z-index: 9999;
         display: flex; flex-direction: column; gap: .5rem; pointer-events: none;
@@ -401,88 +261,25 @@
         padding: .75rem 1.1rem; border-radius: 10px;
         font-size: .88rem; font-weight: 600;
         box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
-        animation: toastIn .3s ease;
-        transition: opacity .25s;
+        animation: toastIn .3s ease; transition: opacity .25s;
     }
     .toast-msg svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
     .toast-msg.exito { background: #f0fdf4; color: #16a34a; border-left: 4px solid #16a34a; }
     .toast-msg.error { background: #fef2f2; color: #dc2626; border-left: 4px solid #dc2626; }
     @@keyframes toastIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
 
-    /* Página vacía */
-    .empty-page {
-        text-align: center; padding: 3.5rem 1rem;
-        background: #fff; border-radius: 14px;
-        border: 1.5px dashed #ede5df;
-        color: #a89080;
+    @@media (max-width: 700px) {
+        .prm-grid { grid-template-columns: 1fr; }
+        .prm-search { max-width: none; }
+        .prm-conteo { margin-left: 0; }
+        .btn-nuevo { width: 100%; justify-content: center; }
+        .toast-wrap { top: .75rem; right: .75rem; left: .75rem; }
     }
-    .empty-page svg { width: 56px; height: 56px; fill: #ddd0c4; margin-bottom: .75rem; }
-    .empty-page h3 {
-        font-size: 1.05rem; color: var(--color-secundario);
-        font-weight: 700; margin: 0 0 .35rem;
-    }
-    .empty-page p { font-size: .88rem; margin: 0 0 1rem; }
-
-    /* Mini-form crear grupo inline */
-    .prm-grupo-form {
-        display: none; align-items: center; gap: .5rem; flex-wrap: wrap;
-        background: #f5f4ff; border: 1.5px solid #c7d2fe; border-radius: 9px;
-        padding: .55rem .75rem; margin-bottom: .65rem;
-    }
-    .prm-grupo-form.visible { display: flex; }
-    .prm-grupo-form input[type="text"] {
-        flex: 1; min-width: 160px;
-        padding: .4rem .65rem; border: 1.5px solid #c7d2fe; border-radius: 7px;
-        font-size: .82rem; outline: none; background: #fff;
-    }
-    .prm-grupo-form input[type="text"]:focus { border-color: #4f46e5; }
-    .prm-grupo-form label {
-        display: inline-flex; align-items: center; gap: .3rem;
-        font-size: .78rem; font-weight: 600; color: #4f46e5; cursor: pointer;
-        white-space: nowrap;
-    }
-    .prm-grupo-form label input { width: 14px; height: 14px; accent-color: #4f46e5; }
-
-    /* Edición inline del nombre del grupo */
-    .prm-grupo-name { flex: 1; min-width: 0; cursor: text; }
-    .prm-grupo-name[contenteditable="true"] {
-        outline: 2px dashed #c7d2fe; outline-offset: 4px; border-radius: 4px;
-        padding: 0 .15rem; background: #fff;
-    }
-    .prm-grupo-edit-form {
-        display: none; align-items: center; gap: .4rem; flex-wrap: wrap;
-        flex: 1; min-width: 0;
-    }
-    .prm-grupo-edit-form.visible { display: flex; }
-    .prm-grupo-edit-form input[type="text"] {
-        flex: 1; min-width: 140px;
-        padding: .35rem .55rem; border: 1.5px solid #c7d2fe; border-radius: 6px;
-        font-size: .82rem; outline: none; background: #fff;
-    }
-    .prm-grupo-edit-form input[type="text"]:focus { border-color: #4f46e5; }
-    .prm-grupo-edit-form label {
-        display: inline-flex; align-items: center; gap: .25rem;
-        font-size: .76rem; font-weight: 600; color: #4f46e5; cursor: pointer;
-        white-space: nowrap;
-    }
-    .prm-grupo-edit-form label input { width: 14px; height: 14px; accent-color: #4f46e5; }
-    .prm-grupo-save, .prm-grupo-cancel {
-        padding: .35rem .6rem; border: none; border-radius: 6px;
-        font-size: .76rem; font-weight: 700; cursor: pointer;
-    }
-    .prm-grupo-save   { background: #4f46e5; color: #fff; }
-    .prm-grupo-save:hover { background: #4338ca; }
-    .prm-grupo-cancel { background: #f0ebe5; color: var(--color-secundario); }
-    .prm-grupo-cancel:hover { background: #e8ddd4; }
 </style>
 
-<!-- Toasts -->
 <div class="toast-wrap" id="toastWrap"></div>
-
-<!-- CSRF token para llamadas sin form -->
 @Html.AntiForgeryToken()
 
-<!-- Modal overlay -->
 <div class="m-overlay" id="modalOverlay">
     <div class="m-box" id="modalBox">
         <div id="modalBody">
@@ -491,293 +288,235 @@
     </div>
 </div>
 
-<div class="prm-page">
-
-    <!-- Encabezado -->
-    <div class="prm-header">
-        <div class="prm-title">
-            <div class="prm-title-icon">
-                <svg viewBox="0 0 24 24"><path d="M12.79 2.7 20.3 10.2a2 2 0 0 1 0 2.83l-6.36 6.36a2 2 0 0 1-2.83 0L3.6 11.9a2 2 0 0 1-.59-1.41V4a2 2 0 0 1 2-2h6.37a2 2 0 0 1 1.41.59zM7 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-            </div>
-            <div>
-                <h1>Gestión de Promociones</h1>
-                <small>Crea y administra las promociones y combos disponibles en caja</small>
-            </div>
+<!-- ── Cabecera ── -->
+<div class="page-header-card">
+    <div class="page-header-left">
+        <div class="page-header-icon">
+            <svg viewBox="0 0 24 24"><path d="M12.79 2.7 20.3 10.2a2 2 0 0 1 0 2.83l-6.36 6.36a2 2 0 0 1-2.83 0L3.6 11.9a2 2 0 0 1-.59-1.41V4a2 2 0 0 1 2-2h6.37a2 2 0 0 1 1.41.59zM7 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
         </div>
+        <div>
+            <h1 class="page-header-title">Gestión de Promociones</h1>
+            <p class="page-header-sub">Combos y promociones disponibles al momento de vender</p>
+        </div>
+    </div>
+    <button class="btn-nuevo" onclick="abrirModal('/Productos/Promociones/ModalCrear')">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        Nueva promoción
+    </button>
+</div>
+
+@if (promos.Count == 0)
+{
+    <div class="empty-page">
+        <svg viewBox="0 0 24 24"><path d="M12.79 2.7 20.3 10.2a2 2 0 0 1 0 2.83l-6.36 6.36a2 2 0 0 1-2.83 0L3.6 11.9a2 2 0 0 1-.59-1.41V4a2 2 0 0 1 2-2h6.37a2 2 0 0 1 1.41.59zM7 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+        <h3>Todavía no hay promociones</h3>
+        <p>Crea la primera para empezar a ofrecer combos en caja.</p>
         <button class="btn-nuevo" onclick="abrirModal('/Productos/Promociones/ModalCrear')">
             <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            Nueva promoción
+            Crear primera promoción
         </button>
     </div>
-
-    <!-- Barra de herramientas -->
+}
+else
+{
+    <!-- ── Barra de herramientas ── -->
     <div class="prm-toolbar">
         <div class="prm-search">
             <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-            <input type="text" id="buscador" placeholder="Buscar por nombre o descripción…" oninput="aplicarFiltros()" />
+            <input type="text" id="buscador" autocomplete="off"
+                   placeholder="Buscar por nombre, grupo o producto incluido…" oninput="aplicarFiltros()" />
         </div>
 
-        <label class="prm-filter" title="Por defecto solo se muestran las promociones activas">
-            <span class="switch">
-                <input type="checkbox" id="toggleInactivas" onchange="aplicarFiltros()" />
-                <span class="slider"></span>
-            </span>
-            Mostrar inactivas
-        </label>
-
-        <div class="prm-counter" id="counterPrm">
-            Mostrando <strong id="counterVisible">0</strong> de <strong id="counterTotal">0</strong>
+        <div class="prm-filtros" id="filtros">
+            <button class="prm-filtro active" data-filtro="todas" onclick="seleccionarFiltro(this)">
+                Todas <span class="prm-filtro-n">@promos.Count</span>
+            </button>
+            <button class="prm-filtro" data-filtro="vigente" onclick="seleccionarFiltro(this)">
+                Vigentes <span class="prm-filtro-n">@Conteo("vigente")</span>
+            </button>
+            <button class="prm-filtro" data-filtro="proxima" onclick="seleccionarFiltro(this)">
+                Próximas <span class="prm-filtro-n">@Conteo("proxima")</span>
+            </button>
+            <button class="prm-filtro" data-filtro="vencida" onclick="seleccionarFiltro(this)">
+                Vencidas <span class="prm-filtro-n">@Conteo("vencida")</span>
+            </button>
+            <button class="prm-filtro" data-filtro="inactiva" onclick="seleccionarFiltro(this)">
+                Inactivas <span class="prm-filtro-n">@Conteo("inactiva")</span>
+            </button>
         </div>
+
+        <select class="prm-orden" id="orden" onchange="ordenarPromos()">
+            <option value="recientes">Más recientes</option>
+            <option value="nombre">Nombre (A–Z)</option>
+            <option value="precio-asc">Precio (menor a mayor)</option>
+            <option value="precio-desc">Precio (mayor a menor)</option>
+        </select>
+
+        <span class="prm-conteo" id="conteo"></span>
     </div>
 
-    <!-- Lista de cards -->
-    <div class="prm-list" id="promoList" data-activas-only="true">
-        @if (!Model.Any())
+    <!-- ── Tarjetas ── -->
+    <div class="prm-grid" id="grid">
+        @foreach (var p in promos)
         {
-            <div class="empty-page" id="emptyState">
-                <svg viewBox="0 0 24 24"><path d="M12.79 2.7 20.3 10.2a2 2 0 0 1 0 2.83l-6.36 6.36a2 2 0 0 1-2.83 0L3.6 11.9a2 2 0 0 1-.59-1.41V4a2 2 0 0 1 2-2h6.37a2 2 0 0 1 1.41.59zM7 7a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-                <h3>No hay promociones registradas</h3>
-                <p>Crea la primera promoción para empezar a ofrecer combos a tus clientes.</p>
-                <button class="btn-nuevo" onclick="abrirModal('/Productos/Promociones/ModalCrear')">
-                    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                    Crear primera promoción
-                </button>
+            var clave      = PromocionesController.EstadoClave(p);
+            var texto      = PromocionesController.EstadoTexto(p);
+            var (nMin, _)  = PromocionesController.PrecioNormal(p);
+            var baseItems  = p.ProPromocionDetalle.Where(d => d.IdGrupo == null)
+                                                  .OrderBy(d => d.IdProductoNavigation.NombreProducto)
+                                                  .ToList();
+            var grupos     = p.ProPromocionGrupo.ToList();
+            var ahorro     = nMin - p.PrecioPromocion;
+            var pct        = nMin > 0 ? (int)Math.Round(ahorro * 100.0 / nMin) : 0;
+            var fechaFin   = p.FechaFin?.ToString("dd/MM/yyyy") ?? "sin límite";
+
+            var piezas = new List<(string Texto, bool EsGrupo)>();
+            foreach (var d in baseItems)
+            {
+                piezas.Add(($"{d.Cantidad}× {d.IdProductoNavigation.NombreProducto}", false));
+            }
+            foreach (var g in grupos)
+            {
+                var n = p.ProPromocionDetalle.Count(d => d.IdGrupo == g.IdGrupo);
+                piezas.Add(($"{(g.EsExcluyente ? "Elige 1" : "Todos")} · {g.Descripcion} ({n})", true));
+            }
+            var visibles  = piezas.Take(4).ToList();
+            var restantes = piezas.Count - visibles.Count;
+
+            var textoBusqueda = string.Join(' ',
+                new[] { p.Nombre, p.Descripcion ?? "" }
+                    .Concat(p.ProPromocionDetalle.Select(d => d.IdProductoNavigation.NombreProducto))
+                    .Concat(grupos.Select(g => g.Descripcion))).ToLowerInvariant();
+
+            <div class="prm-card @(p.Estado ? "" : "inactiva")" id="card-@p.IdPromocion"
+                 data-estado="@clave" data-buscar="@textoBusqueda"
+                 data-nombre="@p.Nombre" data-precio="@p.PrecioPromocion">
+
+                <div class="prm-card-body">
+                    <div class="prm-card-top">
+                        <h3 class="prm-card-nombre">@p.Nombre</h3>
+                        <span class="badge @clave">@texto</span>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(p.Descripcion))
+                    {
+                        <p class="prm-card-desc">@p.Descripcion</p>
+                    }
+
+                    <div class="prm-precio-row">
+                        <span class="prm-precio">@($"${p.PrecioPromocion:N0}")</span>
+                        @if (nMin > 0 && ahorro > 0)
+                        {
+                            <span class="prm-antes">@($"${nMin:N0}")</span>
+                            <span class="prm-ahorro">−@pct%</span>
+                        }
+                        else if (nMin > 0 && ahorro < 0)
+                        {
+                            <span class="prm-ahorro malo">Más cara que por separado</span>
+                        }
+                    </div>
+
+                    <div class="prm-metas">
+                        <span class="prm-meta">
+                            <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H5V9h14v10z"/></svg>
+                            @p.FechaInicio.ToString("dd/MM/yyyy") → @fechaFin
+                        </span>
+                        <span class="prm-meta">
+                            <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                            @p.ProPromocionDetalle.Count producto(s) · @grupos.Count grupo(s)
+                        </span>
+                    </div>
+
+                    @if (piezas.Count == 0)
+                    {
+                        <div class="prm-sin-contenido">
+                            <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                            Sin productos: no se ofrecerá en caja
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="prm-contenido">
+                            @foreach (var pieza in visibles)
+                            {
+                                <span class="prm-chip @(pieza.EsGrupo ? "grupo" : "")" title="@pieza.Texto">@pieza.Texto</span>
+                            }
+                            @if (restantes > 0)
+                            {
+                                <span class="prm-chip mas">+@restantes más</span>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="prm-card-foot">
+                    <a class="prm-btn-editar" href="/Productos/Promociones/Editar/@p.IdPromocion">
+                        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        Editar promoción
+                    </a>
+                    <button class="icon-btn @(p.Estado ? "on" : "")" id="btnToggle-@p.IdPromocion"
+                            title="@(p.Estado ? "Desactivar" : "Activar")"
+                            onclick="toggleEstado(@p.IdPromocion)">
+                        @if (p.Estado)
+                        {
+                            <svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8c-1.66 0-3-1.35-3-3s1.34-3 3-3 3 1.35 3 3-1.34 3-3 3z"/></svg>
+                        }
+                        else
+                        {
+                            <svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-10 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/></svg>
+                        }
+                    </button>
+                    <button class="icon-btn del" title="Eliminar promoción"
+                            onclick="eliminarPromo(@p.IdPromocion)">
+                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                </div>
             </div>
         }
-        else
-        {
-            @Html.Raw(GridHtml(Model))
-        }
-    </div>
-</div>
-
-@* ════════════════════════════════════════════════════════════════════════
-   HELPERS — renderizan la grilla de cards
-   ════════════════════════════════════════════════════════════════════════ *@
-@functions {
-    string Badge(Infraestructura.Entities.BotiApp.ProPromocion p)
-    {
-        if (!p.Estado) return "<span class=\"badge inactiva\">Inactiva</span>";
-        var hoy = DateTime.Today;
-        if (p.FechaInicio > hoy) return "<span class=\"badge proxima\">Próxima</span>";
-        if (p.FechaFin.HasValue && p.FechaFin.Value.Date < hoy) return "<span class=\"badge vencida\">Vencida</span>";
-        return "<span class=\"badge vigente\">Vigente</span>";
-    }
-
-    string ItemHtml(Infraestructura.Entities.BotiApp.ProPromocionDetalle d)
-    {
-        var img = d.IdProductoNavigation.Imagen is { Length: > 0 }
-            ? $"<img src=\"/Productos/Productos/Imagen/{d.IdProducto}\" alt=\"\" />"
-            : "<svg viewBox=\"0 0 24 24\"><path d=\"M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z\"/></svg>";
-        var marca = d.IdProductoNavigation.IdMarcaNavigation?.NombreMarca ?? "—";
-        var nombre = HttpUtility.JavaScriptStringEncode(d.IdProductoNavigation.NombreProducto);
-        return $@"
-<div class=""prm-item"" id=""det-{d.IdPromocionDetalle}"" data-detalle-id=""{d.IdPromocionDetalle}"">
-  <div class=""prm-item-img"">{img}</div>
-  <div class=""prm-item-info"">
-    <div class=""prm-item-name"">{d.IdProductoNavigation.NombreProducto}</div>
-    <div class=""prm-item-meta"">{marca} · ${d.IdProductoNavigation.Precio:N0}</div>
-  </div>
-  <div class=""prm-item-qty"">×{d.Cantidad}</div>
-  <button class=""prm-item-del edit-only"" title=""Quitar""
-          onclick=""confirmarQuitarProducto({d.IdPromocionDetalle},'{nombre}')"">
-    <svg viewBox=""0 0 24 24""><path d=""M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1-1H5v2h14V4z""/></svg>
-  </button>
-</div>";
-    }
-
-    string GrupoHtml(Infraestructura.Entities.BotiApp.ProPromocionGrupo g, int idPromocion, IEnumerable<Infraestructura.Entities.BotiApp.ProPromocionDetalle> items)
-    {
-        var tagClass = g.EsExcluyente ? "excl" : "libre";
-        var tagText  = g.EsExcluyente ? "Excluyente" : "Libre";
-        var itemsArr = items?.ToList() ?? new List<Infraestructura.Entities.BotiApp.ProPromocionDetalle>();
-        var itemsHtml = itemsArr.Any()
-            ? string.Join("", itemsArr.Select(ItemHtml))
-            : @"<div class=""prm-empty"" style=""grid-column:1/-1"">Aún no hay productos en este grupo.</div>";
-        var nombre = HttpUtility.JavaScriptStringEncode(g.Descripcion);
-        return $@"
-<div class=""prm-grupo"" id=""grupo-{g.IdGrupo}"" data-grupo-id=""{g.IdGrupo}"">
-  <div class=""prm-grupo-head"">
-    <div class=""prm-grupo-name"" id=""grupoName-{g.IdGrupo}"">
-      <svg viewBox=""0 0 24 24""><path d=""M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5""/></svg>
-      <span class=""prm-grupo-name-text"">{g.Descripcion}</span>
-      <span class=""prm-grupo-tag {tagClass}"" id=""grupoTag-{g.IdGrupo}"">{tagText}</span>
-    </div>
-    <div class=""prm-grupo-edit-form"" id=""grupoEditForm-{g.IdGrupo}"">
-      <input type=""text"" id=""grupoEditInput-{g.IdGrupo}"" value=""{HttpUtility.HtmlAttributeEncode(g.Descripcion)}""
-             onkeydown=""if(event.key==='Enter'){{event.preventDefault();guardarNombreGrupo({g.IdGrupo});}}if(event.key==='Escape'){{cancelarEditarGrupo({g.IdGrupo});}}"" />
-      <label><input type=""checkbox"" id=""grupoEditExcl-{g.IdGrupo}"" {(g.EsExcluyente ? "checked" : "")} /> Excluyente</label>
-      <button class=""prm-grupo-save"" onclick=""guardarNombreGrupo({g.IdGrupo})"">Guardar</button>
-      <button class=""prm-grupo-cancel"" onclick=""cancelarEditarGrupo({g.IdGrupo})"">Cancelar</button>
-    </div>
-    <div class=""prm-grupo-count"">{itemsArr.Count} producto(s)</div>
-    <div class=""prm-grupo-actions"">
-      <button class=""icon-btn edit edit-only"" title=""Editar nombre del grupo""
-              onclick=""editarNombreGrupo({g.IdGrupo})"">
-        <svg viewBox=""0 0 24 24""><path d=""M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z""/></svg>
-      </button>
-      <button class=""icon-btn del edit-only"" title=""Eliminar grupo""
-              onclick=""confirmarEliminarGrupo({g.IdGrupo},'{nombre}')"">
-        <svg viewBox=""0 0 24 24""><path d=""M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1-1H5v2h14V4z""/></svg>
-      </button>
-    </div>
-  </div>
-  <div class=""prm-grupo-items"">{itemsHtml}</div>
-  <button class=""prm-add-here"" onclick=""abrirModalBuscar({idPromocion},{g.IdGrupo})"">
-    <svg viewBox=""0 0 24 24""><path d=""M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z""/></svg>
-    Agregar producto a «{g.Descripcion}»
-  </button>
-</div>";
-    }
-
-    string GridHtml(IEnumerable<Infraestructura.Entities.BotiApp.ProPromocion> promos)
-    {
-        var sb = new System.Text.StringBuilder();
-        foreach (var p in promos)
-        {
-            var badge       = Badge(p);
-            var fechaFin    = p.FechaFin.HasValue ? p.FechaFin.Value.ToString("dd/MM/yyyy") : "Sin límite";
-            var inactiva    = !p.Estado ? "inactiva" : "";
-            var nombre      = HttpUtility.HtmlAttributeEncode(p.Nombre);
-            var desc        = HttpUtility.HtmlAttributeEncode(p.Descripcion ?? "");
-
-            var sinGrupo    = p.ProPromocionDetalle.Where(d => d.IdGrupo == null).ToList();
-            var itemsBase   = sinGrupo.Any()
-                ? string.Join("", sinGrupo.Select(ItemHtml))
-                : @"<div class=""prm-empty"">Aún no agregaste productos base. Pulsa <strong>Editar</strong> y luego «+ Agregar producto».</div>";
-
-            var gruposHtml  = p.ProPromocionGrupo.Any()
-                ? string.Join("", p.ProPromocionGrupo.Select(g =>
-                    GrupoHtml(g, p.IdPromocion, p.ProPromocionDetalle.Where(d => d.IdGrupo == g.IdGrupo))))
-                : "";
-
-            sb.Append($@"
-<div class=""prm-card {inactiva}"" id=""card-{p.IdPromocion}""
-     data-nombre=""{nombre}"" data-desc=""{desc}""
-     data-estado=""{p.Estado.ToString().ToLower()}""
-     data-vigente=""{BotiApp.Areas.Productos.Controllers.PromocionesController.EsVigente(p).ToString().ToLower()}"">
-
-  <div class=""prm-card-head"" onclick=""toggleCard({p.IdPromocion},event)"">
-    <div>
-      <h3 class=""prm-card-name"">{p.Nombre}</h3>
-      {(string.IsNullOrWhiteSpace(p.Descripcion) ? "" : $@"<p class=""prm-card-desc"">{p.Descripcion}</p>")}
-      <div class=""prm-card-meta"">
-        <span class=""prm-chip precio"">${p.PrecioPromocion:N0}</span>
-        <span class=""prm-chip muted"">
-          <svg viewBox=""0 0 24 24""><path d=""M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H5V9h14v10z""/></svg>
-          {p.FechaInicio:dd/MM/yyyy} → {fechaFin}
-        </span>
-        <span class=""prm-chip"">
-          <svg viewBox=""0 0 24 24""><path d=""M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z""/></svg>
-          {p.ProPromocionDetalle.Count} producto(s)
-        </span>
-        {badge}
-      </div>
-    </div>
-    <div class=""prm-card-actions"" onclick=""event.stopPropagation()"">
-      <button class=""icon-btn"" id=""btnToggle-{p.IdPromocion}""
-              title=""{ (p.Estado ? "Desactivar" : "Activar") }""
-              onclick=""toggleEstado({p.IdPromocion})"">
-        {(p.Estado
-            ? @"<svg viewBox=""0 0 24 24""><path d=""M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h10c1.65 0 3 1.35 3 3s-1.35 3-3 3zm0-4.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z""/></svg>"
-            : @"<svg viewBox=""0 0 24 24""><path d=""M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-10 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z""/></svg>")}
-      </button>
-      <button class=""icon-btn edit"" id=""btnEdit-{p.IdPromocion}""
-              title=""Activar modo edición""
-              onclick=""toggleModoEdicion({p.IdPromocion})"">
-        <svg viewBox=""0 0 24 24""><path d=""M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z""/></svg>
-      </button>
-      <button class=""icon-btn del"" title=""Eliminar promoción""
-              onclick=""confirmarEliminarPromo({p.IdPromocion},'{HttpUtility.JavaScriptStringEncode(p.Nombre)}')"">
-        <svg viewBox=""0 0 24 24""><path d=""M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1-1H5v2h14V4z""/></svg>
-      </button>
-      <button class=""icon-btn btn-expand"" title=""Expandir / colapsar"">
-        <svg viewBox=""0 0 24 24""><path d=""M7 10l5 5 5-5z""/></svg>
-      </button>
-    </div>
-  </div>
-
-  <div class=""prm-card-body"">
-    <div class=""prm-help-banner"">
-      <svg viewBox=""0 0 24 24""><path d=""M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z""/></svg>
-      <div>
-        <strong>Productos base</strong> se incluyen siempre en la promoción.
-        Los <strong>grupos</strong> ofrecen alternativas:
-        un grupo <strong>excluyente</strong> obliga al cliente a elegir solo uno de sus productos;
-        un grupo <strong>libre</strong> incluye todos los productos del grupo.
-      </div>
     </div>
 
-    <div class=""prm-section prm-base-section"">
-      <div class=""prm-section-head"">
-        <div class=""prm-section-title"">
-          <svg viewBox=""0 0 24 24""><path d=""M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L21 8l-9 9z""/></svg>
-          Productos base
-          <span class=""prm-section-count"">{sinGrupo.Count}</span>
-        </div>
-        <div class=""prm-section-actions"">
-          <button class=""btn-section primary edit-only"" onclick=""abrirModalBuscar({p.IdPromocion},null)"">
-            <svg viewBox=""0 0 24 24""><path d=""M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z""/></svg>
-            Agregar producto
-          </button>
-        </div>
-      </div>
-      <div class=""prm-grupo-items"" id=""base-{p.IdPromocion}"">{itemsBase}</div>
+    <div class="empty-page" id="sinResultados">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <h3>Sin resultados</h3>
+        <p>Ninguna promoción coincide con la búsqueda o el filtro aplicado.</p>
     </div>
-
-            <div class=""prm-section"">
-              <div class=""prm-section-head"">
-                <div class=""prm-section-title"">
-                  <svg viewBox=""0 0 24 24""><path d=""M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5""/></svg>
-                  Grupos de opciones
-                  <span class=""prm-section-count"">{p.ProPromocionGrupo.Count}</span>
-                </div>
-                <div class=""prm-section-actions"">
-                  <button class=""btn-section secondary edit-only"" onclick=""mostrarFormGrupo({p.IdPromocion})"">
-                    <svg viewBox=""0 0 24 24""><path d=""M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z""/></svg>
-                    Nuevo grupo
-                  </button>
-                </div>
-              </div>
-
-              <div class=""prm-grupo-form"" id=""formGrupo-{p.IdPromocion}"">
-                <input type=""text"" id=""inputGrupoNombre-{p.IdPromocion}""
-                       placeholder=""Nombre del grupo (ej: Elige el pisco)"" onkeydown=""if(event.key==='Enter')crearGrupo({p.IdPromocion})"" />
-                <label><input type=""checkbox"" id=""chkExcl-{p.IdPromocion}"" checked /> Excluyente</label>
-                <button class=""btn-section primary"" onclick=""crearGrupo({p.IdPromocion})"">Crear</button>
-                <button class=""btn-section secondary"" onclick=""ocultarFormGrupo({p.IdPromocion})"">Cancelar</button>
-              </div>
-
-              <div id=""gruposContainer-{p.IdPromocion}"">
-                {(string.IsNullOrEmpty(gruposHtml)
-                    ? $@"<div class=""prm-empty"" id=""gruposEmpty-{p.IdPromocion}"">Esta promoción aún no tiene grupos. Pulsa <strong>Editar</strong> y luego «+ Nuevo grupo» para crear uno.</div>"
-                    : gruposHtml)}
-              </div>
-            </div>
-  </div>
-</div>");
-        }
-        return sb.ToString();
-    }
 }
 
 @section Scripts {
 <script>
 (function () {
-    const csrf = () => document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
     const overlay = document.getElementById('modalOverlay');
+    const csrf = () => document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
 
-    // ── Insertar HTML ejecutando scripts ──────────────────────────────────────
-    function setHtmlConScripts(elemento, html) {
-        elemento.innerHTML = html;
-        elemento.querySelectorAll('script').forEach(s => {
+    /* ══ Utilidades ══════════════════════════════════════════════════════ */
+    function esc(s) {
+        return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                              .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function toast(msg, tipo) {
+        const iconos = {
+            exito: '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>',
+            error: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>'
+        };
+        const t = document.createElement('div');
+        t.className = `toast-msg ${tipo}`;
+        t.innerHTML = `${iconos[tipo]}<span>${esc(msg)}</span>`;
+        document.getElementById('toastWrap').appendChild(t);
+        setTimeout(() => t.style.opacity = '0', 3500);
+        setTimeout(() => t.remove(), 3800);
+    }
+
+    /* ══ Modal ═══════════════════════════════════════════════════════════ */
+    function setHtmlConScripts(el, html) {
+        el.innerHTML = html;
+        el.querySelectorAll('script').forEach(s => {
             const n = document.createElement('script');
             n.textContent = s.textContent;
             s.replaceWith(n);
         });
     }
 
-    // ── Modal genérico ────────────────────────────────────────────────────────
     async function abrirModal(url) {
         overlay.classList.add('open');
         document.getElementById('modalBody').innerHTML =
@@ -788,7 +527,7 @@
             setHtmlConScripts(document.getElementById('modalBody'), await r.text());
         } catch {
             cerrarModal();
-            toast('Error al cargar el contenido.', 'error');
+            toast('No se pudo cargar el contenido.', 'error');
         }
     }
 
@@ -798,672 +537,210 @@
     }
 
     overlay.addEventListener('click', e => { if (e.target === overlay) cerrarModal(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && overlay.classList.contains('open')) cerrarModal();
+    });
 
-    // ── Crear promo ───────────────────────────────────────────────────────────
+    /* ══ Crear promoción ═════════════════════════════════════════════════ */
+    /* Al crearla se abre su vista de edición: una promo sin productos no sirve. */
     async function submitCrearPromo(formId) {
         const form = document.getElementById(formId);
         if (!form) return;
-        const btn = form.querySelector('[type=submit]');
+        const btn = form.querySelector('[type=submit]') ??
+                    document.querySelector('.btn-guardar');
+        const etiquetaBtn = btn?.textContent;
         if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
-        limpiarErrores();
+
+        document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+        document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+
         try {
             const r    = await fetch(form.action, { method: 'POST', body: new FormData(form) });
             const data = await r.json();
             if (data.ok) {
-                cerrarModal();
-                toast(data.mensaje, 'exito');
-                agregarCard(data.promo);
-                actualizarContador();
-            } else {
-                mostrarErrores(data.errores ?? {});
-                if (data.mensaje) toast(data.mensaje, 'error');
+                sessionStorage.setItem('promoFlash', data.mensaje);
+                location.href = `/Productos/Promociones/Editar/${data.idPromocion}`;
+                return;
             }
-        } catch { toast('Error de conexión.', 'error'); }
-        finally { if (btn) { btn.disabled = false; btn.textContent = 'Guardar promoción'; } }
+            Object.entries(data.errores ?? {}).forEach(([campo, msg]) => {
+                const input = document.querySelector(`[name="${campo}"]`);
+                if (!input) return;
+                input.classList.add('input-error');
+                let span = input.parentElement.querySelector('.field-error');
+                if (!span) { span = document.createElement('span'); span.className = 'field-error'; input.after(span); }
+                span.textContent = msg;
+            });
+            if (data.mensaje) toast(data.mensaje, 'error');
+        } catch {
+            toast('Error de conexión.', 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = etiquetaBtn; }
+        }
     }
 
-    // ── Toggle estado ─────────────────────────────────────────────────────────
+    /* ══ Estado / eliminación ════════════════════════════════════════════ */
+    const ICONO_ACTIVA   = '<svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8c-1.66 0-3-1.35-3-3s1.34-3 3-3 3 1.35 3 3-1.34 3-3 3z"/></svg>';
+    const ICONO_INACTIVA = '<svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-10 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/></svg>';
+
     async function toggleEstado(id) {
         try {
-            const r    = await fetch(`/Productos/Promociones/ToggleEstadoAjax/${id}`,
+            const r = await fetch(`/Productos/Promociones/ToggleEstadoAjax/${id}`,
                 { method: 'POST', headers: { 'RequestVerificationToken': csrf() } });
             const data = await r.json();
-            if (data.ok) {
-                toast(data.mensaje, 'exito');
-                const card = document.getElementById(`card-${id}`);
-                if (card) {
-                    card.dataset.estado = data.estado ? 'true' : 'false';
-                    card.classList.toggle('inactiva', !data.estado);
+            if (!data.ok) { toast(data.mensaje, 'error'); return; }
+            toast(data.mensaje, 'exito');
+
+            const card = document.getElementById(`card-${id}`);
+            if (card) {
+                card.dataset.estado = data.estadoClave;
+                card.classList.toggle('inactiva', !data.estado);
+
+                const badge = card.querySelector('.badge');
+                if (badge) {
+                    badge.textContent = data.estadoTexto;
+                    badge.className   = 'badge ' + data.estadoClave;
                 }
                 const btn = document.getElementById(`btnToggle-${id}`);
                 if (btn) {
-                    btn.innerHTML = data.estado
-                        ? `<svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h10c1.65 0 3 1.35 3 3s-1.35 3-3 3zm0-4.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/></svg>`
-                        : `<svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-10 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/></svg>`;
-                    btn.title = data.estado ? 'Desactivar' : 'Activar';
+                    btn.innerHTML = data.estado ? ICONO_ACTIVA : ICONO_INACTIVA;
+                    btn.title     = data.estado ? 'Desactivar' : 'Activar';
+                    btn.classList.toggle('on', data.estado);
                 }
-                // Re-aplicar filtro por si ahora debe ocultarse
-                aplicarFiltros();
-            } else toast(data.mensaje, 'error');
-        } catch { toast('Error al cambiar estado.', 'error'); }
+            }
+            actualizarContadores();
+            aplicarFiltros();
+        } catch { toast('No se pudo cambiar el estado.', 'error'); }
     }
 
-    // ── Eliminar promoción (confirm) ─────────────────────────────────────────
-    function confirmarEliminarPromo(id, nombre) {
-        const safeName = esc(nombre);
+    /** Recalcula los números de cada chip de filtro a partir de las tarjetas presentes. */
+    function actualizarContadores() {
+        const cards = Array.from(document.querySelectorAll('.prm-card'));
+        document.querySelectorAll('.prm-filtro').forEach(btn => {
+            const clave = btn.dataset.filtro;
+            const n = clave === 'todas'
+                ? cards.length
+                : cards.filter(c => c.dataset.estado === clave).length;
+            const span = btn.querySelector('.prm-filtro-n');
+            if (span) span.textContent = n;
+        });
+    }
+
+    function eliminarPromo(id) {
+        const nombre = document.getElementById(`card-${id}`)?.dataset.nombre ?? '';
         overlay.classList.add('open');
         setHtmlConScripts(document.getElementById('modalBody'), `
-        <div style="padding:2.5rem 2rem;max-width:440px;margin:auto;text-align:center;">
-            <div style="width:60px;height:60px;border-radius:50%;background:rgba(239,68,68,.1);
-                        display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
-                <svg width="30" height="30" fill="#dc2626" viewBox="0 0 24 24">
-                    <path d="M12 2L1 21h22L12 2zm0 6l7.53 13H4.47L12 8zm-1 4v3h2v-3h-2zm0 5v2h2v-2h-2z"/>
-                </svg>
-            </div>
-            <h3 style="font-size:1.1rem;font-weight:700;color:var(--color-secundario);margin-bottom:.5rem;">
-                ¿Eliminar la promoción?
-            </h3>
-            <p style="font-size:.88rem;color:#7a6050;margin-bottom:.5rem;">
-                Vas a eliminar <strong>«${safeName}»</strong> permanentemente.
-            </p>
-            <p style="font-size:.78rem;color:#dc2626;background:#fef2f2;padding:.5rem .75rem;border-radius:8px;margin-bottom:1.75rem;">
-                Se quitarán también sus grupos y todos los productos asociados.
-            </p>
-            <div style="display:flex;gap:.75rem;justify-content:center;">
-                <button onclick="cerrarModal()"
-                    style="padding:.6rem 1.4rem;background:#f0ebe5;color:var(--color-secundario);
-                           border:none;border-radius:8px;font-weight:600;cursor:pointer;">
-                    Cancelar
-                </button>
-                <button onclick="ejecutarEliminarPromo(${id})"
-                    style="padding:.6rem 1.4rem;background:#dc2626;color:#fff;border:none;
-                           border-radius:8px;font-weight:600;cursor:pointer;">
-                    Sí, eliminar
-                </button>
-            </div>
-        </div>`);
+            <div class="m-confirm">
+                <div class="m-confirm-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 6l7.53 13H4.47L12 8zm-1 4v3h2v-3h-2zm0 5v2h2v-2h-2z"/></svg>
+                </div>
+                <h3>¿Eliminar la promoción?</h3>
+                <p>Vas a eliminar <strong>«${esc(nombre)}»</strong> de forma permanente.</p>
+                <p class="aviso">Se quitarán también sus grupos y todos los productos asociados.</p>
+                <div class="m-confirm-actions">
+                    <button class="btn-cancelar" id="cfNo">Cancelar</button>
+                    <button class="btn-eliminar" id="cfSi">Sí, eliminar</button>
+                </div>
+            </div>`);
+        document.getElementById('cfNo').onclick = cerrarModal;
+        document.getElementById('cfSi').onclick = () => ejecutarEliminar(id);
     }
 
-    async function ejecutarEliminarPromo(id) {
+    async function ejecutarEliminar(id) {
         cerrarModal();
         try {
-            const r    = await fetch(`/Productos/Promociones/EliminarAjax/${id}`,
+            const r = await fetch(`/Productos/Promociones/EliminarAjax/${id}`,
                 { method: 'POST', headers: { 'RequestVerificationToken': csrf() } });
             const data = await r.json();
             toast(data.mensaje, data.ok ? 'exito' : 'error');
-            if (data.ok) {
-                const card = document.getElementById(`card-${id}`);
-                if (card) {
-                    card.style.transition = 'opacity .25s, transform .25s';
-                    card.style.opacity = '0';
-                    card.style.transform = 'translateX(-12px)';
-                    setTimeout(() => { card.remove(); actualizarContador(); }, 250);
-                }
+            if (!data.ok) return;
+
+            const card = document.getElementById(`card-${id}`);
+            if (card) {
+                card.classList.add('saliendo');
+                setTimeout(() => {
+                    card.remove();
+                    actualizarContadores();
+                    aplicarFiltros();
+                }, 220);
             }
-        } catch { toast('Error al eliminar la promoción.', 'error'); }
+        } catch { toast('No se pudo eliminar la promoción.', 'error'); }
     }
 
-    // ── Modo edición por card ────────────────────────────────────────────────
-    const editando = new Set();
+    /* ══ Filtros, búsqueda y orden ═══════════════════════════════════════ */
+    let filtroActivo = 'todas';
 
-    function toggleModoEdicion(id) {
-        const card = document.getElementById(`card-${id}`);
-        if (!card) return;
-        if (!card.classList.contains('expanded')) {
-            toggleCard(id, null, true);
-        }
-        if (editando.has(id)) {
-            editando.delete(id);
-            card.classList.remove('edit-mode');
-            card.querySelectorAll('.edit-only').forEach(el => el.style.display = '');
-            const btn = document.getElementById(`btnEdit-${id}`);
-            if (btn) btn.classList.remove('active');
-            ocultarFormGrupo(id);
-        } else {
-            editando.add(id);
-            card.classList.add('edit-mode');
-            card.querySelectorAll('.edit-only').forEach(el => {
-                if (el.tagName === 'TR') el.style.display = 'table-row';
-                else el.style.display = 'inline-flex';
-            });
-            const btn = document.getElementById(`btnEdit-${id}`);
-            if (btn) btn.classList.add('active');
-        }
+    function seleccionarFiltro(btn) {
+        document.querySelectorAll('.prm-filtro').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        filtroActivo = btn.dataset.filtro;
+        aplicarFiltros();
     }
 
-    function toggleCard(id, _e, forceOpen = false) {
-        const card = document.getElementById(`card-${id}`);
-        if (!card) return;
-        if (forceOpen) { card.classList.add('expanded'); return; }
-        card.classList.toggle('expanded');
-    }
-
-    // ── Filtros: búsqueda + mostrar inactivas ────────────────────────────────
     function aplicarFiltros() {
-        const q       = (document.getElementById('buscador').value || '').toLowerCase().trim();
-        const inact   = document.getElementById('toggleInactivas').checked;
-        const cards   = document.querySelectorAll('.prm-card');
+        const q     = (document.getElementById('buscador')?.value ?? '').toLowerCase().trim();
+        const cards = document.querySelectorAll('.prm-card');
 
-        let visible = 0;
+        let visibles = 0;
         cards.forEach(c => {
-            const texto = ((c.dataset.nombre || '') + ' ' + (c.dataset.desc || '')).toLowerCase();
-            const estadoActivo = c.dataset.estado === 'true';
-            const pasaTexto    = !q || texto.includes(q);
-            const pasaEstado   = inact || estadoActivo;
-            const visibleCard  = pasaTexto && pasaEstado;
-            c.style.display = visibleCard ? '' : 'none';
-            if (visibleCard) visible++;
+            const pasaTexto  = !q || (c.dataset.buscar ?? '').includes(q);
+            const pasaEstado = filtroActivo === 'todas' || c.dataset.estado === filtroActivo;
+            const visible    = pasaTexto && pasaEstado;
+            c.style.display = visible ? '' : 'none';
+            if (visible) visibles++;
         });
 
-        document.getElementById('counterVisible').textContent = visible;
-        document.getElementById('counterTotal').textContent   = cards.length;
-    }
-
-    function actualizarContador() { aplicarFiltros(); }
-
-    // ── Gestión de grupos ─────────────────────────────────────────────────────
-    function mostrarFormGrupo(idPromocion) {
-        const form = document.getElementById(`formGrupo-${idPromocion}`);
-        if (form) {
-            form.classList.add('visible');
-            setTimeout(() => document.getElementById(`inputGrupoNombre-${idPromocion}`)?.focus(), 30);
-        }
-    }
-    function ocultarFormGrupo(idPromocion) {
-        const form = document.getElementById(`formGrupo-${idPromocion}`);
-        if (form) form.classList.remove('visible');
-        const input = document.getElementById(`inputGrupoNombre-${idPromocion}`);
-        if (input) input.value = '';
-    }
-
-    async function crearGrupo(idPromocion) {
-        const input = document.getElementById(`inputGrupoNombre-${idPromocion}`);
-        const chk   = document.getElementById(`chkExcl-${idPromocion}`);
-        const desc  = input?.value.trim();
-        if (!desc) { input?.focus(); return; }
-
-        const fd = new FormData();
-        fd.append('idPromocion',  idPromocion);
-        fd.append('descripcion',  desc);
-        fd.append('esExcluyente', chk?.checked ?? true);
-
-        try {
-            const r    = await fetch('/Productos/Promociones/CrearGrupoAjax',
-                { method: 'POST', headers: { 'RequestVerificationToken': csrf() }, body: fd });
-            const data = await r.json();
-            if (data.ok) {
-                toast(data.mensaje, 'exito');
-                ocultarFormGrupo(idPromocion);
-                agregarGrupoEnCard(idPromocion, data.grupo);
-            } else { toast(data.mensaje, 'error'); }
-        } catch { toast('Error al crear el grupo.', 'error'); }
-    }
-
-    function agregarGrupoEnCard(idPromocion, g) {
-        const containerId = `gruposContainer-${idPromocion}`;
-        const container = document.getElementById(containerId);
-        if (!container) {
-            window.location.reload();
-            return;
-        }
-        // Quitar mensaje de "sin grupos" si existe
-        container.querySelector(`#gruposEmpty-${idPromocion}`)?.remove();
-
-        const tag = g.esExcluyente
-            ? `<span class="prm-grupo-tag excl" id="grupoTag-${g.idGrupo}">Excluyente</span>`
-            : `<span class="prm-grupo-tag libre" id="grupoTag-${g.idGrupo}">Libre</span>`;
-        const safeName = esc(g.descripcion);
-        const html = `
-<div class="prm-grupo" id="grupo-${g.idGrupo}" data-grupo-id="${g.idGrupo}">
-  <div class="prm-grupo-head">
-    <div class="prm-grupo-name" id="grupoName-${g.idGrupo}">
-      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      <span class="prm-grupo-name-text">${safeName}</span>
-      ${tag}
-    </div>
-    <div class="prm-grupo-edit-form" id="grupoEditForm-${g.idGrupo}">
-      <input type="text" id="grupoEditInput-${g.idGrupo}" value="${safeName}"
-             onkeydown="if(event.key==='Enter'){event.preventDefault();guardarNombreGrupo(${g.idGrupo});}if(event.key==='Escape'){cancelarEditarGrupo(${g.idGrupo});}" />
-      <label><input type="checkbox" id="grupoEditExcl-${g.idGrupo}" ${g.esExcluyente ? 'checked' : ''} /> Excluyente</label>
-      <button class="prm-grupo-save" onclick="guardarNombreGrupo(${g.idGrupo})">Guardar</button>
-      <button class="prm-grupo-cancel" onclick="cancelarEditarGrupo(${g.idGrupo})">Cancelar</button>
-    </div>
-    <div class="prm-grupo-count">0 producto(s)</div>
-    <div class="prm-grupo-actions">
-      <button class="icon-btn edit edit-only" title="Editar nombre del grupo"
-              onclick="editarNombreGrupo(${g.idGrupo})">
-        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-      </button>
-      <button class="icon-btn del edit-only" title="Eliminar grupo"
-              onclick="confirmarEliminarGrupo(${g.idGrupo},'${safeName.replace(/'/g,"\\'")}')">
-        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1-1H5v2h14V4z"/></svg>
-      </button>
-    </div>
-  </div>
-  <div class="prm-grupo-items">
-    <div class="prm-empty" style="grid-column:1/-1">Aún no hay productos en este grupo.</div>
-  </div>
-  <button class="prm-add-here" onclick="abrirModalBuscar(${idPromocion},${g.idGrupo})">
-    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-    Agregar producto a «${safeName}»
-  </button>
-</div>`;
-        container.insertAdjacentHTML('beforeend', html);
-
-        // Actualizar contador de la sección
-        const card = document.getElementById(`card-${idPromocion}`);
-        const cnt = card?.querySelector('.prm-section:nth-of-type(2) .prm-section-count');
-        if (cnt) {
-            const grupos = container.querySelectorAll('.prm-grupo').length;
-            cnt.textContent = grupos;
+        const conteo = document.getElementById('conteo');
+        if (conteo) {
+            conteo.textContent = visibles === cards.length
+                ? `${cards.length} promoción(es)`
+                : `${visibles} de ${cards.length} promoción(es)`;
         }
 
-        // Si el card está en modo edición, mostrar botones edit-only
-        if (card?.classList.contains('edit-mode')) {
-            const newGrupo = document.getElementById(`grupo-${g.idGrupo}`);
-            newGrupo?.querySelectorAll('.edit-only').forEach(el => el.style.display = 'inline-flex');
-        }
+        const vacio = document.getElementById('sinResultados');
+        if (vacio) vacio.style.display = (visibles === 0 && cards.length > 0) ? 'block' : 'none';
     }
 
-    function confirmarEliminarGrupo(idGrupo, nombre) {
-        const safeName = esc(nombre);
-        overlay.classList.add('open');
-        setHtmlConScripts(document.getElementById('modalBody'), `
-        <div style="padding:2.5rem 2rem;max-width:420px;margin:auto;text-align:center;">
-            <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,.1);
-                        display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
-                <svg width="28" height="28" fill="#dc2626" viewBox="0 0 24 24">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
-            </div>
-            <h3 style="font-size:1.05rem;font-weight:700;color:var(--color-secundario);margin-bottom:.5rem;">¿Eliminar grupo?</h3>
-            <p style="font-size:.88rem;color:#7a6050;margin-bottom:.5rem;">
-                El grupo <strong>«${safeName}»</strong> será eliminado.
-            </p>
-            <p style="font-size:.78rem;color:#dc2626;background:#fef2f2;padding:.5rem .75rem;border-radius:8px;margin-bottom:1.75rem;">
-                También se eliminarán todos los productos asociados al grupo.
-            </p>
-            <div style="display:flex;gap:.75rem;justify-content:center;">
-                <button onclick="cerrarModal()"
-                    style="padding:.6rem 1.4rem;background:#f0ebe5;color:var(--color-secundario);border:none;border-radius:8px;font-weight:600;cursor:pointer;">
-                    Cancelar
-                </button>
-                <button onclick="ejecutarEliminarGrupo(${idGrupo})"
-                    style="padding:.6rem 1.4rem;background:#dc2626;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">
-                    Sí, eliminar
-                </button>
-            </div>
-        </div>`);
-    }
+    function ordenarPromos() {
+        const grid  = document.getElementById('grid');
+        if (!grid) return;
+        const modo  = document.getElementById('orden').value;
+        const cards = Array.from(grid.querySelectorAll('.prm-card'));
 
-    async function ejecutarEliminarGrupo(idGrupo) {
-        cerrarModal();
-        try {
-            const r    = await fetch(`/Productos/Promociones/EliminarGrupoAjax/${idGrupo}`,
-                { method: 'POST', headers: { 'RequestVerificationToken': csrf() } });
-            const data = await r.json();
-            toast(data.mensaje, data.ok ? 'exito' : 'error');
-            if (data.ok) {
-                const grupo = document.getElementById(`grupo-${idGrupo}`);
-                const container = grupo?.parentElement;
-                grupo?.remove();
-                // Si el contenedor queda vacío, mostrar mensaje de "sin grupos"
-                if (container && !container.querySelector('.prm-grupo')) {
-                    const idPromocion = container.id.replace('gruposContainer-', '');
-                    container.insertAdjacentHTML('beforeend', `
-                        <div class="prm-empty" id="gruposEmpty-${idPromocion}">
-                            Esta promoción aún no tiene grupos. Pulsa <strong>Editar</strong> y luego «+ Nuevo grupo» para crear uno.
-                        </div>`);
-                    const cnt = document.querySelector(`#card-${idPromocion} .prm-section:nth-of-type(2) .prm-section-count`);
-                    if (cnt) cnt.textContent = '0';
+        // «recientes» es el orden con que el servidor entregó las tarjetas
+        if (modo !== 'recientes') {
+            cards.sort((a, b) => {
+                if (modo === 'nombre') {
+                    return (a.dataset.nombre ?? '').localeCompare(b.dataset.nombre ?? '', 'es');
                 }
-            }
-        } catch { toast('Error al eliminar el grupo.', 'error'); }
-    }
-
-    // ── Quitar producto ──────────────────────────────────────────────────────
-    function confirmarQuitarProducto(idDetalle, nombre) {
-        const safeName = esc(nombre);
-        overlay.classList.add('open');
-        setHtmlConScripts(document.getElementById('modalBody'), `
-        <div style="padding:2.5rem 2rem;max-width:420px;margin:auto;text-align:center;">
-            <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,.1);
-                        display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
-                <svg width="28" height="28" fill="#dc2626" viewBox="0 0 24 24">
-                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1-1H5v2h14V4z"/>
-                </svg>
-            </div>
-            <h3 style="font-size:1.05rem;font-weight:700;color:var(--color-secundario);margin-bottom:.5rem;">¿Quitar producto?</h3>
-            <p style="font-size:.88rem;color:#7a6050;margin-bottom:1.75rem;">«${safeName}» será quitado de la promoción.</p>
-            <div style="display:flex;gap:.75rem;justify-content:center;">
-                <button onclick="cerrarModal()"
-                    style="padding:.6rem 1.4rem;background:#f0ebe5;color:var(--color-secundario);border:none;border-radius:8px;font-weight:600;cursor:pointer;">
-                    Cancelar
-                </button>
-                <button onclick="ejecutarQuitarProducto(${idDetalle})"
-                    style="padding:.6rem 1.4rem;background:#dc2626;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">
-                    Sí, quitar
-                </button>
-            </div>
-        </div>`);
-    }
-
-    async function ejecutarQuitarProducto(idDetalle) {
-        cerrarModal();
-        try {
-            const r    = await fetch(`/Productos/Promociones/QuitarProductoAjax/${idDetalle}`,
-                { method: 'POST', headers: { 'RequestVerificationToken': csrf() } });
-            const data = await r.json();
-            toast(data.mensaje, data.ok ? 'exito' : 'error');
-            if (data.ok) {
-                document.getElementById(`det-${idDetalle}`)?.remove();
-            }
-        } catch { toast('Error al quitar el producto.', 'error'); }
-    }
-
-    // ── Abrir modal buscador (idGrupo puede ser null) ─────────────────────────
-    function abrirModalBuscar(idPromocion, idGrupo = null) {
-        const qs = idGrupo !== null && idGrupo !== undefined
-            ? `?idPromocion=${idPromocion}&idGrupo=${idGrupo}`
-            : `?idPromocion=${idPromocion}`;
-        abrirModal(`/Productos/Promociones/ModalBuscarProducto${qs}`);
-    }
-
-    // ── Agregar producto (llamado desde el partial) ──────────────────────────
-    async function ejecutarAgregarProducto(idPromocion, idProducto, cantidad, idGrupo) {
-        cerrarModal();
-        try {
-            const fd = new FormData();
-            fd.append('idPromocion', idPromocion);
-            fd.append('idProducto',  idProducto);
-            fd.append('cantidad',    cantidad);
-            if (idGrupo) fd.append('idGrupo', idGrupo);
-
-            const r    = await fetch('/Productos/Promociones/AgregarProductoAjax',
-                { method: 'POST', headers: { 'RequestVerificationToken': csrf() }, body: fd });
-            const data = await r.json();
-            toast(data.mensaje, data.ok ? 'exito' : 'error');
-            if (data.ok) agregarFilaProducto(idPromocion, data.detalle);
-        } catch { toast('Error al agregar el producto.', 'error'); }
-    }
-
-    function agregarFilaProducto(idPromocion, d) {
-        const img = d.tieneImagen
-            ? `<img src="/Productos/Productos/Imagen/${d.idProducto}?t=${Date.now()}" alt="" />`
-            : `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`;
-        const safeName = esc(d.nombreProducto);
-        const marca    = esc(d.nombreMarca);
-        const html = `
-<div class="prm-item" id="det-${d.idPromocionDetalle}" data-detalle-id="${d.idPromocionDetalle}">
-  <div class="prm-item-img">${img}</div>
-  <div class="prm-item-info">
-    <div class="prm-item-name">${safeName}</div>
-    <div class="prm-item-meta">${marca} · $${Number(d.precio).toLocaleString('es-CL')}</div>
-  </div>
-  <div class="prm-item-qty">×${d.cantidad}</div>
-  <button class="prm-item-del edit-only" title="Quitar"
-          onclick="confirmarQuitarProducto(${d.idPromocionDetalle},'${safeName.replace(/'/g,"\\'")}')">
-    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1-1H5v2h14V4z"/></svg>
-  </button>
-</div>`;
-
-        if (d.idGrupo) {
-            const grupo = document.getElementById(`grupo-${d.idGrupo}`);
-            const items = grupo?.querySelector('.prm-grupo-items');
-            if (items) {
-                const empty = items.querySelector('.prm-empty');
-                if (empty) empty.remove();
-                items.insertAdjacentHTML('beforeend', html);
-                const cnt = grupo.querySelector('.prm-grupo-count');
-                if (cnt) {
-                    const n = items.querySelectorAll('.prm-item').length;
-                    cnt.textContent = `${n} producto(s)`;
-                }
-            }
+                const pa = Number(a.dataset.precio) || 0;
+                const pb = Number(b.dataset.precio) || 0;
+                return modo === 'precio-asc' ? pa - pb : pb - pa;
+            });
         } else {
-            const base = document.getElementById(`base-${idPromocion}`);
-            if (base) {
-                const empty = base.querySelector('.prm-empty');
-                if (empty) empty.remove();
-                base.insertAdjacentHTML('beforeend', html);
-            }
+            cards.sort((a, b) => Number(a.dataset.orden) - Number(b.dataset.orden));
         }
-
-        // Si el card está en modo edición, hacer visibles los botones delete
-        const card = document.getElementById(`card-${idPromocion}`);
-        if (card?.classList.contains('edit-mode')) {
-            const newDel = card.querySelector(`#det-${d.idPromocionDetalle} .prm-item-del`);
-            if (newDel) newDel.style.display = 'inline-flex';
-        }
+        cards.forEach(c => grid.appendChild(c));
     }
 
-    // ── agregarCard (nueva promo desde modal crear) ─────────────────────────
-    function agregarCard(p) {
-        const empty = document.getElementById('emptyState');
-        if (empty) empty.remove();
+    /* ══ Exponer para los onclick del markup y el modal de creación ══════ */
+    window.abrirModal        = abrirModal;
+    window.cerrarModal       = cerrarModal;
+    window.submitCrearPromo  = submitCrearPromo;
+    window.toggleEstado      = toggleEstado;
+    window.eliminarPromo     = eliminarPromo;
+    window.seleccionarFiltro = seleccionarFiltro;
+    window.aplicarFiltros    = aplicarFiltros;
+    window.ordenarPromos     = ordenarPromos;
+    window.toast             = toast;
 
-        const badge = p.vigente
-            ? '<span class="badge vigente">Vigente</span>'
-            : (!p.estado
-                ? '<span class="badge inactiva">Inactiva</span>'
-                : '<span class="badge proxima">Próxima</span>');
-        const inactiva = p.estado ? '' : 'inactiva';
-        const fechaFin = p.fechaFin || 'Sin límite';
-        const safeName = esc(p.nombre);
-        const safeDesc = esc(p.descripcion || '');
+    /* ══ Init ════════════════════════════════════════════════════════════ */
+    // Conserva el orden original para poder volver a «Más recientes»
+    document.querySelectorAll('.prm-card').forEach((c, i) => c.dataset.orden = i);
 
-        const html = `
-<div class="prm-card ${inactiva}" id="card-${p.idPromocion}"
-     data-nombre="${esc(p.nombre)}" data-desc="${esc(p.descripcion || '')}"
-     data-estado="${(p.estado ? 'true' : 'false')}"
-     data-vigente="${(p.vigente ? 'true' : 'false')}">
-  <div class="prm-card-head" onclick="toggleCard(${p.idPromocion},event)">
-    <div>
-      <h3 class="prm-card-name">${safeName}</h3>
-      ${p.descripcion ? `<p class="prm-card-desc">${safeDesc}</p>` : ''}
-      <div class="prm-card-meta">
-        <span class="prm-chip precio">$${Number(p.precioPromocion).toLocaleString('es-CL')}</span>
-        <span class="prm-chip muted">
-          <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H5V9h14v10z"/></svg>
-          ${p.fechaInicio} → ${fechaFin}
-        </span>
-        <span class="prm-chip">
-          <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-          0 producto(s)
-        </span>
-        ${badge}
-      </div>
-    </div>
-    <div class="prm-card-actions" onclick="event.stopPropagation()">
-      <button class="icon-btn" id="btnToggle-${p.idPromocion}"
-              title="${(p.estado ? 'Desactivar' : 'Activar')}"
-              onclick="toggleEstado(${p.idPromocion})">
-        ${p.estado
-            ? `<svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h10c1.65 0 3 1.35 3 3s-1.35 3-3 3zm0-4.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/></svg>`
-            : `<svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-10 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/></svg>`}
-      </button>
-      <button class="icon-btn edit" id="btnEdit-${p.idPromocion}"
-              title="Activar modo edición"
-              onclick="toggleModoEdicion(${p.idPromocion})">
-        <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-      </button>
-      <button class="icon-btn del" title="Eliminar promoción"
-              onclick="confirmarEliminarPromo(${p.idPromocion},'${safeName.replace(/'/g,"\\'")}')">
-        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1-1H5v2h14V4z"/></svg>
-      </button>
-      <button class="icon-btn btn-expand" title="Expandir / colapsar">
-        <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
-      </button>
-    </div>
-  </div>
+    const flash = sessionStorage.getItem('promoFlash');
+    if (flash) { sessionStorage.removeItem('promoFlash'); toast(flash, 'exito'); }
 
-  <div class="prm-card-body">
-    <div class="prm-help-banner">
-      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-      <div>
-        <strong>Productos base</strong> se incluyen siempre en la promoción.
-        Los <strong>grupos</strong> ofrecen alternativas:
-        un grupo <strong>excluyente</strong> obliga al cliente a elegir solo uno de sus productos;
-        un grupo <strong>libre</strong> incluye todos los productos del grupo.
-      </div>
-    </div>
-
-    <div class="prm-section prm-base-section">
-      <div class="prm-section-head">
-        <div class="prm-section-title">
-          <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L21 8l-9 9z"/></svg>
-          Productos base
-          <span class="prm-section-count">0</span>
-        </div>
-        <div class="prm-section-actions">
-          <button class="btn-section primary edit-only" onclick="abrirModalBuscar(${p.idPromocion},null)">
-            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            Agregar producto
-          </button>
-        </div>
-      </div>
-      <div class="prm-grupo-items" id="base-${p.idPromocion}">
-        <div class="prm-empty">Aún no agregaste productos base. Pulsa <strong>Editar</strong> y luego «+ Agregar producto».</div>
-      </div>
-    </div>
-  </div>
-</div>`;
-
-        const list = document.getElementById('promoList');
-        list.insertAdjacentHTML('afterbegin', html);
-    }
-
-    // ── Errores / Toast / Utils ─────────────────────────────────────────────
-    function mostrarErrores(errores) {
-        Object.entries(errores).forEach(([campo, msg]) => {
-            const input = document.querySelector(`[name="${campo}"]`);
-            if (!input) return;
-            input.classList.add('input-error');
-            let span = input.parentElement.querySelector('.field-error');
-            if (!span) { span = document.createElement('span'); span.className = 'field-error'; input.after(span); }
-            span.textContent = msg;
-        });
-    }
-    function limpiarErrores() {
-        document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
-        document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
-    }
-
-    function toast(msg, tipo) {
-        const iconos = {
-            exito: '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>',
-            error: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>'
-        };
-        const w = document.getElementById('toastWrap');
-        const t = document.createElement('div');
-        t.className = `toast-msg ${tipo}`;
-        t.innerHTML = `${iconos[tipo]}<span>${msg}</span>`;
-        w.appendChild(t);
-        setTimeout(() => t.style.opacity = '0', 3500);
-        setTimeout(() => t.remove(), 3800);
-    }
-
-    function esc(s) {
-        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    // ── Editar nombre de grupo ────────────────────────────────────────────────
-    function editarNombreGrupo(idGrupo) {
-        const grupo = document.getElementById(`grupo-${idGrupo}`);
-        if (!grupo) return;
-        const name   = document.getElementById(`grupoName-${idGrupo}`);
-        const form   = document.getElementById(`grupoEditForm-${idGrupo}`);
-        const input  = document.getElementById(`grupoEditInput-${idGrupo}`);
-        if (!name || !form || !input) return;
-        name.style.display = 'none';
-        form.classList.add('visible');
-        input.focus();
-        input.select();
-    }
-
-    function cancelarEditarGrupo(idGrupo) {
-        const name = document.getElementById(`grupoName-${idGrupo}`);
-        const form = document.getElementById(`grupoEditForm-${idGrupo}`);
-        if (!name || !form) return;
-        name.style.display = '';
-        form.classList.remove('visible');
-    }
-
-    async function guardarNombreGrupo(idGrupo) {
-        const input  = document.getElementById(`grupoEditInput-${idGrupo}`);
-        const chk    = document.getElementById(`grupoEditExcl-${idGrupo}`);
-        if (!input) return;
-        const desc = input.value.trim();
-        if (!desc) { input.focus(); return; }
-
-        const fd = new FormData();
-        fd.append('idGrupo',     idGrupo);
-        fd.append('descripcion', desc);
-        fd.append('esExcluyente', chk?.checked ?? false);
-
-        try {
-            const r    = await fetch('/Productos/Promociones/RenombrarGrupoAjax',
-                { method: 'POST', headers: { 'RequestVerificationToken': csrf() }, body: fd });
-            const data = await r.json();
-            if (data.ok) {
-                toast(data.mensaje, 'exito');
-                // Actualizar DOM
-                const nameEl = document.querySelector(`#grupoName-${idGrupo} .prm-grupo-name-text`);
-                if (nameEl) nameEl.textContent = data.grupo.descripcion;
-                const tagEl  = document.getElementById(`grupoTag-${idGrupo}`);
-                if (tagEl) {
-                    tagEl.textContent = data.grupo.esExcluyente ? 'Excluyente' : 'Libre';
-                    tagEl.className  = 'prm-grupo-tag ' + (data.grupo.esExcluyente ? 'excl' : 'libre');
-                }
-                const addBtn = document.querySelector(`#grupo-${idGrupo} .prm-add-here`);
-                if (addBtn) {
-                    addBtn.lastChild.textContent = ` Agregar producto a «${data.grupo.descripcion}»`;
-                }
-                // Actualizar data-nombre en botones de acción
-                const grupo = document.getElementById(`grupo-${idGrupo}`);
-                if (grupo) {
-                    grupo.querySelectorAll('[onclick*="confirmarEliminarGrupo"]').forEach(b => {
-                        b.setAttribute('onclick',
-                            `confirmarEliminarGrupo(${idGrupo},'${esc(data.grupo.descripcion).replace(/'/g,"\\'")}')`);
-                    });
-                }
-                cancelarEditarGrupo(idGrupo);
-            } else {
-                toast(data.mensaje, 'error');
-            }
-        } catch { toast('Error al renombrar el grupo.', 'error'); }
-    }
-
-    // ── Init ─────────────────────────────────────────────────────────────────
     aplicarFiltros();
-
-    // Export interactive functions to window
-    window.abrirModal = abrirModal;
-    window.cerrarModal = cerrarModal;
-    window.submitCrearPromo = submitCrearPromo;
-    window.toggleEstado = toggleEstado;
-    window.toggleModoEdicion = toggleModoEdicion;
-    window.toggleCard = toggleCard;
-    window.mostrarFormGrupo = mostrarFormGrupo;
-    window.ocultarFormGrupo = ocultarFormGrupo;
-    window.crearGrupo = crearGrupo;
-    window.confirmarEliminarGrupo = confirmarEliminarGrupo;
-    window.ejecutarEliminarGrupo = ejecutarEliminarGrupo;
-    window.confirmarQuitarProducto = confirmarQuitarProducto;
-    window.ejecutarQuitarProducto = ejecutarQuitarProducto;
-    window.abrirModalBuscar = abrirModalBuscar;
-    window.ejecutarAgregarProducto = ejecutarAgregarProducto;
-    window.agregarFilaProducto = agregarFilaProducto;
-    window.agregarGrupoEnCard = agregarGrupoEnCard;
-    window.confirmarEliminarPromo = confirmarEliminarPromo;
-    window.ejecutarEliminarPromo = ejecutarEliminarPromo;
-    window.editarNombreGrupo = editarNombreGrupo;
-    window.cancelarEditarGrupo = cancelarEditarGrupo;
-    window.guardarNombreGrupo = guardarNombreGrupo;
-    window.aplicarFiltros = aplicarFiltros;
-    window.toast = toast;
-    window.esc = esc;
 })();
 </script>
 }

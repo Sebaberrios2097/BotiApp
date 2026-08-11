@@ -13,6 +13,28 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
     public async Task<IActionResult> Index()
         => View(await promoRepo.ObtenerTodasAsync());
 
+    // ── Edición en vista completa ────────────────────────────────────────────
+    [HttpGet]
+    public async Task<IActionResult> Editar(int id)
+    {
+        var promo = await promoRepo.ObtenerPorIdAsync(id);
+        if (promo is null) return NotFound();
+        return View(promo);
+    }
+
+    /// <summary>
+    /// Devuelve solo el bloque de productos y grupos de la promoción. La vista de
+    /// edición lo recarga tras cada cambio para que contadores, estados vacíos y
+    /// resumen de precios queden siempre consistentes sin parchear el DOM a mano.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> ContenidoPromo(int id)
+    {
+        var promo = await promoRepo.ObtenerPorIdAsync(id);
+        if (promo is null) return NotFound();
+        return PartialView("_ContenidoPromo", promo);
+    }
+
     // ── Partials ─────────────────────────────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> ModalCrear()
@@ -41,10 +63,7 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CrearAjax(ProPromocion promocion)
     {
-        ModelState.Remove(nameof(promocion.ProPromocionDetalle));
-        ModelState.Remove(nameof(promocion.ProPromocionGrupo));
-
-        if (!ModelState.IsValid)
+        if (!ValidarPromocion(promocion))
             return Json(new { ok = false, errores = ObtenerErrores() });
 
         var creada = await promoRepo.CrearAsync(promocion);
@@ -52,7 +71,34 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
         {
             ok = true,
             mensaje = $"Promoción «{creada.Nombre}» creada correctamente.",
-            promo = MapCard(creada)
+            idPromocion = creada.IdPromocion
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditarAjax(ProPromocion promocion)
+    {
+        if (!ValidarPromocion(promocion))
+            return Json(new { ok = false, errores = ObtenerErrores() });
+
+        var actualizada = await promoRepo.ActualizarAsync(promocion);
+        if (actualizada is null)
+            return Json(new { ok = false, mensaje = "Promoción no encontrada." });
+
+        return Json(new
+        {
+            ok = true,
+            mensaje = "Cambios guardados correctamente.",
+            promo = new
+            {
+                actualizada.IdPromocion,
+                actualizada.Nombre,
+                actualizada.PrecioPromocion,
+                actualizada.Estado,
+                estadoClave = EstadoClave(actualizada),
+                estadoTexto = EstadoTexto(actualizada)
+            }
         });
     }
 
@@ -60,15 +106,17 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleEstadoAjax(int id)
     {
-        var nuevoEstado = await promoRepo.ToggleEstadoAsync(id);
-        if (nuevoEstado is null)
+        var promo = await promoRepo.ToggleEstadoAsync(id);
+        if (promo is null)
             return Json(new { ok = false, mensaje = "Promoción no encontrada." });
 
         return Json(new
         {
             ok = true,
-            estado = nuevoEstado,
-            mensaje = nuevoEstado.Value ? "Promoción activada." : "Promoción desactivada."
+            promo.Estado,
+            estadoClave = EstadoClave(promo),
+            estadoTexto = EstadoTexto(promo),
+            mensaje = promo.Estado ? "Promoción activada." : "Promoción desactivada."
         });
     }
 
@@ -117,6 +165,37 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ActualizarCantidadAjax(int id, int cantidad)
+    {
+        if (cantidad < 1)
+            return Json(new { ok = false, mensaje = "La cantidad debe ser al menos 1." });
+
+        var detalle = await promoRepo.ActualizarCantidadAsync(id, cantidad);
+        if (detalle is null)
+            return Json(new { ok = false, mensaje = "Detalle no encontrado." });
+
+        return Json(new { ok = true, mensaje = "Cantidad actualizada.", cantidad = detalle.Cantidad });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MoverProductoAjax(int id, int? idGrupo)
+    {
+        var detalle = await promoRepo.MoverDetalleAsync(id, idGrupo);
+        if (detalle is null)
+            return Json(new { ok = false, mensaje = "No se pudo mover el producto." });
+
+        return Json(new
+        {
+            ok = true,
+            mensaje = idGrupo.HasValue
+                ? "Producto movido al grupo."
+                : "Producto movido a productos base."
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> CrearGrupoAjax(int idPromocion, string descripcion, bool esExcluyente = true)
     {
         if (string.IsNullOrWhiteSpace(descripcion))
@@ -136,11 +215,13 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
         });
     }
 
+    // El id viaja en el segmento de ruta, que se llama «id»: el parámetro debe
+    // llamarse igual para que el binder lo tome.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EliminarGrupoAjax(int idGrupo)
+    public async Task<IActionResult> EliminarGrupoAjax(int id)
     {
-        var ok = await promoRepo.EliminarGrupoAsync(idGrupo);
+        var ok = await promoRepo.EliminarGrupoAsync(id);
         return Json(new
         {
             ok,
@@ -200,23 +281,29 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
     };
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Valida los datos propios de la promoción (comunes a crear y editar) y deja
+    /// los mensajes en ModelState para que el formulario los muestre por campo.
+    /// </summary>
+    private bool ValidarPromocion(ProPromocion p)
+    {
+        ModelState.Remove(nameof(p.ProPromocionDetalle));
+        ModelState.Remove(nameof(p.ProPromocionGrupo));
+
+        if (p.PrecioPromocion <= 0)
+            ModelState.AddModelError(nameof(p.PrecioPromocion), "El precio debe ser mayor a 0.");
+
+        if (p.FechaFin.HasValue && p.FechaFin.Value.Date < p.FechaInicio.Date)
+            ModelState.AddModelError(nameof(p.FechaFin), "No puede ser anterior a la fecha de inicio.");
+
+        return ModelState.IsValid;
+    }
+
     private Dictionary<string, string> ObtenerErrores()
         => ModelState
             .Where(e => e.Value?.Errors.Count > 0)
             .ToDictionary(e => e.Key, e => e.Value!.Errors[0].ErrorMessage);
-
-    private static object MapCard(ProPromocion p) => new
-    {
-        p.IdPromocion,
-        p.Nombre,
-        descripcion = p.Descripcion ?? "",
-        p.PrecioPromocion,
-        fechaInicio = p.FechaInicio.ToString("dd/MM/yyyy"),
-        fechaFin = p.FechaFin?.ToString("dd/MM/yyyy") ?? "",
-        p.Estado,
-        vigente = EsVigente(p),
-        totalProductos = p.ProPromocionDetalle.Count
-    };
 
     private static object MapDetalle(ProPromocionDetalle d) => new
     {
@@ -240,5 +327,64 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
         if (p.FechaInicio > hoy) return false;
         if (p.FechaFin.HasValue && p.FechaFin.Value.Date < hoy) return false;
         return true;
+    }
+
+    /// <summary>
+    /// Estado mostrado al usuario: inactiva / próxima / vencida / vigente.
+    /// Se usa como clave de badge y de filtro en el listado.
+    /// </summary>
+    internal static string EstadoClave(ProPromocion p)
+    {
+        if (!p.Estado) return "inactiva";
+        var hoy = DateTime.Today;
+        if (p.FechaInicio.Date > hoy) return "proxima";
+        if (p.FechaFin.HasValue && p.FechaFin.Value.Date < hoy) return "vencida";
+        return "vigente";
+    }
+
+    internal static string EstadoTexto(ProPromocion p) => EstadoClave(p) switch
+    {
+        "inactiva" => "Inactiva",
+        "proxima"  => "Próxima",
+        "vencida"  => "Vencida",
+        _          => "Vigente"
+    };
+
+    /// <summary>
+    /// Precio que pagaría el cliente comprando los productos por separado. Los grupos
+    /// excluyentes hacen que el total varíe según la opción elegida, por eso se
+    /// devuelve un rango: mínimo (opción más barata) y máximo (opción más cara).
+    /// </summary>
+    internal static (int Min, int Max) PrecioNormal(ProPromocion p)
+    {
+        var baseSum = p.ProPromocionDetalle
+            .Where(d => d.IdGrupo == null)
+            .Sum(d => d.IdProductoNavigation.Precio * d.Cantidad);
+
+        var min = baseSum;
+        var max = baseSum;
+
+        foreach (var g in p.ProPromocionGrupo)
+        {
+            var items = p.ProPromocionDetalle
+                .Where(d => d.IdGrupo == g.IdGrupo)
+                .Select(d => d.IdProductoNavigation.Precio * d.Cantidad)
+                .ToList();
+            if (items.Count == 0) continue;
+
+            if (g.EsExcluyente)
+            {
+                min += items.Min();
+                max += items.Max();
+            }
+            else
+            {
+                var total = items.Sum();
+                min += total;
+                max += total;
+            }
+        }
+
+        return (min, max);
     }
 }

@@ -1802,7 +1802,7 @@
     /* ══════════════════════════════════════════════════════════════════════
        GENERAR BOLETA
     ══════════════════════════════════════════════════════════════════════ */
-    window.generarBoleta = async function (soloCliente = false) {
+    window.generarBoleta = async function (soloCliente = false, sinTicket = false) {
         if (carrito.size === 0 && promoCarrito.size === 0) return;
 
         const btn     = document.getElementById('btnGenerar');
@@ -1886,22 +1886,34 @@
                 ids.forEach(id => actualizarTarjeta(id));
                 renderPromoGrid();
 
-                // Mostrar ticket con el snapshot
-                mostrarTicket({
-                    idBoleta:          data.boleta.idBoleta,
-                    correlativoDiario: data.boleta.correlativoDiario,
-                    @* cajero:       data.boleta.cajero, *@
-                    fechaEmision: data.boleta.fechaEmision,
-                    instancias:   snapshotInstancias,
-                    remaining:    snapshotRemaining,
-                    carritoSnap:  snapshotCarrito,
-                    descPromos:   snapshotDescPromos,
-                    descOfertas:  snapshotDescOfertas,
-                    descTotal:    snapshotDescTotal,
-                    subtotal:     subtotalSnapshot,
-                    envases:      snapshotEnvases,
-                    soloCliente
-                });
+                if (sinTicket) {
+                    // Venta guardada sin emitir ticket: aviso breve que se cierra solo
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Venta guardada',
+                        text: `Venta N° ${data.boleta.correlativoDiario ?? data.boleta.idBoleta} guardada sin emitir ticket.`,
+                        timer: 5000,
+                        timerProgressBar: true,
+                        showConfirmButton: false
+                    });
+                } else {
+                    // Mostrar ticket con el snapshot
+                    mostrarTicket({
+                        idBoleta:          data.boleta.idBoleta,
+                        correlativoDiario: data.boleta.correlativoDiario,
+                        @* cajero:       data.boleta.cajero, *@
+                        fechaEmision: data.boleta.fechaEmision,
+                        instancias:   snapshotInstancias,
+                        remaining:    snapshotRemaining,
+                        carritoSnap:  snapshotCarrito,
+                        descPromos:   snapshotDescPromos,
+                        descOfertas:  snapshotDescOfertas,
+                        descTotal:    snapshotDescTotal,
+                        subtotal:     subtotalSnapshot,
+                        envases:      snapshotEnvases,
+                        soloCliente
+                    });
+                }
             } else {
                 toast(data.mensaje ?? 'Error al generar la venta.', 'error');
             }
@@ -2142,6 +2154,30 @@
         });
     };
 
+    // ── CONFIRMACIÓN DE VENTA SIN EMITIR TICKET (F3) ──────────────────────
+    window.confirmarVentaSinTicket = function () {
+        if (carrito.size === 0 && promoCarrito.size === 0) return;
+
+        if (Swal.isVisible()) {
+            return;
+        }
+
+        Swal.fire({
+            title: '¿Confirmar venta?',
+            text: 'Se guardará la venta en el sistema sin emitir ticket.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: 'var(--color-primario, #e76f2e)',
+            cancelButtonColor: '#7a6050',
+            confirmButtonText: 'Sí, generar venta',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                generarBoleta(false, true);
+            }
+        });
+    };
+
     // ── NAVEGACIÓN EN GRILLA CON FLECHAS DE DIRECCIÓN ────────────────────
     function navigateGrid(key) {
         const cards = Array.from(document.querySelectorAll('.tab-pane:not(.hidden) .prod-card:not(.sin-stock), .tab-pane:not(.hidden) .promo-card:not(.sin-stock-promo)'));
@@ -2204,7 +2240,7 @@
     }
 
     if (window._generarVentaKeyDownHandler) {
-        window.removeEventListener('keydown', window._generarVentaKeyDownHandler);
+        window.removeEventListener('keydown', window._generarVentaKeyDownHandler, true);
     }
 
     window._generarVentaKeyDownHandler = function (e) {
@@ -2274,9 +2310,21 @@
             return;
         }
 
-        // 2. F3: Enfocar y seleccionar buscador
+        // 2. F3: Guardar venta sin emitir ticket (si hay productos en el carrito);
+        //    si el carrito está vacío, enfocar y seleccionar el buscador
         if (e.key === 'F3') {
             e.preventDefault();
+            e.stopPropagation();
+
+            if (carrito.size > 0 || promoCarrito.size > 0) {
+                if (Swal.isVisible()) {
+                    Swal.clickConfirm();
+                } else {
+                    confirmarVentaSinTicket();
+                }
+                return;
+            }
+
             const txtBuscar = document.getElementById('txtBuscar');
             if (txtBuscar) {
                 txtBuscar.focus();
@@ -2396,7 +2444,11 @@
         }
     };
 
-    window.addEventListener('keydown', window._generarVentaKeyDownHandler);
+    // Se registra en fase de captura para que se ejecute antes que el listener
+    // interno de SweetAlert2 (que corre en fase de burbuja sobre document y
+    // detiene la propagación), garantizando que F1/F2/F3 puedan reconfirmar
+    // el diálogo abierto con una segunda pulsación.
+    window.addEventListener('keydown', window._generarVentaKeyDownHandler, true);
 
     renderGrid(CATALOGO);
     renderPromoGrid();

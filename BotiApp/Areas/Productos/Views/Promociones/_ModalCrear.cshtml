@@ -62,8 +62,10 @@
 
     .mc-footer {
         padding:1rem 1.5rem; border-top:1px solid #f0ebe5;
-        display:flex; justify-content:flex-end; gap:.75rem; background:#faf7f5;
+        display:flex; align-items:center; justify-content:flex-end;
+        gap:.75rem; flex-wrap:wrap; background:#faf7f5;
     }
+    .mc-footer-hint { margin-right:auto; font-size:.78rem; color:#a89080; }
     .btn-cancelar {
         padding:.55rem 1.2rem; background:#f0ebe5; color:var(--color-secundario);
         border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:.88rem;
@@ -112,7 +114,7 @@
                 <div class="form-group">
                     <label class="form-label" for="PrecioPromocion">Precio promocional <span class="req">*</span></label>
                     <input class="form-control" id="PrecioPromocion" name="PrecioPromocion"
-                           type="number" min="0" value="@Model.PrecioPromocion" required />
+                           type="number" min="1" placeholder="Ej: 3990" required />
                     <span class="field-error"></span>
                 </div>
                 <div class="form-group">
@@ -167,6 +169,7 @@
 
 <!-- Footer -->
 <div class="mc-footer">
+    <span class="mc-footer-hint">Al crearla podrás agregar sus productos y grupos.</span>
     <button class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
-    <button class="btn-guardar" onclick="submitCrearPromo('formCrearPromo')">Guardar promoción</button>
+    <button class="btn-guardar" onclick="submitCrearPromo('formCrearPromo')">Crear y agregar productos</button>
 </div>

@@ -41,13 +41,31 @@ public class PromocionesRepository(BotiAppContext context) : IPromocionesReposit
         return promocion;
     }
 
-    public async Task<bool?> ToggleEstadoAsync(int id)
+    public async Task<ProPromocion?> ActualizarAsync(ProPromocion promocion)
+    {
+        var actual = await context.ProPromocion.FindAsync(promocion.IdPromocion);
+        if (actual is null) return null;
+
+        actual.Nombre          = promocion.Nombre.Trim();
+        actual.Descripcion     = string.IsNullOrWhiteSpace(promocion.Descripcion)
+                                 ? null
+                                 : promocion.Descripcion.Trim();
+        actual.PrecioPromocion = promocion.PrecioPromocion;
+        actual.FechaInicio     = promocion.FechaInicio;
+        actual.FechaFin        = promocion.FechaFin;
+        actual.Estado          = promocion.Estado;
+
+        await context.SaveChangesAsync();
+        return actual;
+    }
+
+    public async Task<ProPromocion?> ToggleEstadoAsync(int id)
     {
         var promo = await context.ProPromocion.FindAsync(id);
         if (promo is null) return null;
         promo.Estado = !promo.Estado;
         await context.SaveChangesAsync();
-        return promo.Estado;
+        return promo;
     }
 
     public async Task<bool> EliminarAsync(int id)
@@ -135,6 +153,37 @@ public class PromocionesRepository(BotiAppContext context) : IPromocionesReposit
         context.ProPromocionDetalle.Remove(detalle);
         await context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<ProPromocionDetalle?> ActualizarCantidadAsync(int idPromocionDetalle, int cantidad)
+    {
+        var detalle = await context.ProPromocionDetalle.FindAsync(idPromocionDetalle);
+        if (detalle is null) return null;
+        detalle.Cantidad = cantidad < 1 ? 1 : cantidad;
+        await context.SaveChangesAsync();
+        return detalle;
+    }
+
+    /// <summary>
+    /// Mueve un producto ya agregado a otro grupo de la promoción, o lo deja como
+    /// producto base (siempre incluido) cuando <paramref name="idGrupo"/> es null.
+    /// </summary>
+    public async Task<ProPromocionDetalle?> MoverDetalleAsync(int idPromocionDetalle, int? idGrupo)
+    {
+        var detalle = await context.ProPromocionDetalle.FindAsync(idPromocionDetalle);
+        if (detalle is null) return null;
+
+        if (idGrupo.HasValue)
+        {
+            // El grupo destino debe pertenecer a la misma promoción
+            var grupoValido = await context.ProPromocionGrupo
+                .AnyAsync(g => g.IdGrupo == idGrupo.Value && g.IdPromocion == detalle.IdPromocion);
+            if (!grupoValido) return null;
+        }
+
+        detalle.IdGrupo = idGrupo;
+        await context.SaveChangesAsync();
+        return detalle;
     }
 
     public async Task<IEnumerable<ProPromocion>> ObtenerUltimasAsync(int top = 5)

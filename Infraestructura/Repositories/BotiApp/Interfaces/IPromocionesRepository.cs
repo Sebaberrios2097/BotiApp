@@ -7,7 +7,8 @@ public interface IPromocionesRepository
     Task<IEnumerable<ProPromocion>> ObtenerTodasAsync();
     Task<ProPromocion?> ObtenerPorIdAsync(int id);
     Task<ProPromocion> CrearAsync(ProPromocion promocion);
-    Task<bool?> ToggleEstadoAsync(int id);
+    Task<ProPromocion?> ActualizarAsync(ProPromocion promocion);
+    Task<ProPromocion?> ToggleEstadoAsync(int id);
     Task<bool> EliminarAsync(int id);
 
     // Grupos
@@ -18,6 +19,8 @@ public interface IPromocionesRepository
     // Detalle
     Task<ProPromocionDetalle> AgregarProductoAsync(int idPromocion, int idProducto, int cantidad, int? idGrupo = null);
     Task<bool> QuitarProductoAsync(int idPromocionDetalle);
+    Task<ProPromocionDetalle?> ActualizarCantidadAsync(int idPromocionDetalle, int cantidad);
+    Task<ProPromocionDetalle?> MoverDetalleAsync(int idPromocionDetalle, int? idGrupo);
 
     Task<IEnumerable<ProPromocion>> ObtenerUltimasAsync(int top = 5);
     Task<IEnumerable<ProProductos>> BuscarProductosAsync(string q);

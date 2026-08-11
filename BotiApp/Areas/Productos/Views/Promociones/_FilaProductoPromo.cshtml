@@ -1,0 +1,54 @@
+@model Infraestructura.Entities.BotiApp.ProPromocionDetalle
+@{
+    var producto = Model.IdProductoNavigation;
+    var grupos   = ViewData["GruposPromo"] as List<Infraestructura.Entities.BotiApp.ProPromocionGrupo>
+                   ?? new List<Infraestructura.Entities.BotiApp.ProPromocionGrupo>();
+    var subtotal = producto.Precio * Model.Cantidad;
+}
+
+<div class="ed-item" id="det-@Model.IdPromocionDetalle" data-nombre="@producto.NombreProducto">
+    <div class="ed-item-img">
+        @if (producto.Imagen is { Length: > 0 })
+        {
+            <img src="/Productos/Productos/Imagen/@producto.IdProducto" alt="" loading="lazy" />
+        }
+        else
+        {
+            <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+        }
+    </div>
+
+    <div class="ed-item-info">
+        <div class="ed-item-nombre">@producto.NombreProducto</div>
+        <div class="ed-item-meta">
+            @(producto.IdMarcaNavigation?.NombreMarca ?? "—") · @($"${producto.Precio:N0}") c/u
+        </div>
+    </div>
+
+    <div class="ed-qty" title="Cantidad incluida en la promoción">
+        <button type="button" onclick="cambiarCantidad(@Model.IdPromocionDetalle, -1)"
+                aria-label="Disminuir cantidad">−</button>
+        <input type="number" min="1" max="99" value="@Model.Cantidad"
+               id="cant-@Model.IdPromocionDetalle"
+               onchange="fijarCantidad(@Model.IdPromocionDetalle, this.value)"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" />
+        <button type="button" onclick="cambiarCantidad(@Model.IdPromocionDetalle, 1)"
+                aria-label="Aumentar cantidad">+</button>
+    </div>
+
+    <div class="ed-item-subtotal">@($"${subtotal:N0}")</div>
+
+    <select class="ed-mover" title="Mover a otra sección"
+            onchange="moverProducto(@Model.IdPromocionDetalle, this.value)">
+        <option value="" selected="@(Model.IdGrupo == null ? "selected" : null)">Producto base</option>
+        @foreach (var g in grupos)
+        {
+            <option value="@g.IdGrupo" selected="@(Model.IdGrupo == g.IdGrupo ? "selected" : null)">@g.Descripcion</option>
+        }
+    </select>
+
+    <button type="button" class="ed-icon danger" title="Quitar de la promoción"
+            onclick="quitarProducto(@Model.IdPromocionDetalle)">
+        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+    </button>
+</div>

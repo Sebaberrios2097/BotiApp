@@ -327,10 +327,6 @@
     overflow: hidden !important;
     box-shadow: 0 10px 32px rgba(0,0,0,0.2) !important;
     background: #ffffff !important;
-    transition: width 0.25s ease !important;
-}
-.cobro-modal-box.con-efectivo {
-    width: 860px !important;
 }
 
 .cobro-modal-body-compact {
@@ -341,16 +337,9 @@
     align-items: start !important;
     overflow: visible !important;
 }
-.cobro-modal-box.con-efectivo .cobro-modal-body-compact {
-    grid-template-columns: 1.05fr 0.95fr !important;
-}
 
-@@media (max-width: 820px) {
-    .cobro-modal-body-compact,
-    .cobro-modal-box.con-efectivo .cobro-modal-body-compact {
-        grid-template-columns: 1fr !important;
-    }
-}
+/* Fila de efectivo entregado (dentro del desglose de pago) */
+.cobro-item-efectivo-input { background:#fff5ee; border-color:#f3d9c4; }
 
 /* ══════════════════════════════════════════════════════ ESTADO FINAL */
 .estado-final { display:none; padding:1.25rem; text-align:center; border-radius:10px; margin-top:.5rem; }
@@ -476,7 +465,7 @@
 .pend-subheader-left { display:flex; align-items:center; gap:.4rem; }
 .pend-subheader-left svg { width:13px; height:13px; fill:#a89080; flex-shrink:0; }
 .pend-subheader-left span { font-size:.72rem; font-weight:700; color:#a89080; text-transform:uppercase; letter-spacing:.04em; }
-.pend-header-count { background:var(--color-primario); color:#fff; border-radius:99px; font-size:.67rem; font-weight:800; padding:.1rem .45rem; }
+.pend-subheader-left .pend-header-count { background:var(--color-primario); color:#fff; border-radius:99px; font-size:.67rem; font-weight:800; padding:.1rem .45rem; }
 .pend-header-count.nuevo { animation:pendPulse .5s ease; }
 @@keyframes pendPulse { 0%{transform:scale(1)} 40%{transform:scale(1.35)} 100%{transform:scale(1)} }
 .btn-pend-refresh { background:rgba(133,93,59,.12); border:none; border-radius:6px; cursor:pointer; color:#a89080; width:24px; height:24px; display:flex; align-items:center; justify-content:center; transition:background .15s; flex-shrink:0; }
@@ -501,8 +490,10 @@
 .toast-msg svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
 .toast-msg.exito { background:#f0fdf4; color:#16a34a; border-left:4px solid #16a34a; }
 .toast-msg.error { background:#fef2f2; color:#dc2626; border-left:4px solid #dc2626; }
+.toast-msg.cargando { background:#fff7ed; color:var(--color-primario); border-left:4px solid var(--color-primario); }
 @@keyframes toastIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
 .spin-sm { width:15px; height:15px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spinR .65s linear infinite; display:inline-block; }
+.spin-sm.spin-sm-primario { border-color:rgba(231,111,46,.25); border-top-color:var(--color-primario); }
 @@keyframes spinR { to { transform:rotate(360deg); } }
 
 /* ══════════════════════════════════════════════════════ BOTÓN FIADO */
@@ -669,6 +660,10 @@
         <div class="cj-panel-header">
             <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-3 7H7v-2h3v2zm3-4H7v-2h6v2zm0 4h-2v-2h2v2z"/></svg>
             <span>Tickets Emitidos</span>
+            <button class="btn-agregar-modal" id="btnNuevaVenta" onclick="nuevaVenta()" title="Generar una boleta vacía para agregar productos" style="margin-left:auto; padding:.4rem .7rem; font-size:.78rem;">
+                <svg viewBox="0 0 24 24" style="width:15px; height:15px; fill:currentColor;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                Generar Venta
+            </button>
         </div>
         <div class="cj-panel-body" style="gap:.85rem; padding:.85rem 1.15rem 0;">
             <div class="cj-search-row">
@@ -703,6 +698,9 @@
         <div class="cj-panel-header">
             <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-3 7H7v-2h3v2zm3-4H7v-2h6v2zm0 4h-2v-2h2v2zm5-3h-2v3h-2v-3h-2v-2h6v2z"/></svg>
             <span id="headerBoleta">Detalle del Ticket</span>
+            <button onclick="cerrarDetalleTicket()" title="Cerrar detalle (Esc)" style="margin-left:auto; background:rgba(255,255,255,.12); border:none; border-radius:50%; width:26px; height:26px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0;">
+                <svg viewBox="0 0 24 24" style="width:15px; height:15px; fill:currentColor;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
         </div>
         <div class="cj-panel-body">
 
@@ -887,39 +885,6 @@
 
                 </div>
 
-                <!-- COLUMNA DERECHA: Pago en Efectivo & Vuelto -->
-                <div id="seccionEfectivoInferior" style="background:#f4efe9; border:1.5px solid #dcd1c4; border-radius:10px; padding:0.75rem; display:flex; flex-direction:column; gap:0.5rem; justify-content:space-between; height:100%;">
-                    
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:0.35rem;">
-                        <span style="font-size:0.85rem; font-weight:800; color:var(--color-secundario); display:flex; align-items:center; gap:0.3rem;">
-                            <svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:var(--color-primario);"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
-                            Cobro en Efectivo
-                        </span>
-                        <span style="font-size:0.78rem; font-weight:800; color:var(--color-secundario); background:#fff; border:1px solid #d4c4b7; border-radius:5px; padding:0.15rem 0.45rem;">
-                            Efectivo Total: <strong id="lblTotalEfectivoRequerido" style="color:var(--color-primario); font-size:0.9rem;">$0</strong>
-                        </span>
-                    </div>
-
-                    <!-- Input Dinero Recibido -->
-                    <div style="display:flex; flex-direction:column; gap:0.25rem;">
-                        <label for="inputPagaConModal" style="font-size:0.8rem; font-weight:800; color:var(--color-secundario);">
-                            Dinero entregado por el cliente ($):
-                        </label>
-                        <div style="position:relative; display:flex; align-items:center;">
-                            <span style="position:absolute; left:10px; font-size:1.15rem; font-weight:800; color:#7a6050;">$</span>
-                            <input type="number" id="inputPagaConModal" class="cobro-monto-input" style="width:100%; height:40px; font-size:1.25rem; font-weight:900; text-align:left; padding:0 0.6rem 0 1.8rem; border-radius:7px; border:2px solid #d4c4b7; background:#fff; color:var(--color-secundario); outline:none;" placeholder="0" min="0" oninput="calcularVueltoModal()" />
-                        </div>
-                    </div>
-
-                    <!-- Tarjeta de Vuelto -->
-                    <div id="vueltoCardContainer" style="border-radius:8px; padding:0.6rem; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; transition:all 0.15s ease; min-height:75px;">
-                        <div id="vueltoTitleLabel" style="font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.1rem;">VUELTO</div>
-                        <div id="vueltoModalDisplay" style="font-size:1.6rem; font-weight:900; line-height:1.1;">$0</div>
-                        <div id="vueltoStatusMsg" style="display:none;"></div>
-                    </div>
-
-                </div>
-
             </div>
 
             <!-- Footer del Modal -->
@@ -990,10 +955,13 @@
         div.className = 'toast-msg ' + tipo;
         div.innerHTML = tipo === 'exito'
             ? `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`
+            : tipo === 'cargando'
+            ? `<span class="spin-sm spin-sm-primario"></span>`
             : `<svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>`;
         div.innerHTML += x(msg);
         wrap.appendChild(div);
-        setTimeout(() => div.remove(), 4000);
+        if (tipo !== 'cargando') setTimeout(() => div.remove(), 4000);
+        return div;
     }
     async function post(url, data) {
         let r;
@@ -1046,18 +1014,59 @@
         _autoGuardarTimer = setTimeout(_autoGuardar, 600);
     }
 
+    /* Crea una boleta vacía (estado Pendiente) y la deja cargada, lista para agregar productos.
+       Se usa tanto desde el botón "Generar Venta" como al escanear un producto sin ticket activo. */
+    async function _crearBoletaVacia() {
+        const res = await post(URL_CREAR, { items: [] });
+        if (!res.ok) {
+            toast(res.mensaje, 'error');
+            return false;
+        }
+        cargarBoleta(res.boleta);
+        const numTicket = res.boleta.correlativoDiario ?? res.boleta.idBoleta;
+        toast(`Nueva Venta N° ${numTicket} iniciada.`, 'exito');
+        return true;
+    }
+
     window.nuevaVenta = async function () {
         const btn = document.getElementById('btnNuevaVenta');
         setBotonCargando(btn, true);
-        const res = await post(URL_CREAR, { items: [] });
+        await _crearBoletaVacia();
         setBotonCargando(btn, false);
-        if (!res.ok) {
-            toast(res.mensaje, 'error');
-            return;
-        }
-        cargarBoleta(res.boleta);
-        toast(`Nueva Venta N° ${res.boleta.idBoleta} iniciada.`, 'exito');
     };
+
+    /* Agrega un producto escaneado al ticket activo; si no hay ninguno editable,
+       genera automáticamente una boleta vacía antes de agregarlo.
+       _generandoVentaAuto evita que un doble escaneo (muy común con lectores rápidos)
+       dispare la creación de dos boletas vacías mientras la primera aún está en curso. */
+    let _generandoVentaAuto = false;
+    async function _escanearYAgregarProducto(prod) {
+        if (_generandoVentaAuto) return;
+
+        if (!boletaActual || boletaActual.idEstado !== 1) {
+            _generandoVentaAuto = true;
+            const toastCargando = toast('Generando venta…', 'cargando');
+            let creada;
+            try {
+                creada = await _crearBoletaVacia();
+            } finally {
+                toastCargando.remove();
+                _generandoVentaAuto = false;
+            }
+            if (!creada) return;
+        }
+
+        if (prod.retornable) {
+            pendingEnvase = { p: prod, qty: 1 };
+            cerrarModal();
+            mostrarDialogoEnvase(prod.nombre, prod.retornable.valorEnvase, prod.retornable.soloEfectivo);
+        } else {
+            _agregarProductoADetalle(prod, 1, false);
+            evaluarPromocionesAutomaticasEnDetalle();
+            renderDetalle();
+            _autoGuardarDebounce();
+        }
+    }
 
     window.actualizarOtrosMonto = function () {
         if (!boletaActual || boletaActual.idEstado !== 1) return;
@@ -1790,7 +1799,13 @@
     /* ════════════════════════════════════════════════════
        CARGAR BOLETA EN UI
     ════════════════════════════════════════════════════ */
+    /* Timer de cierre automático del panel "Detalle del Ticket" tras terminar una venta */
+    let _autoCloseDetalleTimer = null;
+
     function cargarBoleta(b) {
+        clearTimeout(_autoCloseDetalleTimer);
+        _autoCloseDetalleTimer = null;
+
         boletaActual  = b;
         detalleActual = b.detalle.map(d => ({ ...d }));
         metodosCobro  = [];
@@ -1929,7 +1944,31 @@
         if (bolPl) bolPl.style.display = 'none';
         const bolInf = document.getElementById('bolInfo');
         if (bolInf) bolInf.classList.add('visible');
+
+        // Venta terminada (cobrada, anulada o dejada fiada): cerrar el panel solo a los 10s
+        if (!esEditable) {
+            _autoCloseDetalleTimer = setTimeout(() => {
+                if (boletaActual && boletaActual.idBoleta === b.idBoleta) {
+                    cerrarDetalleTicket();
+                }
+            }, 10000);
+        }
     }
+
+    /* Cierra y limpia el panel "Detalle del Ticket", dejándolo como al inicio */
+    window.cerrarDetalleTicket = function () {
+        clearTimeout(_autoCloseDetalleTimer);
+        _autoCloseDetalleTimer = null;
+
+        boletaActual  = null;
+        detalleActual = [];
+        metodosCobro  = [];
+
+        document.getElementById('headerBoleta').textContent = 'Detalle del Ticket';
+        document.getElementById('bolInfo')?.classList.remove('visible');
+        const bolPl = document.getElementById('bolPlaceholder');
+        if (bolPl) bolPl.style.display = '';
+    };
 
     /* ════════════════════════════════════════════════════
        COBRO
@@ -2169,6 +2208,11 @@
     function renderMetodosCobro() {
         const list = document.getElementById('cobroList');
         if (list) {
+            // Preservar lo ingresado en "Efectivo entregado" antes de reconstruir la lista
+            const inputPrevio = document.getElementById('inputPagaConModal');
+            const valorPrevio = inputPrevio ? inputPrevio.value : '';
+            const teniaFoco   = !!inputPrevio && document.activeElement === inputPrevio;
+
             list.innerHTML = '';
             metodosCobro.forEach((m, i) => {
                 if (m.monto <= 0 && m.bloque === 1 && metodosCobro.length > 1) return;
@@ -2188,29 +2232,41 @@
                             : ''));
                 list.appendChild(div);
             });
-        }
 
-        const totalReg = metodosCobro.reduce((s, m) => s + m.monto, 0);
-        const total = boletaActual?.montoTotal ?? 0;
-        const totalEfectivo = metodosCobro.filter(m => m.esEfectivo).reduce((s, m) => s + m.monto, 0);
-
-        // Actualizar sección de efectivo y layout dinámico del modal
-        const lblTotEfec = document.getElementById('lblTotalEfectivoRequerido');
-        if (lblTotEfec) lblTotEfec.textContent = fmt(totalEfectivo);
-
-        const seccionEf = document.getElementById('seccionEfectivoInferior');
-        if (seccionEf) seccionEf.style.display = totalEfectivo > 0 ? 'flex' : 'none';
-
-        const modalBox = document.querySelector('.cobro-modal-box');
-        if (modalBox) {
+            // Fila "Efectivo entregado" — justo debajo del desglose, solo si hay efectivo en el cobro
+            const totalEfectivo = metodosCobro.filter(m => m.esEfectivo).reduce((s, m) => s + m.monto, 0);
             if (totalEfectivo > 0) {
-                modalBox.classList.add('con-efectivo');
-            } else {
-                modalBox.classList.remove('con-efectivo');
+                const fila = document.createElement('div');
+                fila.className = 'cobro-item cobro-item-efectivo-input';
+                fila.style.flexDirection = 'column';
+                fila.style.alignItems = 'stretch';
+                fila.style.gap = '0.3rem';
+                fila.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                        <span class="cobro-item-nombre" style="font-weight:700; font-size:0.9rem;">
+                            Efectivo entregado <span style="font-weight:600; color:#a89080; font-size:0.7rem;">(opcional · vacío = pago justo)</span>
+                        </span>
+                        <div style="display:flex; align-items:center; gap:0.2rem; margin-left:auto; flex-shrink:0;">
+                            <span style="font-weight:800; color:#7a6050; font-size:0.9rem;">$</span>
+                            <input type="number" id="inputPagaConModal" class="cobro-monto-input" min="0" placeholder="Pago justo" oninput="calcularVueltoModal()" style="width:120px; text-align:right; font-weight:900; font-size:0.9rem;" />
+                        </div>
+                    </div>
+                    <div id="efectivoInsuficienteMsg" style="display:none; color:#dc2626; font-size:0.72rem; font-weight:700;">Monto insuficiente para cubrir el efectivo requerido.</div>`;
+                list.appendChild(fila);
+
+                const inputNuevo = fila.querySelector('#inputPagaConModal');
+                if (inputNuevo) {
+                    inputNuevo.value = valorPrevio;
+                    if (teniaFoco) {
+                        inputNuevo.focus();
+                        const len = inputNuevo.value.length;
+                        inputNuevo.setSelectionRange?.(len, len);
+                    }
+                }
             }
         }
 
-        // Recalcular vuelto modal
+        // Recalcular vuelto / disponibilidad del botón finalizar
         recalcVuelto();
     }
 
@@ -3062,18 +3118,6 @@
         activeMetodoPagoId = null;
         bloque2Activo = false;
         metodoBloque2Id = null;
-
-        const vueltoDisplay = document.getElementById('vueltoModalDisplay');
-        if (vueltoDisplay) vueltoDisplay.textContent = '$0';
-
-        const vueltoStatus = document.getElementById('vueltoStatusMsg');
-        if (vueltoStatus) {
-            vueltoStatus.textContent = '';
-            vueltoStatus.style.display = 'none';
-        }
-
-        const modalBox = document.querySelector('.cobro-modal-box');
-        if (modalBox) modalBox.classList.remove('con-efectivo');
     };
 
     window.calcularVueltoModal = function () {
@@ -3084,59 +3128,17 @@
         const totalEfectivo = metodosCobro.filter(m => m.esEfectivo).reduce((s, m) => s + m.monto, 0);
         const inputPagaCon = document.getElementById('inputPagaConModal');
         const pagaConVal = inputPagaCon?.value;
-        const pagaCon = pagaConVal ? (parseInt(pagaConVal) || 0) : 0;
+        // Campo vacío = se asume que se pagó con el efectivo justo (no bloquea el cobro)
+        const pagaConIngresado = pagaConVal !== undefined && pagaConVal !== null && pagaConVal !== '';
+        const pagaCon = pagaConIngresado ? (parseInt(pagaConVal) || 0) : totalEfectivo;
 
-        const vueltoDisplay = document.getElementById('vueltoModalDisplay');
-        const vueltoTitleLabel = document.getElementById('vueltoTitleLabel');
-        const vueltoStatusMsg = document.getElementById('vueltoStatusMsg');
-        const vueltoContainer = document.getElementById('vueltoCardContainer');
-        const btnFin = document.getElementById('btnFinalizarVentaModal');
+        const btnFin  = document.getElementById('btnFinalizarVentaModal');
+        const msgInsuf = document.getElementById('efectivoInsuficienteMsg');
 
-        let cobroListo = (saldoRestante === 0) && (metodosCobro.length > 0);
+        const efectivoInsuficiente = totalEfectivo > 0 && pagaConIngresado && pagaCon < totalEfectivo;
+        if (msgInsuf) msgInsuf.style.display = efectivoInsuficiente ? 'block' : 'none';
 
-        if (totalEfectivo === 0) {
-            if (vueltoDisplay) vueltoDisplay.textContent = "$0";
-            if (vueltoTitleLabel) vueltoTitleLabel.textContent = "PAGO ELECTRÓNICO";
-            if (vueltoStatusMsg) vueltoStatusMsg.textContent = "";
-            if (vueltoContainer) {
-                vueltoContainer.style.background = "#f0fdf4";
-                vueltoContainer.style.border = "1.5px solid #bbf7d0";
-                vueltoContainer.style.color = "#16a34a";
-            }
-        } else {
-            if (pagaCon >= totalEfectivo) {
-                const vuelto = pagaCon - totalEfectivo;
-                if (vueltoDisplay) vueltoDisplay.textContent = fmt(vuelto);
-                if (vueltoTitleLabel) vueltoTitleLabel.textContent = "VUELTO";
-                if (vueltoStatusMsg) vueltoStatusMsg.textContent = "";
-                if (vueltoContainer) {
-                    vueltoContainer.style.background = "#dcfce7";
-                    vueltoContainer.style.border = "1.5px solid #86efac";
-                    vueltoContainer.style.color = "#15803d";
-                }
-            } else if (pagaCon > 0) {
-                const faltan = totalEfectivo - pagaCon;
-                if (vueltoDisplay) vueltoDisplay.textContent = fmt(pagaCon);
-                if (vueltoTitleLabel) vueltoTitleLabel.textContent = "EFECTIVO INSUFICIENTE";
-                if (vueltoStatusMsg) vueltoStatusMsg.textContent = "";
-                if (vueltoContainer) {
-                    vueltoContainer.style.background = "#fef2f2";
-                    vueltoContainer.style.border = "1.5px solid #fecaca";
-                    vueltoContainer.style.color = "#dc2626";
-                }
-                cobroListo = false;
-            } else {
-                if (vueltoDisplay) vueltoDisplay.textContent = "$0";
-                if (vueltoTitleLabel) vueltoTitleLabel.textContent = "VUELTO";
-                if (vueltoStatusMsg) vueltoStatusMsg.textContent = "";
-                if (vueltoContainer) {
-                    vueltoContainer.style.background = "#faf7f5";
-                    vueltoContainer.style.border = "1.5px solid #e0d5cc";
-                    vueltoContainer.style.color = "#7a6050";
-                }
-                cobroListo = false;
-            }
-        }
+        const cobroListo = (saldoRestante === 0) && (metodosCobro.length > 0) && !efectivoInsuficiente;
 
         if (btnFin) {
             btnFin.disabled = !cobroListo;
@@ -3147,30 +3149,56 @@
 
     window.finalizarCobroModal = async function () {
         if (!boletaActual || boletaActual.idEstado !== 1) return;
-        const total = boletaActual.montoTotal;
         const montoEfec = metodosCobro.filter(m => m.esEfectivo).reduce((s, m) => s + m.monto, 0);
         const hayEfec = metodosCobro.some(m => m.esEfectivo);
         const pagaConVal = document.getElementById('inputPagaConModal')?.value;
-        const pagaCon = pagaConVal ? (parseInt(pagaConVal) || 0) : montoEfec;
+        const pagaConIngresado = pagaConVal !== undefined && pagaConVal !== null && pagaConVal !== '';
+        // Sin monto ingresado se asume pago con el efectivo justo (sin vuelto)
+        const pagaCon = pagaConIngresado ? (parseInt(pagaConVal) || 0) : montoEfec;
 
-        if (hayEfec && pagaCon < montoEfec) {
+        if (hayEfec && pagaConIngresado && pagaCon < montoEfec) {
             toast(`El monto ingresado en efectivo (${fmt(pagaCon)}) es menor al total a pagar en efectivo (${fmt(montoEfec)}).`, 'error');
             return;
         }
+
+        const vuelto = hayEfec ? Math.max(0, pagaCon - montoEfec) : 0;
+
+        // Los pagos deben armarse ANTES de cerrar el modal: cerrarModalCobro() vacía metodosCobro
+        const pagos = metodosCobro
+            .filter(m => m.monto > 0 && !m.bloqueado)
+            .map(m => ({ idMetodoPago: m.idMetodoPago, monto: m.monto }));
 
         cerrarModalCobro();
 
         const btn = document.getElementById('btnCobrar');
         setBotonCargando(btn, true);
-        const pagos = metodosCobro
-            .filter(m => m.monto > 0 && !m.bloqueado)
-            .map(m => ({ idMetodoPago: m.idMetodoPago, monto: m.monto }));
         const res = await post(URL_COBRAR, { idBoleta: boletaActual.idBoleta, metodosPago: pagos });
         setBotonCargando(btn, false);
         if (!res.ok) { toast(res.mensaje, 'error'); return; }
-        toast(res.mensaje, 'exito');
+
         cargarBoleta(res.boleta);
         cargarBoletasPendientes();
+
+        if (hayEfec) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Cobro registrado',
+                html: `Venta cobrada correctamente.<br><span style="font-size:1.3em; font-weight:900; color:var(--color-primario);">Vuelto a entregar: ${fmt(vuelto)}</span>`,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#16a34a',
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            });
+        } else {
+            Swal.fire({
+                icon: 'success',
+                title: 'Cobro registrado',
+                text: 'La venta se registró correctamente.',
+                timer: 5000,
+                timerProgressBar: true,
+                showConfirmButton: false
+            });
+        }
     };
 
     // ── LECTOR DE CÓDIGO DE BARRAS & ATAJOS ─────────────────────────────
@@ -3195,6 +3223,17 @@
             const cobroOverlay = document.getElementById('cobroModalOverlay');
             if (cobroOverlay && cobroOverlay.style.display === 'flex') {
                 cerrarModalCobro();
+                return;
+            }
+
+            // Si hay algún otro modal/diálogo abierto, dejar que cada uno maneje su propio Esc
+            const otroModalAbierto = [
+                'modalAgregar', 'envaseOverlay', 'gruposOverlay', 'fiadoModalOverlay'
+            ].some(id => document.getElementById(id)?.style.display === 'flex');
+
+            const bolInfo = document.getElementById('bolInfo');
+            if (!otroModalAbierto && bolInfo && bolInfo.classList.contains('visible')) {
+                cerrarDetalleTicket();
                 return;
             }
         }
@@ -3232,22 +3271,7 @@
                 if (prod) {
                     e.preventDefault();
                     e.stopPropagation();
-
-                    if (!boletaActual || boletaActual.idEstado !== 1) {
-                        toast("No se pueden añadir productos a esta boleta porque no está en estado Pendiente.", "error");
-                        return;
-                    }
-
-                    if (prod.retornable) {
-                        pendingEnvase = { p: prod, qty: 1 };
-                        cerrarModal();
-                        mostrarDialogoEnvase(prod.nombre, prod.retornable.valorEnvase, prod.retornable.soloEfectivo);
-                    } else {
-                        _agregarProductoADetalle(prod, 1, false);
-                        evaluarPromocionesAutomaticasEnDetalle();
-                        renderDetalle();
-                        _autoGuardarDebounce();
-                    }
+                    _escanearYAgregarProducto(prod);
                     return;
                 } else {
                     if (code.length >= 3) {

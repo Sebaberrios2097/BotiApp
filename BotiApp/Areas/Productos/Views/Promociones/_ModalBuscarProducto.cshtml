@@ -598,14 +598,8 @@
                     body: fd
                 });
                 const data = await r.json();
-                if (data.ok) {
-                    okCount++;
-                    if (typeof window.agregarFilaProducto === 'function') {
-                        window.agregarFilaProducto(idPromocion, data.detalle);
-                    }
-                } else {
-                    lastError = data.mensaje;
-                }
+                if (data.ok) okCount++;
+                else lastError = data.mensaje;
             } catch (e) {
                 lastError = 'Error de red';
             }
@@ -631,6 +625,9 @@
                 window.toast(lastError ?? 'No se pudo agregar ningún producto.', 'error');
             }
         }
+
+        // La vista de edición recarga su contenido para reflejar lo agregado
+        if (okCount > 0) window.onProductosAgregados?.();
     };
 
     // Init

@@ -1,0 +1,190 @@
+@model Infraestructura.Entities.BotiApp.ProPromocion
+@{
+    var detalles  = Model.ProPromocionDetalle;
+    var baseItems = detalles.Where(d => d.IdGrupo == null)
+                            .OrderBy(d => d.IdProductoNavigation.NombreProducto)
+                            .ToList();
+    var grupos    = Model.ProPromocionGrupo.OrderBy(g => g.IdGrupo).ToList();
+
+    var (normalMin, normalMax) = PromocionesController.PrecioNormal(Model);
+    var totalUnidades = detalles.Sum(d => d.Cantidad);
+
+    // Las filas de producto leen esta lista para armar su selector «mover a»
+    ViewData["GruposPromo"] = grupos;
+}
+
+@* ── Resumen de precio ───────────────────────────────────────────────────── *@
+<div class="ed-card ed-precio-card" id="edPrecioCard"
+     data-normal-min="@normalMin" data-normal-max="@normalMax">
+    <div class="ed-precio-row">
+        <span class="ed-precio-lbl">Comprado por separado</span>
+        <span class="ed-precio-val" id="edPrecioNormal">
+            @if (normalMin == normalMax)
+            {
+                @($"${normalMin:N0}")
+            }
+            else
+            {
+                @($"${normalMin:N0} – ${normalMax:N0}")
+            }
+        </span>
+    </div>
+    <div class="ed-precio-row">
+        <span class="ed-precio-lbl">Precio de la promoción</span>
+        <span class="ed-precio-val destacado" id="edPrecioPromo">@($"${Model.PrecioPromocion:N0}")</span>
+    </div>
+    <div class="ed-precio-sep"></div>
+    <div class="ed-precio-row">
+        <span class="ed-precio-lbl">Ahorro para el cliente</span>
+        <span id="edAhorro"></span>
+    </div>
+    @if (normalMin != normalMax)
+    {
+        <p class="ed-precio-nota">
+            El total varía porque hay grupos excluyentes: el cliente elige una opción
+            y cada una tiene distinto precio.
+        </p>
+    }
+</div>
+
+@* ── Productos base ──────────────────────────────────────────────────────── *@
+<div class="ed-card">
+    <div class="ed-card-head">
+        <div class="ed-card-title">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+            <div>
+                <h2>Productos base</h2>
+                <p>Se incluyen siempre en la promoción</p>
+            </div>
+            <span class="ed-count">@baseItems.Count</span>
+        </div>
+        <button type="button" class="ed-btn ed-btn-primary" onclick="agregarProductos(null)">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Agregar producto
+        </button>
+    </div>
+
+    @if (baseItems.Count == 0)
+    {
+        <div class="ed-empty">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+            <p>Aún no hay productos base.</p>
+            <span>Agrega los productos que siempre vienen incluidos en el combo.</span>
+        </div>
+    }
+    else
+    {
+        <div class="ed-items">
+            @foreach (var d in baseItems)
+            {
+                <partial name="_FilaProductoPromo" model="d" />
+            }
+        </div>
+    }
+</div>
+
+@* ── Grupos de opciones ──────────────────────────────────────────────────── *@
+<div class="ed-card">
+    <div class="ed-card-head">
+        <div class="ed-card-title">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            <div>
+                <h2>Grupos de opciones</h2>
+                <p>Alternativas entre las que el cliente elige</p>
+            </div>
+            <span class="ed-count">@grupos.Count</span>
+        </div>
+        <button type="button" class="ed-btn ed-btn-ghost" onclick="abrirFormGrupo()">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Nuevo grupo
+        </button>
+    </div>
+
+    <div class="ed-grupo-form" id="edFormGrupo">
+        <input type="text" id="edGrupoNombre" maxlength="100"
+               placeholder="Nombre del grupo (ej: Elige el pisco)"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();crearGrupo();} if(event.key==='Escape'){cerrarFormGrupo();}" />
+        <label class="ed-check">
+            <input type="checkbox" id="edGrupoExcl" checked />
+            Excluyente (elige solo uno)
+        </label>
+        <button type="button" class="ed-btn ed-btn-primary" onclick="crearGrupo()">Crear grupo</button>
+        <button type="button" class="ed-btn ed-btn-plain" onclick="cerrarFormGrupo()">Cancelar</button>
+    </div>
+
+    @if (grupos.Count == 0)
+    {
+        <div class="ed-empty">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            <p>Esta promoción no tiene grupos.</p>
+            <span>Úsalos cuando el cliente deba elegir entre varias opciones.</span>
+        </div>
+    }
+    else
+    {
+        foreach (var g in grupos)
+        {
+            var items = detalles.Where(d => d.IdGrupo == g.IdGrupo)
+                                .OrderBy(d => d.IdProductoNavigation.NombreProducto)
+                                .ToList();
+            <div class="ed-grupo" id="grupo-@g.IdGrupo" data-nombre="@g.Descripcion">
+                <div class="ed-grupo-head">
+                    <div class="ed-grupo-ident" id="grupoIdent-@g.IdGrupo">
+                        <span class="ed-grupo-nombre">@g.Descripcion</span>
+                        <span class="ed-tag @(g.EsExcluyente ? "excl" : "libre")">
+                            @(g.EsExcluyente ? "Elige 1" : "Todos incluidos")
+                        </span>
+                        <span class="ed-grupo-count">@items.Count producto(s)</span>
+                    </div>
+
+                    <div class="ed-grupo-edit" id="grupoEdit-@g.IdGrupo">
+                        <input type="text" id="grupoInput-@g.IdGrupo" maxlength="100" value="@g.Descripcion"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();guardarGrupo(@g.IdGrupo);} if(event.key==='Escape'){cancelarEditarGrupo(@g.IdGrupo);}" />
+                        <label class="ed-check">
+                            <input type="checkbox" id="grupoExcl-@g.IdGrupo" checked="@(g.EsExcluyente ? "checked" : null)" />
+                            Excluyente
+                        </label>
+                        <button type="button" class="ed-btn ed-btn-primary" onclick="guardarGrupo(@g.IdGrupo)">Guardar</button>
+                        <button type="button" class="ed-btn ed-btn-plain" onclick="cancelarEditarGrupo(@g.IdGrupo)">Cancelar</button>
+                    </div>
+
+                    <div class="ed-grupo-acciones" id="grupoAcciones-@g.IdGrupo">
+                        <button type="button" class="ed-icon" title="Renombrar grupo" onclick="editarGrupo(@g.IdGrupo)">
+                            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        </button>
+                        <button type="button" class="ed-icon danger" title="Eliminar grupo" onclick="eliminarGrupo(@g.IdGrupo)">
+                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                @if (items.Count == 0)
+                {
+                    <div class="ed-empty compacta">
+                        <p>Este grupo aún no tiene productos.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="ed-items">
+                        @foreach (var d in items)
+                        {
+                            <partial name="_FilaProductoPromo" model="d" />
+                        }
+                    </div>
+                }
+
+                <button type="button" class="ed-add-here" onclick="agregarProductos(@g.IdGrupo)">
+                    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    Agregar producto a este grupo
+                </button>
+            </div>
+        }
+    }
+</div>
+
+@* Métricas que la cabecera de la vista relee tras cada recarga del contenido *@
+<span hidden id="edMetricas"
+      data-productos="@detalles.Count"
+      data-unidades="@totalUnidades"
+      data-grupos="@grupos.Count"></span>
