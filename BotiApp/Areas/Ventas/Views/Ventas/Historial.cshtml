@@ -263,10 +263,6 @@
                 <button class="clr" id="btnClr" onclick="limpiarQ()" title="Limpiar">✕</button>
             </div>
             <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
-                <select class="fil-estado" id="selRangoFecha" onchange="aplicarFiltros()">
-                    <option value="dia">Ventas del día</option>
-                    <option value="historicas">Históricas (Todas)</option>
-                </select>
                 <select class="fil-estado" id="selEstado" onchange="aplicarFiltros()">
                     <option value="0">Todos los estados</option>
                     <option value="1">Pendiente</option>
@@ -274,7 +270,7 @@
                     <option value="2">Anulada</option>
                     <option value="4">Fiado</option>
                 </select>
-                <select class="fil-estado" id="selAnio" onchange="aplicarFiltros(true)">
+                <select class="fil-estado" id="selAnio" onchange="aplicarFiltros()">
                     <option value="">Todos los años</option>
                     @{
                         var anioActual = DateTime.Now.Year.ToString();
@@ -296,7 +292,7 @@
                         }
                     }
                 </select>
-                <select class="fil-estado" id="selMes" onchange="aplicarFiltros(true)">
+                <select class="fil-estado" id="selMes" onchange="aplicarFiltros()">
                     <option value="">Todos los meses</option>
                     @{ var mesesNombres = new[]{"","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"}; }
                     @for (int m = 1; m <= 12; m++)
@@ -311,7 +307,7 @@
                         }
                     }
                 </select>
-                <select class="fil-estado" id="selDia" onchange="aplicarFiltros(true)">
+                <select class="fil-estado" id="selDia" onchange="aplicarFiltros()">
                     <option value="">Todos los días</option>
                     @for (int d = 1; d <= 31; d++)
                     {
@@ -360,22 +356,10 @@
     /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        FILTROS
     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-    function parseFechaEmision(fechaStr) {
-        if (!fechaStr || fechaStr === '—') return null;
-        var parts = fechaStr.split(' ');
-        var dParts = parts[0].split('/');
-        var tParts = parts[1].split(':');
-        return new Date(+dParts[2], +dParts[1] - 1, +dParts[0], +tParts[0], +tParts[1]);
-    }
-
-    function obtenerInicioDiaComercial() {
-        var now = new Date();
-        var inicio = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0, 0);
-        if (now.getHours() < 8) {
-            inicio.setDate(inicio.getDate() - 1);
-        }
-        return inicio;
-    }
+    /* La fecha llega formateada según la cultura del servidor, que en es-CL usa
+       «-» como separador. Se normaliza a «/» solo para comparar en la búsqueda,
+       así el usuario encuentra igual escribiendo 11/08 que 11-08. */
+    function normFecha(s) { return String(s ?? '').replace(/[-.]/g, '/').toLowerCase(); }
 
     window.selVendedor = function (id) {
         vendedorActivo = id;
@@ -384,49 +368,29 @@
         aplicarFiltros();
     };
 
-    window.aplicarFiltros = function (fromCalendarChange) {
+    window.aplicarFiltros = function () {
         var q         = (document.getElementById('txtBuscar')?.value ?? '').trim().toLowerCase();
         var estadoSel = +(document.getElementById('selEstado')?.value ?? 0);
-        var rangoSelEl = document.getElementById('selRangoFecha');
-        var rangoSel  = rangoSelEl?.value ?? 'dia';
-        
-        if (fromCalendarChange && rangoSelEl && rangoSel === 'dia') {
-            rangoSelEl.value = 'historicas';
-            rangoSel = 'historicas';
-        }
-        
-        var anioSel   = 0;
-        var mesSel    = 0;
-        var diaSel    = 0;
-        
-        if (rangoSel !== 'dia') {
-            anioSel = +document.getElementById('selAnio')?.value || 0;
-            mesSel  = +document.getElementById('selMes')?.value  || 0;
-            diaSel  = +document.getElementById('selDia')?.value  || 0;
-        }
+        var anioSel   = +(document.getElementById('selAnio')?.value  ?? 0) || 0;
+        var mesSel    = +(document.getElementById('selMes')?.value   ?? 0) || 0;
+        var diaSel    = +(document.getElementById('selDia')?.value   ?? 0) || 0;
 
         document.getElementById('btnClr')?.classList.toggle('on', q.length > 0);
 
-        var inicioDia = obtenerInicioDiaComercial();
+        var qFecha = normFecha(q);
 
         boletasFiltradas = BOLETAS.filter(function(b) {
-            var okRango = true;
-            if (rangoSel === 'dia') {
-                var dt = parseFechaEmision(b.fecha);
-                okRango = dt && dt >= inicioDia;
-            }
-
             var okVendedor = vendedorActivo === 0 || b.idVendedor === vendedorActivo;
-            var okEstado   = estadoSel === 0 || b.idEstado  === estadoSel;
-            var okAnio     = anioSel   === 0 || b.anio      === anioSel;
-            var okMes      = mesSel    === 0 || b.mes       === mesSel;
-            var okDia      = diaSel    === 0 || b.dia       === diaSel;
+            var okEstado   = estadoSel === 0 || b.idEstado === estadoSel;
+            var okAnio     = anioSel   === 0 || b.anio     === anioSel;
+            var okMes      = mesSel    === 0 || b.mes      === mesSel;
+            var okDia      = diaSel    === 0 || b.dia      === diaSel;
             var okQ = q === ''
                 || String(b.id).includes(q)
                 || String(b.correlativoDiario ?? '').includes(q)
                 || b.vendedor.toLowerCase().includes(q)
-                || b.fecha.toLowerCase().includes(q);
-            return okRango && okVendedor && okEstado && okAnio && okMes && okDia && okQ;
+                || normFecha(b.fecha).includes(qFecha);
+            return okVendedor && okEstado && okAnio && okMes && okDia && okQ;
         });
 
         paginaActual = 1;
@@ -493,7 +457,7 @@
         if (!lista.length) {
             cont.innerHTML = `
             <div class="boletas-empty">
-                <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.33C18 2.99 16.01 1 13.67 1c-1.32 0-2.4.75-3.17 1.69L10 3.5l-.5-.82C8.73 1.75 7.65 1 6.33 1 4 1 2 2.99 2 5.33c0 .45.1.89.18 1.33H0v2h20V6zm-8.5-.17c.38-.61.96-2.33 2.17-2.33 1 0 1.83.83 1.83 1.83 0 .67-.36 1.15-.88 1.5L12 8.5l-1.62-1.67.12-1zm-3 0L7.88 7.83C7.36 7.48 7 7 7 6.33 7 5.33 7.83 4.5 8.83 4.5c1.21 0 1.79 1.72 2.17 2.33zM4 20c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10H4v10z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
                 No hay ventas para mostrar
             </div>`;
             return;

@@ -58,10 +58,12 @@ public class VentasRepository(BotiAppContext context, IProductosRepository produ
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.IdBoleta == id);
 
+    // Las ventas postergadas (5) todavía no son ventas emitidas: no deben poder
+    // abrirse desde Caja, ni siquiera buscándolas por número.
     public async Task<VenBoletas?> ObtenerBoletaParaCajaAsync(int id)
         => await BoletasConIncludes()
             .AsNoTracking()
-            .FirstOrDefaultAsync(b => b.IdBoleta == id);
+            .FirstOrDefaultAsync(b => b.IdBoleta == id && b.IdEstadoBoleta != EstadoSinFinalizar);
 
     public async Task<VenBoletas?> ObtenerBoletaPorCorrelativoDiarioAsync(int correlativo, DateTime fecha)
     {
@@ -86,10 +88,14 @@ public class VentasRepository(BotiAppContext context, IProductosRepository produ
             : fecha.Date.AddDays(-1).AddHours(8);
         var finPeriodo = inicioPeriodo.AddDays(1);
 
-        var count = await context.VenBoletas
-            .CountAsync(b => b.FechaEmision >= inicioPeriodo && b.FechaEmision < finPeriodo);
+        // Se toma el máximo y no la cantidad de boletas: las ventas postergadas
+        // (estado 5) no llevan correlativo, y contarlas haría saltar la numeración.
+        var ultimoCorrelativo = await context.VenBoletas
+            .Where(b => b.FechaEmision >= inicioPeriodo && b.FechaEmision < finPeriodo
+                        && b.CorrelativoDiario != null)
+            .MaxAsync(b => (int?)b.CorrelativoDiario) ?? 0;
 
-        boleta.CorrelativoDiario = count + 1;
+        boleta.CorrelativoDiario = ultimoCorrelativo + 1;
 
         context.VenBoletas.Add(boleta);
         await context.SaveChangesAsync();
@@ -236,6 +242,100 @@ public class VentasRepository(BotiAppContext context, IProductosRepository produ
                 : $"{boleta.Observaciones}{Environment.NewLine}{nota}";
         }
 
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        return true;
+    }
+
+    // ── Ventas postergadas (estado 5 «Sin Finalizar») ─────────────────────────
+    private const int EstadoSinFinalizar = 5;
+
+    public async Task<VenBoletas> PostergarVentaAsync(VenBoletas boleta, IEnumerable<VenBoletaDetalle> detalles)
+    {
+        await using var tx = await context.Database.BeginTransactionAsync();
+
+        boleta.IdEstadoBoleta   = EstadoSinFinalizar;
+        // Sin correlativo diario: la numeración se reserva para las ventas emitidas.
+        boleta.CorrelativoDiario = null;
+
+        context.VenBoletas.Add(boleta);
+        await context.SaveChangesAsync();
+
+        // No se toca el stock: la venta no se emitió, así que los productos siguen
+        // disponibles para otro cliente mientras este se decide.
+        foreach (var item in detalles)
+        {
+            item.IdBoleta = boleta.IdBoleta;
+            context.VenBoletaDetalle.Add(item);
+        }
+
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        return boleta;
+    }
+
+    public async Task<IEnumerable<VenBoletas>> ObtenerVentasPostergadasAsync(int top = 30)
+        => await BoletasConIncludes()
+            .AsNoTracking()
+            .Where(b => b.IdEstadoBoleta == EstadoSinFinalizar)
+            .OrderByDescending(b => b.FechaEmision)
+            .Take(top)
+            .ToListAsync();
+
+    public async Task<VenBoletas?> RecuperarVentaPostergadaAsync(int idBoleta)
+    {
+        await using var tx = await context.Database.BeginTransactionAsync();
+
+        var boleta = await context.VenBoletas
+            .Include(b => b.VenBoletaDetalle)
+            .FirstOrDefaultAsync(b => b.IdBoleta == idBoleta
+                                      && b.IdEstadoBoleta == EstadoSinFinalizar);
+        if (boleta is null) return null;
+
+        // Copia del detalle antes de borrar, para que el vendedor pueda rearmar el carrito
+        var snapshot = new VenBoletas
+        {
+            IdBoleta      = boleta.IdBoleta,
+            IdVendedor    = boleta.IdVendedor,
+            MontoTotal    = boleta.MontoTotal,
+            FechaEmision  = boleta.FechaEmision,
+            Observaciones = boleta.Observaciones,
+            VenBoletaDetalle = boleta.VenBoletaDetalle
+                .Select(d => new VenBoletaDetalle
+                {
+                    IdProducto       = d.IdProducto,
+                    Cantidad         = d.Cantidad,
+                    PrecioNormal     = d.PrecioNormal,
+                    PrecioUnitario   = d.PrecioUnitario,
+                    Subtotal         = d.Subtotal,
+                    IdPromocion      = d.IdPromocion,
+                    IdOfertaProducto = d.IdOfertaProducto
+                })
+                .ToList()
+        };
+
+        context.VenBoletaDetalle.RemoveRange(boleta.VenBoletaDetalle);
+        context.VenBoletas.Remove(boleta);
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        return snapshot;
+    }
+
+    public async Task<bool> DescartarVentaPostergadaAsync(int idBoleta)
+    {
+        await using var tx = await context.Database.BeginTransactionAsync();
+
+        var boleta = await context.VenBoletas
+            .Include(b => b.VenBoletaDetalle)
+            .FirstOrDefaultAsync(b => b.IdBoleta == idBoleta
+                                      && b.IdEstadoBoleta == EstadoSinFinalizar);
+        if (boleta is null) return false;
+
+        context.VenBoletaDetalle.RemoveRange(boleta.VenBoletaDetalle);
+        context.VenBoletas.Remove(boleta);
         await context.SaveChangesAsync();
         await tx.CommitAsync();
 

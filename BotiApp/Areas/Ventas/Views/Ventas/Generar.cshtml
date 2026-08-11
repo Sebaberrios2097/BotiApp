@@ -55,14 +55,48 @@
 
     var urlImagen = Url.Action("Imagen", "Productos", new { area = "Productos", id = 0 })!.Replace("/0", "");
     var urlCrear  = Url.Action("CrearBoletaAjax", "Ventas", new { area = "Ventas" });
+
+    var urlPostergar         = Url.Action("PostergarVentaAjax",           "Ventas", new { area = "Ventas" });
+    var urlPostergadas       = Url.Action("VentasPostergadasAjax",        "Ventas", new { area = "Ventas" });
+    var urlRecuperarPostergada = Url.Action("RecuperarVentaPostergadaAjax", "Ventas", new { area = "Ventas" });
+    var urlDescartarPostergada = Url.Action("DescartarVentaPostergadaAjax", "Ventas", new { area = "Ventas" });
 }
 
 <style>
 /* ══════════════════════════════════════════════════════
    LAYOUT
 ══════════════════════════════════════════════════════ */
-.gv-wrap { display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem; align-items:stretch; }
+.gv-wrap { display:grid; grid-template-columns: 1fr 1fr 208px; gap:1.25rem; align-items:stretch; }
+/* Bajo 1280px la rejilla vuelve a 2 columnas y las postergadas pasan a una
+   franja horizontal bajo el carrito, para no comerle ancho al catálogo. */
+@@media (max-width: 1280px) {
+    .gv-wrap { grid-template-columns: 1fr 1fr; }
+    .post-panel { grid-column:1/-1; height:auto; max-height:none; }
+    .post-list { flex-direction:row; flex-wrap:wrap; overflow-x:auto; }
+    .post-card { flex:0 0 165px; }
+}
 @@media (max-width: 980px) { .gv-wrap { grid-template-columns:1fr; } }
+
+/* ── Panel de ventas postergadas ─────────────────────── */
+.post-panel { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); overflow:hidden; display:flex; flex-direction:column; height:calc(100vh - 85px); }
+.post-panel-header { display:flex; align-items:center; gap:.5rem; padding:.85rem .9rem; background:var(--color-secundario); color:#fff; flex-shrink:0; }
+.post-panel-header svg { width:16px; height:16px; fill:var(--color-primario); flex-shrink:0; }
+.post-panel-header span.post-title { font-size:.8rem; font-weight:700; }
+.post-panel-header .post-cnt { margin-left:auto; background:var(--color-primario); color:#fff; border-radius:20px; padding:.1rem .5rem; font-size:.7rem; font-weight:800; }
+.post-list { flex:1; overflow-y:auto; padding:.7rem; display:flex; flex-direction:column; gap:.5rem; }
+.post-card { position:relative; background:#faf7f5; border:1.5px solid #e8ddd4; border-radius:10px; padding:.6rem .7rem; cursor:pointer; transition:border-color .15s, background .15s, transform .12s; }
+.post-card:hover { border-color:var(--color-primario); background:#fff5ee; transform:translateY(-1px); }
+.post-card-num { font-size:1.15rem; font-weight:800; color:var(--color-primario); line-height:1.1; }
+.post-card-monto { font-size:.86rem; font-weight:800; color:var(--color-secundario); margin-top:.15rem; }
+.post-card-meta { font-size:.7rem; color:#a89080; margin-top:.15rem; }
+.post-card-del { position:absolute; top:.35rem; right:.35rem; width:20px; height:20px; border:none; border-radius:5px; background:transparent; color:#dc2626; cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .12s, background .12s; }
+.post-card-del svg { width:11px; height:11px; fill:currentColor; }
+.post-card:hover .post-card-del { opacity:1; }
+.post-card-del:hover { background:rgba(239,68,68,.14); }
+.post-empty { text-align:center; padding:1.5rem .6rem; color:#b8a898; font-size:.76rem; line-height:1.45; }
+.post-empty svg { width:30px; height:30px; fill:#ddd0c4; display:block; margin:0 auto .4rem; }
+.post-card.recien { animation:postResalta 1.4s ease; }
+@@keyframes postResalta { 0%,35% { border-color:var(--color-primario); background:#fff5ee; } 100% { border-color:#e8ddd4; background:#faf7f5; } }
 
 /* ── Header card ─────────────────────────────────────── */
 .page-header-card { background:#fff; border-radius:14px; box-shadow:0 2px 12px rgba(44,29,13,.07); padding:1.1rem 1.5rem; margin-bottom:1.4rem; display:flex; align-items:center; gap:1rem; }
@@ -306,7 +340,11 @@
 .tot-line.gran { font-size:1.25rem; font-weight:800; color:var(--color-secundario); padding-top:.55rem; border-top:1.5px solid #f0ebe5; margin-top:.35rem; }
 .tot-line.gran span:last-child { color:var(--color-primario); font-weight:800; }
 
-.boleta-footer { padding:1rem 1.1rem; border-top:1px solid #f0ebe5; flex-shrink:0; }
+.boleta-footer { padding:1rem 1.1rem; border-top:1px solid #f0ebe5; flex-shrink:0; display:flex; gap:.6rem; align-items:stretch; }
+.btn-postergar { display:flex; align-items:center; justify-content:center; gap:.4rem; padding:.85rem 1rem; background:#fff; color:#7a6050; border:1.5px solid #e0d5cc; border-radius:10px; font-size:.9rem; font-weight:800; cursor:pointer; white-space:nowrap; transition:background .2s, border-color .2s, color .2s; flex-shrink:0; }
+.btn-postergar svg { width:16px; height:16px; fill:currentColor; }
+.btn-postergar:hover:not(:disabled) { background:#fff5ee; border-color:var(--color-primario); color:var(--color-primario); }
+.btn-postergar:disabled { opacity:.45; cursor:not-allowed; }
 .btn-generar { display:flex; align-items:center; justify-content:center; gap:.5rem; width:100%; padding:.85rem; background:var(--color-primario); color:#fff; border:none; border-radius:10px; font-size:1.05rem; font-weight:800; cursor:pointer; transition:background .2s,transform .15s; }
 .btn-generar svg { width:16px; height:16px; fill:currentColor; }
 .btn-generar:hover:not(:disabled) { background:#cf5f22; transform:translateY(-1px); }
@@ -555,10 +593,27 @@
         </div>
 
         <div class="boleta-footer">
+            <button class="btn-postergar" id="btnPostergar" disabled onclick="confirmarPostergarVenta()"
+                    title="F4 — Guarda esta venta para atender a otro cliente y retomarla después">
+                <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+                Postergar
+            </button>
             <button class="btn-generar" id="btnGenerar" disabled onclick="confirmarVentaShortcut(false)">
                 <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
                 Generar venta
             </button>
+        </div>
+    </div>
+
+    <!-- ══ VENTAS POSTERGADAS ══ -->
+    <div class="post-panel">
+        <div class="post-panel-header">
+            <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+            <span class="post-title">Postergadas</span>
+            <span class="post-cnt" id="postCnt">0</span>
+        </div>
+        <div class="post-list" id="postList">
+            <div class="post-empty">Cargando…</div>
         </div>
     </div>
 
@@ -574,6 +629,10 @@
     const PROMOS      = @Html.Raw(promosJson);
     const URL_CREAR   = '@urlCrear';
     const URL_IMG     = '@urlImagen';
+    const URL_POSTERGAR            = '@urlPostergar';
+    const URL_POSTERGADAS          = '@urlPostergadas';
+    const URL_RECUPERAR_POSTERGADA = '@urlRecuperarPostergada';
+    const URL_DESCARTAR_POSTERGADA = '@urlDescartarPostergada';
     const CSRF        = () => document.querySelector('[name=__RequestVerificationToken]')?.value ?? '';
 
     const OFERTAS_MAP    = {};                  // idProducto → precioOferta
@@ -1580,17 +1639,20 @@
        RENDER CARRITO
     ══════════════════════════════════════════════════════════════════════ */
     function renderCarrito() {
-        const cont   = document.getElementById('cartItems');
-        const btnGen = document.getElementById('btnGenerar');
+        const cont    = document.getElementById('cartItems');
+        const btnGen  = document.getElementById('btnGenerar');
+        const btnPost = document.getElementById('btnPostergar');
 
         if (carrito.size === 0 && promoCarrito.size === 0) {
             cont.innerHTML = `<div class="cart-empty">
                 <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h14v-2H7.42a.25.25 0 0 1-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.46 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2z"/></svg>
                 Selecciona productos del catálogo</div>`;
-            if (btnGen) btnGen.disabled = true;
+            if (btnGen)  btnGen.disabled  = true;
+            if (btnPost) btnPost.disabled = true;
             actualizarTotales();
             return;
         }
+        if (btnPost) btnPost.disabled = false;
 
         const { instancias, remaining } = calcularDescuentos();
         const entries = [];
@@ -1831,6 +1893,227 @@
     }
 
     /* ══════════════════════════════════════════════════════════════════════
+       VENTAS POSTERGADAS  (estado 5 «Sin Finalizar»)
+       ─────────────────────────────────────────────────────────────────────
+       Se guarda el carrito «en crudo»: los productos y sus envases, sin
+       resolver promociones. Al recuperarlo, el motor vuelve a detectar las
+       promos por su cuenta, así que no hace falta persistir ese estado.
+       Postergar no mueve stock: la venta no se emitió y los productos siguen
+       disponibles para otro cliente.
+    ══════════════════════════════════════════════════════════════════════ */
+    let ventasPostergadas = [];
+
+    function itemsCarritoCrudo() {
+        const items = [];
+        carrito.forEach((it, id) => {
+            const precioUnitario = OFERTAS_MAP[id] != null ? OFERTAS_MAP[id] : it.precio;
+            items.push({
+                idProducto: id, cantidad: it.cantidad,
+                precioNormal: it.precio, precioUnitario,
+                subtotal: precioUnitario * it.cantidad,
+                idPromocion: null, idOfertaProducto: OFERTAS_ID_MAP[id] ?? null
+            });
+        });
+        // Los envases viajan como fila con precioNormal 0, igual que en la venta real
+        envasesMap.forEach((env, id) => {
+            const it = carrito.get(id);
+            if (!it) return;
+            items.push({
+                idProducto: id, cantidad: it.cantidad,
+                precioNormal: 0, precioUnitario: env.valorEnvase,
+                subtotal: env.valorEnvase * it.cantidad,
+                idPromocion: null, idOfertaProducto: null
+            });
+        });
+        return items;
+    }
+
+    function totalCarritoActual() {
+        const { descTotal } = calcularDescuentos();
+        let subtotal = 0;
+        carrito.forEach(it => { subtotal += it.precio * it.cantidad; });
+        let envases = 0;
+        envasesMap.forEach((env, id) => {
+            const it = carrito.get(id);
+            if (it) envases += env.valorEnvase * it.cantidad;
+        });
+        return Math.max(0, subtotal - descTotal) + envases;
+    }
+
+    function vaciarCarrito() {
+        const ids = [...carrito.keys()];
+        carrito.clear();
+        promoCarrito.clear();
+        envasesMap.clear();
+        renderCarrito();
+        ids.forEach(id => actualizarTarjeta(id));
+        renderPromoGrid();
+    }
+
+    window.confirmarPostergarVenta = function () {
+        if (carrito.size === 0 && promoCarrito.size === 0) return;
+        if (Swal.isVisible()) return;
+
+        Swal.fire({
+            title: '¿Postergar esta venta?',
+            text: 'Se guardará para retomarla después y el carrito quedará libre para atender a otro cliente.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: 'var(--color-primario, #e76f2e)',
+            cancelButtonColor: '#7a6050',
+            confirmButtonText: 'Sí, postergar',
+            cancelButtonText: 'Cancelar'
+        }).then(r => { if (r.isConfirmed) postergarVenta(); });
+    };
+
+    async function postergarVenta() {
+        const btn = document.getElementById('btnPostergar');
+        const htmlPrevio = btn.innerHTML;
+        btn.disabled  = true;
+        btn.innerHTML = `<span class="spin-sm" style="border-color:rgba(122,96,80,.3);border-top-color:#7a6050;"></span> Guardando…`;
+
+        try {
+            const resp = await fetch(URL_POSTERGAR, {
+                method : 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': CSRF() },
+                body   : JSON.stringify({ items: itemsCarritoCrudo(), montoTotal: totalCarritoActual() })
+            });
+            const data = await resp.json();
+            if (!data.ok) { toast(data.mensaje ?? 'No se pudo postergar la venta.', 'error'); return; }
+
+            vaciarCarrito();
+            toast(data.mensaje, 'exito');
+            await cargarPostergadas(data.venta?.idBoleta);
+        } catch {
+            toast('Error de conexión al postergar la venta.', 'error');
+        } finally {
+            btn.innerHTML = htmlPrevio;
+            btn.disabled  = carrito.size === 0 && promoCarrito.size === 0;
+        }
+    }
+
+    window.cargarPostergadas = async function (resaltarId) {
+        try {
+            const r = await fetch(URL_POSTERGADAS);
+            if (!r.ok) throw new Error();
+            ventasPostergadas = await r.json();
+        } catch {
+            ventasPostergadas = [];
+        }
+        renderPostergadas(resaltarId);
+    };
+
+    function renderPostergadas(resaltarId) {
+        const cont = document.getElementById('postList');
+        const cnt  = document.getElementById('postCnt');
+        if (!cont) return;
+        if (cnt) cnt.textContent = ventasPostergadas.length;
+
+        if (ventasPostergadas.length === 0) {
+            cont.innerHTML = `<div class="post-empty">
+                <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+                Sin ventas postergadas</div>`;
+            return;
+        }
+
+        cont.innerHTML = ventasPostergadas.map(v => `
+            <div class="post-card${v.idBoleta === resaltarId ? ' recien' : ''}"
+                 onclick="recuperarPostergada(${v.idBoleta})"
+                 title="Recuperar esta venta — ${x(v.vendedor)} · ${x(v.fechaEmision)}">
+                <button class="post-card-del" title="Descartar esta venta"
+                        onclick="event.stopPropagation(); descartarPostergada(${v.idBoleta});">
+                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+                <div class="post-card-num">N° ${v.idBoleta}</div>
+                <div class="post-card-monto">$${fmt(v.montoTotal)}</div>
+                <div class="post-card-meta">${v.cantProductos} ítem(s) · ${x(v.hora)}</div>
+            </div>`).join('');
+    }
+
+    window.recuperarPostergada = async function (idBoleta) {
+        if (carrito.size > 0 || promoCarrito.size > 0) {
+            const r = await Swal.fire({
+                title: 'El carrito tiene productos',
+                text: 'Se descartarán para cargar la venta postergada. Si quieres conservarlos, postérgalos primero.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#7a6050',
+                confirmButtonText: 'Descartar y recuperar',
+                cancelButtonText: 'Cancelar'
+            });
+            if (!r.isConfirmed) return;
+        }
+
+        try {
+            const resp = await fetch(URL_RECUPERAR_POSTERGADA, {
+                method : 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': CSRF() },
+                body   : JSON.stringify({ idBoleta })
+            });
+            const data = await resp.json();
+            if (!data.ok) { toast(data.mensaje, 'error'); await cargarPostergadas(); return; }
+
+            const idsPrevios = [...carrito.keys()];
+            carrito.clear();
+            promoCarrito.clear();
+            envasesMap.clear();
+
+            (data.items ?? []).forEach(it => {
+                const prod = CATALOGO.find(p => p.id === it.idProducto);
+                if (!prod) return;
+                if (it.precioNormal === 0) {
+                    // Fila de envase: se vuelve a cobrar la garantía
+                    envasesMap.set(it.idProducto, {
+                        valorEnvase : it.precioUnitario,
+                        soloEfectivo: prod.retornable?.soloEfectivo ?? false
+                    });
+                } else {
+                    carrito.set(it.idProducto, {
+                        id: it.idProducto, nombre: prod.nombre, precio: prod.precio,
+                        cantidad: it.cantidad, stock: prod.stock, _seq: ++cartSeqCounter
+                    });
+                }
+            });
+
+            renderCarrito();
+            new Set([...idsPrevios, ...carrito.keys()]).forEach(id => actualizarTarjeta(id));
+            renderPromoGrid();
+            toast(data.mensaje, 'exito');
+            await cargarPostergadas();
+        } catch {
+            toast('Error de conexión al recuperar la venta.', 'error');
+        }
+    };
+
+    window.descartarPostergada = async function (idBoleta) {
+        const r = await Swal.fire({
+            title: '¿Descartar la venta postergada?',
+            html: `Se eliminará la venta <strong>N° ${idBoleta}</strong> sin devolver sus productos al carrito.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#7a6050',
+            confirmButtonText: 'Sí, descartar',
+            cancelButtonText: 'Cancelar'
+        });
+        if (!r.isConfirmed) return;
+
+        try {
+            const resp = await fetch(URL_DESCARTAR_POSTERGADA, {
+                method : 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': CSRF() },
+                body   : JSON.stringify({ idBoleta })
+            });
+            const data = await resp.json();
+            toast(data.mensaje, data.ok ? 'exito' : 'error');
+            await cargarPostergadas();
+        } catch {
+            toast('Error de conexión al descartar la venta.', 'error');
+        }
+    };
+
+    /* ══════════════════════════════════════════════════════════════════════
        GENERAR BOLETA
     ══════════════════════════════════════════════════════════════════════ */
     window.generarBoleta = async function (soloCliente = false, sinTicket = false) {
@@ -1909,13 +2192,9 @@
                     }
                 });
 
-                // Limpiar carrito
-                const ids = [...carrito.keys()];
-                carrito.clear();
-                envasesMap.clear();
-                renderCarrito();
-                ids.forEach(id => actualizarTarjeta(id));
-                renderPromoGrid();
+                // Limpiar carrito (incluye promoCarrito: si no, una promo agregada
+                // desde su tarjeta quedaba en el panel después de vender)
+                vaciarCarrito();
 
                 if (sinTicket) {
                     // Venta guardada sin emitir ticket: aviso breve que se cierra solo
@@ -2327,14 +2606,16 @@
             return;
         }
 
-        // 3. Atajos absolutos (NumpadEnter, F1, F2)
-        if (e.code === 'NumpadEnter' || e.key === 'F1' || e.key === 'F2') {
+        // 3. Atajos absolutos (NumpadEnter, F1, F2, F4)
+        if (e.code === 'NumpadEnter' || e.key === 'F1' || e.key === 'F2' || e.key === 'F4') {
             if (carrito.size === 0 && promoCarrito.size === 0) return;
             e.preventDefault();
             e.stopPropagation();
 
             if (Swal.isVisible()) {
                 Swal.clickConfirm();
+            } else if (e.key === 'F4') {
+                confirmarPostergarVenta();
             } else {
                 confirmarVentaShortcut(e.key === 'F2');
             }
@@ -2477,13 +2758,14 @@
 
     // Se registra en fase de captura para que se ejecute antes que el listener
     // interno de SweetAlert2 (que corre en fase de burbuja sobre document y
-    // detiene la propagación), garantizando que F1/F2/F3 puedan reconfirmar
+    // detiene la propagación), garantizando que F1/F2/F3/F4 puedan reconfirmar
     // el diálogo abierto con una segunda pulsación.
     window.addEventListener('keydown', window._generarVentaKeyDownHandler, true);
 
     renderGrid(CATALOGO);
     renderPromoGrid();
     actualizarTotales(); // Mostrar $0 desde el inicio
+    cargarPostergadas();
 
 })();
 </script>

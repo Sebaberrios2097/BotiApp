@@ -302,6 +302,111 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         return Json(result);
     }
 
+    // ── Ventas postergadas (estado 5 «Sin Finalizar») ─────────────────────────
+
+    // POST: deja el carrito guardado para atender a otro cliente
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "TodosRoles")]
+    public async Task<IActionResult> PostergarVentaAjax([FromBody] PostergarVentaRequest request)
+    {
+        if (request?.Items is not { Count: > 0 })
+            return Json(new { ok = false, mensaje = "No hay productos que postergar." });
+
+        var idVendedor = ClaimHelper.GetIdUsuario(User);
+        if (idVendedor == 0)
+            return Json(new { ok = false, mensaje = "No se pudo identificar el usuario." });
+
+        var detalles = request.Items.Select(i => new VenBoletaDetalle
+        {
+            IdProducto       = i.IdProducto,
+            Cantidad         = i.Cantidad,
+            PrecioNormal     = i.PrecioNormal,
+            PrecioUnitario   = i.PrecioUnitario,
+            Subtotal         = i.Subtotal ?? i.Cantidad * i.PrecioUnitario,
+            IdPromocion      = i.IdPromocion,
+            IdOfertaProducto = i.IdOfertaProducto
+        }).ToList();
+
+        var boleta = new VenBoletas
+        {
+            IdVendedor   = idVendedor,
+            FechaEmision = DateTime.Now,
+            // Total ya con descuentos, que es el monto que el vendedor reconoce al retomarla
+            MontoTotal   = request.MontoTotal > 0
+                ? request.MontoTotal
+                : detalles.Sum(d => d.Subtotal)
+        };
+
+        var creada = await ventasRepository.PostergarVentaAsync(boleta, detalles);
+
+        return Json(new
+        {
+            ok = true,
+            mensaje = $"Venta postergada como N° {creada.IdBoleta}.",
+            venta = MapVentaPostergada(creada, detalles.Count)
+        });
+    }
+
+    [HttpGet]
+    [Authorize(Policy = "TodosRoles")]
+    public async Task<IActionResult> VentasPostergadasAjax()
+    {
+        var ventas = await ventasRepository.ObtenerVentasPostergadasAsync(top: 30);
+        return Json(ventas.Select(b => MapVentaPostergada(b, b.VenBoletaDetalle.Count)));
+    }
+
+    // POST: devuelve los productos al carrito y elimina la venta postergada
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "TodosRoles")]
+    public async Task<IActionResult> RecuperarVentaPostergadaAjax([FromBody] BuscarBoletaRequest request)
+    {
+        var boleta = await ventasRepository.RecuperarVentaPostergadaAsync(request.IdBoleta);
+        if (boleta is null)
+            return Json(new { ok = false, mensaje = "La venta postergada ya no existe." });
+
+        return Json(new
+        {
+            ok = true,
+            mensaje = $"Venta N° {boleta.IdBoleta} recuperada.",
+            items = boleta.VenBoletaDetalle.Select(d => new
+            {
+                idProducto     = d.IdProducto,
+                cantidad       = d.Cantidad,
+                precioNormal   = d.PrecioNormal,
+                precioUnitario = d.PrecioUnitario
+            })
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "TodosRoles")]
+    public async Task<IActionResult> DescartarVentaPostergadaAjax([FromBody] BuscarBoletaRequest request)
+    {
+        var ok = await ventasRepository.DescartarVentaPostergadaAsync(request.IdBoleta);
+        return Json(new
+        {
+            ok,
+            mensaje = ok
+                ? $"Venta postergada N° {request.IdBoleta} descartada."
+                : "La venta postergada ya no existe."
+        });
+    }
+
+    private static object MapVentaPostergada(VenBoletas b, int cantItems) => new
+    {
+        idBoleta      = b.IdBoleta,
+        montoTotal    = b.MontoTotal,
+        cantProductos = cantItems,
+        hora          = b.FechaEmision?.ToString("HH:mm") ?? "—",
+        fechaEmision  = b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
+        vendedor      = b.IdVendedorNavigation?.IdEmpleadoNavigation is { } ev
+            ? $"{ev.NombresEmpleado} {ev.Apellido1}".Trim()
+            : "—"
+    };
+
     // ── Helpers ───────────────────────────────────────────────────────────────
     private static object MapBoletaTicket(VenBoletas b) => new
     {
@@ -359,4 +464,5 @@ public record AnularBoletaRequest(int IdBoleta, string? Motivo = null);
 public record ModificarBoletaRequest(int IdBoleta, List<ItemBoleta> Items);
 public record CobrarBoletaRequest(int IdBoleta, List<MetodoPagoItem> MetodosPago);
 public record DejarFiadoRequest(int IdBoleta, int IdClienteFiado);
+public record PostergarVentaRequest(List<ItemBoleta> Items, int MontoTotal = 0);
 public record MetodoPagoItem(int IdMetodoPago, int Monto);

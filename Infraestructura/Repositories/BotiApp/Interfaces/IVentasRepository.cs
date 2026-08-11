@@ -24,6 +24,20 @@ public interface IVentasRepository
     /// </summary>
     Task<bool> AnularBoletaAsync(int idBoleta, int idUsuario, string? nota = null);
 
+    // ── Ventas postergadas (estado 5 «Sin Finalizar») ─────────────────────────
+    /// <summary>
+    /// Guarda el carrito como venta postergada: estado 5, sin correlativo diario y
+    /// sin mover stock, porque todavía no es una venta emitida.
+    /// </summary>
+    Task<VenBoletas> PostergarVentaAsync(VenBoletas boleta, IEnumerable<VenBoletaDetalle> detalles);
+    Task<IEnumerable<VenBoletas>> ObtenerVentasPostergadasAsync(int top = 30);
+    /// <summary>
+    /// Devuelve la venta postergada con su detalle y la elimina, para que el carrito
+    /// vuelva a quedar en manos del vendedor. Null si no existe o no está postergada.
+    /// </summary>
+    Task<VenBoletas?> RecuperarVentaPostergadaAsync(int idBoleta);
+    Task<bool> DescartarVentaPostergadaAsync(int idBoleta);
+
     // ── Catálogo ──────────────────────────────────────────────────────────────
     Task<IEnumerable<ProProductos>> ObtenerProductosDisponiblesAsync();
     Task<IEnumerable<ProTiposProductos>> ObtenerTiposAsync();
