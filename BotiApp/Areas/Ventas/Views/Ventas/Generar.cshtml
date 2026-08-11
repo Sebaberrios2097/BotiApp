@@ -1406,28 +1406,35 @@
         for (const promo of PROMOS) {
             // eslint-disable-next-line no-constant-condition
             while (true) {
+                // Saldo de trabajo: cada requisito que se da por cubierto se descuenta
+                // aquí mismo, para que una misma unidad del carrito no alcance para dos
+                // requisitos distintos de la promo (el mismo producto en base y en un
+                // grupo, o repetido en dos grupos, como en «2 vinos a elección»).
+                const disp = new Map(remaining);
+                const reservar = req => {
+                    const hay = disp.get(req.idProducto) ?? 0;
+                    if (hay < req.cantidad) return false;
+                    disp.set(req.idProducto, hay - req.cantidad);
+                    return true;
+                };
+
                 // ── 1. Productos base (sin grupo) ─────────────────────────
-                const baseOk = promo.productosBase.every(
-                    req => (remaining.get(req.idProducto) ?? 0) >= req.cantidad
-                );
-                if (!baseOk) break;
+                if (!promo.productosBase.every(req => reservar(req))) break;
 
                 // ── 2. Grupos ─────────────────────────────────────────────
                 let gruposOk = true;
                 const gruposResueltos = []; // array de arrays de {idProducto, cantidad}
                 for (const grupo of promo.grupos) {
                     if (grupo.esExcluyente) {
-                        // Primer producto del grupo con saldo suficiente gana
+                        // Primer producto del grupo con saldo aún sin reservar gana
                         const ganador = grupo.productos.find(
-                            req => (remaining.get(req.idProducto) ?? 0) >= req.cantidad
+                            req => (disp.get(req.idProducto) ?? 0) >= req.cantidad
                         );
                         if (!ganador) { gruposOk = false; break; }
+                        reservar(ganador);
                         gruposResueltos.push([ganador]);
                     } else {
-                        const todosOk = grupo.productos.every(
-                            req => (remaining.get(req.idProducto) ?? 0) >= req.cantidad
-                        );
-                        if (!todosOk) { gruposOk = false; break; }
+                        if (!grupo.productos.every(req => reservar(req))) { gruposOk = false; break; }
                         gruposResueltos.push([...grupo.productos]);
                     }
                 }
@@ -1531,6 +1538,25 @@
             });
         });
 
+        return renderFilasDesglosePromo(prodCounts);
+    }
+
+    /* Desglose real de una promo detectada automáticamente: se arma con los
+       productos que el motor asignó a cada instancia, no suponiendo que de cada
+       grupo excluyente sale su primer producto. Sin esto, una promo con dos
+       grupos iguales (p. ej. «2 vinos a elección») siempre mostraría dos veces
+       la primera variedad, aunque el cliente llevara otras. */
+    function buildPromoBreakdownDesdeInstancias(instList) {
+        const prodCounts = new Map();
+        instList.forEach(inst => {
+            (inst.itemsActivos || []).forEach(({ id, cantReq }) => {
+                prodCounts.set(id, (prodCounts.get(id) || 0) + cantReq);
+            });
+        });
+        return renderFilasDesglosePromo(prodCounts);
+    }
+
+    function renderFilasDesglosePromo(prodCounts) {
         const rows = [];
         prodCounts.forEach((cantTotal, idProd) => {
             const prod = CATALOGO.find(c => c.id === idProd);
@@ -1591,12 +1617,17 @@
             const tagText = cantDirect > 0 ? '🎁 Promo' : '🏷️ Promo';
             const subtotal = promoInfo.precio * totalCantidad;
 
-            const prodRowsHtml = buildPromoProdBreakdownHtml(
-                promoInfo,
-                pDirect ? pDirect.unidades : null,
-                totalCantidad,
-                pDirect ? pDirect.seleccionGrupos : null
-            );
+            // Si el motor ya emparejó instancias, esos son los productos que
+            // realmente se están descontando: se muestran tal cual. La suposición
+            // por selección de grupos queda solo para promos sin instancia aún.
+            const prodRowsHtml = instList.length > 0
+                ? buildPromoBreakdownDesdeInstancias(instList)
+                : buildPromoProdBreakdownHtml(
+                    promoInfo,
+                    pDirect ? pDirect.unidades : null,
+                    totalCantidad,
+                    pDirect ? pDirect.seleccionGrupos : null
+                  );
 
             const seqDirect = pDirect ? (pDirect._seq || 0) : 0;
             const seqAuto = Math.max(...instList.flatMap(i => (i.itemsActivos || []).map(it => carrito.get(it.id)?._seq || 0)), 0);

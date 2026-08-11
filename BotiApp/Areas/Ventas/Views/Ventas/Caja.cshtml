@@ -1430,25 +1430,32 @@
         for (const promo of PROMOS) {
             // eslint-disable-next-line no-constant-condition
             while (true) {
-                const baseOk = (promo.productosBase || []).every(
-                    req => (standaloneMap.get(req.idProducto) || 0) >= req.cantidad
-                );
-                if (!baseOk) break;
+                // Saldo de trabajo: cada requisito que se da por cubierto se descuenta
+                // aquí mismo, para que una misma unidad del detalle no alcance para dos
+                // requisitos distintos de la promo (el mismo producto en base y en un
+                // grupo, o repetido en dos grupos, como en «2 vinos a elección»).
+                const disp = new Map(standaloneMap);
+                const reservar = req => {
+                    const hay = disp.get(req.idProducto) || 0;
+                    if (hay < req.cantidad) return false;
+                    disp.set(req.idProducto, hay - req.cantidad);
+                    return true;
+                };
+
+                if (!(promo.productosBase || []).every(req => reservar(req))) break;
 
                 let gruposOk = true;
                 const gruposResueltos = [];
                 for (const grupo of (promo.grupos || [])) {
                     if (grupo.esExcluyente) {
                         const ganador = grupo.productos.find(
-                            req => (standaloneMap.get(req.idProducto) || 0) >= req.cantidad
+                            req => (disp.get(req.idProducto) || 0) >= req.cantidad
                         );
                         if (!ganador) { gruposOk = false; break; }
+                        reservar(ganador);
                         gruposResueltos.push([ganador]);
                     } else {
-                        const todosOk = grupo.productos.every(
-                            req => (standaloneMap.get(req.idProducto) || 0) >= req.cantidad
-                        );
-                        if (!todosOk) { gruposOk = false; break; }
+                        if (!grupo.productos.every(req => reservar(req))) { gruposOk = false; break; }
                         gruposResueltos.push([...grupo.productos]);
                     }
                 }

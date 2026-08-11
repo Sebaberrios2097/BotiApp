@@ -85,6 +85,7 @@
         background: #f0ebe5; color: #7a6050; border-radius: 20px;
         padding: .12rem .55rem; font-size: .74rem; font-weight: 800; flex-shrink: 0;
     }
+    .ed-card-acciones { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
 
     /* ── Formulario ─────────────────────────────────────────────────────── */
     .ed-form-grid {
@@ -241,6 +242,12 @@
         padding: .85rem .95rem; margin-bottom: .75rem;
     }
     .ed-grupo:last-of-type { margin-bottom: 0; }
+    .ed-grupo.recien-creado { animation: edResaltar 1.8s ease; }
+    @@keyframes edResaltar {
+        0%, 35% { border-color: var(--color-primario); background: #fff5ee;
+                  box-shadow: 0 0 0 3px rgba(231, 111, 46, .16); }
+        100%    { border-color: #e8ddd4; background: #faf7f5; box-shadow: none; }
+    }
     .ed-grupo-head {
         display: flex; align-items: center; gap: .5rem;
         flex-wrap: wrap; margin-bottom: .65rem;
@@ -526,6 +533,12 @@
                     <dd>El cliente escoge solo uno de los productos del grupo.</dd>
                     <dt>Grupo «Todos incluidos»</dt>
                     <dd>Se incluyen todos los productos del grupo.</dd>
+                    <dt>Varias unidades a elección</dt>
+                    <dd>
+                        Para «2 vinos a elección» crea un grupo «Elige 1» con las variedades
+                        y <strong>duplícalo</strong>: dos grupos iguales permiten repetir la
+                        misma variedad o combinarlas. No pongas esos productos también en la base.
+                    </dd>
                 </dl>
                 <p style="font-size:.76rem;color:#a89080;margin:.8rem 0 0;line-height:1.45;">
                     Los productos y grupos se guardan al instante. Los datos del formulario
@@ -877,7 +890,38 @@
             esExcluyente: document.getElementById('edGrupoExcl')?.checked ?? true
         });
         toast(data.mensaje, data.ok ? 'exito' : 'error');
-        if (data.ok) await refrescarContenido();
+        if (data.ok) {
+            await refrescarContenido();
+            resaltarGrupo(data.grupo.idGrupo);
+        }
+    }
+
+    /** Crea un grupo «elige 1» con una copia de los productos base. */
+    async function replicarBaseEnGrupo() {
+        const data = await post(`/Productos/Promociones/ReplicarBaseEnGrupoAjax/${ID_PROMO}`,
+            { esExcluyente: true });
+        toast(data.mensaje, data.ok ? 'exito' : 'error');
+        if (!data.ok) return;
+        await refrescarContenido();
+        resaltarGrupo(data.grupo.idGrupo);
+    }
+
+    /** Duplica el grupo con su tipo, productos y cantidades. */
+    async function duplicarGrupo(idGrupo) {
+        const data = await post(`/Productos/Promociones/DuplicarGrupoAjax/${idGrupo}`);
+        toast(data.mensaje, data.ok ? 'exito' : 'error');
+        if (!data.ok) return;
+        await refrescarContenido();
+        resaltarGrupo(data.grupo.idGrupo);
+    }
+
+    /** Lleva la vista al grupo y lo destaca un momento para no perderlo de vista. */
+    function resaltarGrupo(idGrupo) {
+        const el = document.getElementById(`grupo-${idGrupo}`);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('recien-creado');
+        setTimeout(() => el.classList.remove('recien-creado'), 1800);
     }
 
     function editarGrupo(idGrupo) {
@@ -956,6 +1000,8 @@
     window.abrirFormGrupo          = abrirFormGrupo;
     window.cerrarFormGrupo         = cerrarFormGrupo;
     window.crearGrupo              = crearGrupo;
+    window.replicarBaseEnGrupo     = replicarBaseEnGrupo;
+    window.duplicarGrupo           = duplicarGrupo;
     window.editarGrupo             = editarGrupo;
     window.cancelarEditarGrupo     = cancelarEditarGrupo;
     window.guardarGrupo            = guardarGrupo;

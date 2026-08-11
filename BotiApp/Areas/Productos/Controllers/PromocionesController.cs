@@ -231,6 +231,48 @@ public class PromocionesController(IPromocionesRepository promoRepo) : Controlle
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReplicarBaseEnGrupoAjax(int id, bool esExcluyente = true)
+    {
+        var grupo = await promoRepo.ReplicarBaseEnGrupoAsync(id, esExcluyente);
+        if (grupo is null)
+            return Json(new { ok = false, mensaje = "La promoción no tiene productos base que replicar." });
+
+        return Json(new
+        {
+            ok = true,
+            mensaje = $"Se creó el grupo «{grupo.Descripcion}» con los mismos productos base.",
+            grupo = new
+            {
+                grupo.IdGrupo,
+                grupo.Descripcion,
+                grupo.EsExcluyente
+            }
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DuplicarGrupoAjax(int id)
+    {
+        var copia = await promoRepo.DuplicarGrupoAsync(id);
+        if (copia is null)
+            return Json(new { ok = false, mensaje = "Grupo no encontrado." });
+
+        return Json(new
+        {
+            ok = true,
+            mensaje = $"Grupo duplicado como «{copia.Descripcion}».",
+            grupo = new
+            {
+                copia.IdGrupo,
+                copia.Descripcion,
+                copia.EsExcluyente
+            }
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> RenombrarGrupoAjax(int idGrupo, string descripcion, bool esExcluyente)
     {
         if (string.IsNullOrWhiteSpace(descripcion))

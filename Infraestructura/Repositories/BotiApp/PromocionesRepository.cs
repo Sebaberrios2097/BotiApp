@@ -1,4 +1,5 @@
-﻿using Infraestructura.Context;
+﻿using System.Text.RegularExpressions;
+using Infraestructura.Context;
 using Infraestructura.Entities.BotiApp;
 using Infraestructura.Repositories.BotiApp.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -122,6 +123,134 @@ public class PromocionesRepository(BotiAppContext context) : IPromocionesReposit
         grupo.EsExcluyente = esExcluyente;
         await context.SaveChangesAsync();
         return grupo;
+    }
+
+    /// <summary>
+    /// Crea una copia del grupo dentro de la misma promoción, con su mismo tipo
+    /// (excluyente o libre) y con los mismos productos y cantidades.
+    /// </summary>
+    public async Task<ProPromocionGrupo?> DuplicarGrupoAsync(int idGrupo)
+    {
+        var original = await context.ProPromocionGrupo
+            .Include(g => g.ProPromocionDetalle)
+            .FirstOrDefaultAsync(g => g.IdGrupo == idGrupo);
+        if (original is null) return null;
+
+        var nombresUsados = await context.ProPromocionGrupo
+            .Where(g => g.IdPromocion == original.IdPromocion)
+            .Select(g => g.Descripcion)
+            .ToListAsync();
+
+        var copia = new ProPromocionGrupo
+        {
+            IdPromocion  = original.IdPromocion,
+            Descripcion  = GenerarNombreCopia(original.Descripcion, nombresUsados),
+            EsExcluyente = original.EsExcluyente
+        };
+        context.ProPromocionGrupo.Add(copia);
+        await context.SaveChangesAsync();   // necesario para obtener el IdGrupo generado
+
+        foreach (var d in original.ProPromocionDetalle)
+        {
+            context.ProPromocionDetalle.Add(new ProPromocionDetalle
+            {
+                IdPromocion = d.IdPromocion,
+                IdProducto  = d.IdProducto,
+                Cantidad    = d.Cantidad,
+                IdGrupo     = copia.IdGrupo
+            });
+        }
+        await context.SaveChangesAsync();
+
+        return copia;
+    }
+
+    /// <summary>
+    /// Crea un grupo de opciones con una copia de los productos base de la promoción
+    /// (los que no pertenecen a ningún grupo). Los productos base se mantienen.
+    /// Devuelve null si la promoción no tiene productos base.
+    /// </summary>
+    public async Task<ProPromocionGrupo?> ReplicarBaseEnGrupoAsync(int idPromocion, bool esExcluyente = true)
+    {
+        var baseItems = await context.ProPromocionDetalle
+            .Where(d => d.IdPromocion == idPromocion && d.IdGrupo == null)
+            .ToListAsync();
+        if (baseItems.Count == 0) return null;
+
+        var nombresUsados = await context.ProPromocionGrupo
+            .Where(g => g.IdPromocion == idPromocion)
+            .Select(g => g.Descripcion)
+            .ToListAsync();
+
+        var grupo = new ProPromocionGrupo
+        {
+            IdPromocion  = idPromocion,
+            Descripcion  = NombreUnico("Opciones", nombresUsados),
+            EsExcluyente = esExcluyente
+        };
+        context.ProPromocionGrupo.Add(grupo);
+        await context.SaveChangesAsync();   // necesario para obtener el IdGrupo generado
+
+        foreach (var d in baseItems)
+        {
+            context.ProPromocionDetalle.Add(new ProPromocionDetalle
+            {
+                IdPromocion = d.IdPromocion,
+                IdProducto  = d.IdProducto,
+                Cantidad    = d.Cantidad,
+                IdGrupo     = grupo.IdGrupo
+            });
+        }
+        await context.SaveChangesAsync();
+
+        return grupo;
+    }
+
+    /// <summary>
+    /// Devuelve el nombre pedido, o «Nombre 2», «Nombre 3»… si ya está en uso.
+    /// </summary>
+    private static string NombreUnico(string deseado, IEnumerable<string> existentes)
+    {
+        const int maxLargo = 100;
+        var usados = new HashSet<string>(existentes, StringComparer.OrdinalIgnoreCase);
+        if (!usados.Contains(deseado)) return deseado;
+
+        for (var i = 2; ; i++)
+        {
+            var sufijo = $" {i}";
+            var recorte = deseado.Length + sufijo.Length > maxLargo
+                ? deseado[..(maxLargo - sufijo.Length)]
+                : deseado;
+            var candidato = recorte + sufijo;
+            if (!usados.Contains(candidato)) return candidato;
+        }
+    }
+
+    /// <summary>
+    /// Devuelve «Nombre (copia)», o «(copia 2)», «(copia 3)»… si ya existe otro grupo
+    /// con ese nombre. Duplicar una copia parte del nombre raíz para no encadenar
+    /// sufijos, y el resultado se recorta al largo máximo de la columna (100).
+    /// </summary>
+    private static string GenerarNombreCopia(string original, IEnumerable<string> existentes)
+    {
+        const int maxLargo = 100;
+
+        var raiz  = Regex.Match(original, @"^(.*?)\s*\(copia(?:\s+\d+)?\)$");
+        var baseNombre = raiz.Success && !string.IsNullOrWhiteSpace(raiz.Groups[1].Value)
+            ? raiz.Groups[1].Value
+            : original;
+
+        var usados = new HashSet<string>(existentes, StringComparer.OrdinalIgnoreCase);
+
+        for (var i = 1; ; i++)
+        {
+            var sufijo = i == 1 ? " (copia)" : $" (copia {i})";
+            var recorte = baseNombre.Length + sufijo.Length > maxLargo
+                ? baseNombre[..(maxLargo - sufijo.Length)]
+                : baseNombre;
+            var candidato = recorte + sufijo;
+            if (!usados.Contains(candidato)) return candidato;
+        }
     }
 
     public async Task<ProPromocionDetalle> AgregarProductoAsync(

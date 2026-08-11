@@ -15,6 +15,8 @@ public interface IPromocionesRepository
     Task<ProPromocionGrupo> CrearGrupoAsync(int idPromocion, string descripcion, bool esExcluyente = true);
     Task<bool> EliminarGrupoAsync(int idGrupo);
     Task<ProPromocionGrupo?> RenombrarGrupoAsync(int idGrupo, string descripcion, bool esExcluyente);
+    Task<ProPromocionGrupo?> DuplicarGrupoAsync(int idGrupo);
+    Task<ProPromocionGrupo?> ReplicarBaseEnGrupoAsync(int idPromocion, bool esExcluyente = true);
 
     // Detalle
     Task<ProPromocionDetalle> AgregarProductoAsync(int idPromocion, int idProducto, int cantidad, int? idGrupo = null);
