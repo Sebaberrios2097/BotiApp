@@ -30,13 +30,26 @@ public interface IVentasRepository
     /// sin mover stock, porque todavía no es una venta emitida.
     /// </summary>
     Task<VenBoletas> PostergarVentaAsync(VenBoletas boleta, IEnumerable<VenBoletaDetalle> detalles);
+    /// <summary>
+    /// Reemplaza el detalle de una venta ya postergada conservando su identidad.
+    /// Null si no existe o dejó de estar postergada.
+    /// </summary>
+    Task<VenBoletas?> ActualizarVentaPostergadaAsync(int idBoleta, int montoTotal, IEnumerable<VenBoletaDetalle> detalles);
+    /// <summary>
+    /// Emite una venta postergada reutilizando su boleta y su correlativo reservado,
+    /// descontando el stock. Null si ya no existe o dejó de estar postergada.
+    /// </summary>
+    Task<VenBoletas?> EmitirVentaPostergadaAsync(int idBoleta, int idVendedor, IEnumerable<VenBoletaDetalle> detalles);
     Task<IEnumerable<VenBoletas>> ObtenerVentasPostergadasAsync(int top = 30);
     /// <summary>
-    /// Devuelve la venta postergada con su detalle y la elimina, para que el carrito
-    /// vuelva a quedar en manos del vendedor. Null si no existe o no está postergada.
+    /// Devuelve la venta postergada con su detalle sin eliminarla, para cargarla en el
+    /// carrito conservándola en el panel. Null si no existe o no está postergada.
     /// </summary>
     Task<VenBoletas?> RecuperarVentaPostergadaAsync(int idBoleta);
-    Task<bool> DescartarVentaPostergadaAsync(int idBoleta);
+    /// <summary>
+    /// Elimina la venta postergada y devuelve su número visible, o null si ya no existía.
+    /// </summary>
+    Task<int?> DescartarVentaPostergadaAsync(int idBoleta);
 
     // ── Catálogo ──────────────────────────────────────────────────────────────
     Task<IEnumerable<ProProductos>> ObtenerProductosDisponiblesAsync();

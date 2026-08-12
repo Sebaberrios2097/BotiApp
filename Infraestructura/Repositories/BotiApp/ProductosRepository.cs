@@ -269,26 +269,54 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
         return true;
     }
 
-    public async Task<HashSet<int>> ObtenerIdsUnidadOcupadosAsync()
+    public async Task<List<ProProductoPack>> ObtenerPacksPorUnidadAsync(int idUnidad)
+        => await context.ProProductoPack
+            .AsNoTracking()
+            .Where(p => p.IdProductoUnidad == idUnidad)
+            .ToListAsync();
+
+    public async Task<HashSet<int>> ObtenerIdsProductosQueSonPackAsync()
     {
         var ids = await context.ProProductoPack
             .AsNoTracking()
-            .Select(p => p.IdProductoUnidad)
+            .Select(p => p.IdProductoPackProducto)
             .ToListAsync();
         return ids.ToHashSet();
     }
 
     /// <summary>
-    /// Aplica un delta al stock de un producto y mantiene sincronizado el stock del pack
-    /// asociado (tanto si el producto es pack como si es unidad de un pack).
+    /// Recalcula el stock de todos los packs que se arman con esta unidad. Una misma
+    /// unidad puede alimentar varios packs (uno de 6 y otro de 12, por ejemplo), y
+    /// todos deben quedar consistentes con el stock real de la unidad.
+    /// El stock de cada pack es floor(StockUnidad / CantidadUnidades).
+    /// No llama a SaveChanges: lo hace quien lo invoca.
+    /// </summary>
+    private async Task SincronizarPacksDeUnidadAsync(ProProductos unidad)
+    {
+        var packs = await context.ProProductoPack
+            .Where(pk => pk.IdProductoUnidad == unidad.IdProducto)
+            .ToListAsync();
+
+        foreach (var pk in packs)
+        {
+            if (pk.CantidadUnidades <= 0) continue;
+            var packProd = await context.ProProductos.FindAsync(pk.IdProductoPackProducto);
+            if (packProd is null) continue;
+            packProd.Stock = unidad.Stock / pk.CantidadUnidades;
+        }
+    }
+
+    /// <summary>
+    /// Aplica un delta al stock de un producto y mantiene sincronizados los packs
+    /// asociados. El stock de la UNIDAD es la única fuente de verdad: el de cada pack
+    /// siempre se deriva como `floor(StockUnidad / CantidadUnidades)`.
     ///
     /// Reglas:
-    ///   • Si el producto es un PACK: descuenta/suma `delta` al pack, y propaga
-    ///     `delta * CantidadUnidades` a la unidad base. Ambos stocks quedan persistidos.
-    ///   • Si el producto es la UNIDAD de un pack: aplica el delta a la unidad y
-    ///     recalcula el stock del pack como `floor(StockUnidad / CantidadUnidades)`,
-    ///     aplicando el delta resultante al pack.
-    ///   • Si no es ni pack ni unidad de pack: solo aplica el delta al producto.
+    ///   • Si el producto es un PACK: propaga `delta * CantidadUnidades` a la unidad
+    ///     base y recalcula todos los packs que se arman con esa unidad — incluido él
+    ///     mismo y cualquier otro pack de distinto tamaño sobre el mismo producto.
+    ///   • Si no lo es: aplica el delta al producto y recalcula los packs que dependan
+    ///     de él (ninguno si es un producto independiente).
     ///
     /// `delta` positivo = entrada de stock; negativo = salida.
     /// </summary>
@@ -300,35 +328,23 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
 
         var packComoPack = await context.ProProductoPack
             .FirstOrDefaultAsync(pk => pk.IdProductoPackProducto == idProducto);
-        var packComoUnidad = await context.ProProductoPack
-            .FirstOrDefaultAsync(pk => pk.IdProductoUnidad == idProducto);
 
-        // Caso 1: el producto ES un pack
+        // El producto ES un pack: el movimiento se traduce a unidades sobre su base
         if (packComoPack is not null)
         {
-            prod.Stock += delta;
             var unidad = await context.ProProductos.FindAsync(packComoPack.IdProductoUnidad)
                 ?? throw new InvalidOperationException($"Unidad base del pack {idProducto} no encontrada.");
+
             unidad.Stock += delta * packComoPack.CantidadUnidades;
+
+            // Recalcula el propio pack y los demás que compartan la unidad
+            await SincronizarPacksDeUnidadAsync(unidad);
             return;
         }
 
-        // Caso 2: el producto es la UNIDAD de un pack
-        if (packComoUnidad is not null)
-        {
-            prod.Stock += delta;
-            var packProd = await context.ProProductos.FindAsync(packComoUnidad.IdProductoPackProducto)
-                ?? throw new InvalidOperationException($"Producto pack {packComoUnidad.IdProductoPackProducto} no encontrado.");
-            var stockPackNuevo = packComoUnidad.CantidadUnidades > 0
-                ? prod.Stock / packComoUnidad.CantidadUnidades
-                : 0;
-            var deltaPack = stockPackNuevo - packProd.Stock;
-            if (deltaPack != 0) packProd.Stock += deltaPack;
-            return;
-        }
-
-        // Caso 3: producto independiente
+        // Producto normal o unidad base: se mueve su stock y se derivan sus packs
         prod.Stock += delta;
+        await SincronizarPacksDeUnidadAsync(prod);
     }
 
     public async Task<IEnumerable<ProProductos>> BuscarAsync(string filtro)

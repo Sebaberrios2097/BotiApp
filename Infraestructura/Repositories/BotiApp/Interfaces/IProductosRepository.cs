@@ -22,7 +22,14 @@ public interface IProductosRepository
     Task<ProProductoPack?> ObtenerPackPorProductoAsync(int idProducto);
     Task<ProProductoPack> UpsertPackAsync(ProProductoPack pack);
     Task<bool> EliminarPackPorProductoAsync(int idProducto);
-    Task<HashSet<int>> ObtenerIdsUnidadOcupadosAsync();
+    /// <summary>
+    /// Ids de los productos que ya están definidos como pack. Se usan para impedir que
+    /// un pack sea a su vez la unidad base de otro (el stock no propaga en cadena).
+    /// </summary>
+    Task<HashSet<int>> ObtenerIdsProductosQueSonPackAsync();
+
+    /// <summary>Packs que se arman con esa unidad base. Puede haber varios de distinto tamaño.</summary>
+    Task<List<ProProductoPack>> ObtenerPacksPorUnidadAsync(int idUnidad);
     // Aplica un delta al stock de un producto manteniendo pack/unidad sincronizados.
     Task AplicarDeltaStockAsync(int idProducto, int delta);
     // Búsqueda por nombre o código (coincidencia parcial, ignora tildes/case)

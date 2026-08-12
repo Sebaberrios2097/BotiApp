@@ -1224,6 +1224,15 @@
         });
     }
 
+    /* Tope por stock para la selección del modal. El stock puede venir en 0 o en
+       negativo (descuadres de inventario) y Caja igualmente permite vender: en
+       ese caso no se aplica tope, pero nunca se baja de 1 unidad. */
+    function topeStock(cantidad, stock) {
+        const tope = Number(stock);
+        if (!Number.isFinite(tope) || tope < 1) return Math.max(1, cantidad);
+        return Math.max(1, Math.min(cantidad, tope));
+    }
+
     window.toggleSeleccionProdModal = function (id, event) {
         if (event) event.stopPropagation();
         const p = CATALOGO_ACTIVO.find(c => c.id === id);
@@ -1232,7 +1241,7 @@
         if (modalSelectedProds.has(id)) {
             modalSelectedProds.delete(id);
         } else {
-            modalSelectedProds.set(id, Math.min(1, p.stock));
+            modalSelectedProds.set(id, topeStock(1, p.stock));
         }
         updateModalCard(p);
         updateBtnModalAgregarState();
@@ -1248,7 +1257,7 @@
         if (newQty <= 0) {
             modalSelectedProds.delete(id);
         } else {
-            modalSelectedProds.set(id, Math.min(newQty, p.stock));
+            modalSelectedProds.set(id, topeStock(newQty, p.stock));
         }
         updateModalCard(p);
         updateBtnModalAgregarState();

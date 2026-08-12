@@ -159,6 +159,32 @@
     .btn-ver-cliente:hover { background: rgba(99,102,241,.18); color: #4f46e5; text-decoration: none; }
 
     .fiado-empty { text-align: center; padding: 2.5rem 1rem; color: #9ca3af; font-size: .88rem; }
+
+    /* estado del cliente */
+    .badge-estado {
+        display: inline-block;
+        padding: .15rem .55rem;
+        border-radius: 20px;
+        font-size: .68rem;
+        font-weight: 700;
+        margin-left: .4rem;
+        background: #f1f0ee;
+        color: #78716c;
+        vertical-align: middle;
+    }
+    .fiado-table tr.inactivo td { background: #fbfaf9; }
+    .fiado-table tr.inactivo td:first-child strong { color: #a8a29e; }
+    .fiado-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        font-size: .8rem;
+        color: #6b7280;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+    }
+    .fiado-toggle input { cursor: pointer; }
 </style>
 
 <div class="fiado-header">
@@ -205,8 +231,10 @@
             </svg>
         </div>
         <div class="fiado-kpi-body">
-            <span class="fiado-kpi-value">@Model.Clientes.Count</span>
-            <span class="fiado-kpi-label">Clientes registrados</span>
+            <span class="fiado-kpi-value">@Model.Clientes.Count(c => c.Estado)</span>
+            <span class="fiado-kpi-label">
+                Clientes activos@(Model.Clientes.Any(c => !c.Estado) ? $" · {Model.Clientes.Count(c => !c.Estado)} desactivado(s)" : "")
+            </span>
         </div>
     </div>
 </div>
@@ -215,10 +243,20 @@
 <div class="fiado-table-card">
     <div class="fiado-table-header">
         <h2>Clientes fiados</h2>
-        <div class="fiado-search-wrap">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-            <input class="fiado-search-input" type="text" id="fiadoSearchInput"
-                   placeholder="Buscar cliente…" oninput="filtrarClientes()" />
+        <div style="display:flex;align-items:center;gap:.9rem;flex-wrap:wrap">
+            @{ var cantInactivos = Model.Clientes.Count(c => !c.Estado); }
+            @if (cantInactivos > 0)
+            {
+                <label class="fiado-toggle">
+                    <input type="checkbox" id="fiadoVerInactivos" onchange="filtrarClientes()" />
+                    Ver desactivados (@cantInactivos)
+                </label>
+            }
+            <div class="fiado-search-wrap">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input class="fiado-search-input" type="text" id="fiadoSearchInput"
+                       placeholder="Buscar cliente…" oninput="filtrarClientes()" />
+            </div>
         </div>
     </div>
 
@@ -245,8 +283,15 @@
                         var deudaBoletas = c.VenBoletas.Where(b => b.IdEstadoBoleta == 4).Sum(b => b.MontoTotal);
                         var balance      = deudaBoletas - c.SaldoAFavor;
                         var badgeClass   = balance > 50000 ? "alta" : balance > 10000 ? "media" : balance > 0 ? "baja" : "cero";
-                        <tr data-nombre="@c.Nombre.ToLower()">
-                            <td><strong>@c.Nombre</strong></td>
+                        <tr data-nombre="@c.Nombre.ToLower()" data-activo="@(c.Estado ? "1" : "0")"
+                            class="@(c.Estado ? "" : "inactivo")">
+                            <td>
+                                <strong>@c.Nombre</strong>
+                                @if (!c.Estado)
+                                {
+                                    <span class="badge-estado">Desactivado</span>
+                                }
+                            </td>
                             <td style="color:#6b7280">@(c.Telefono ?? "—")</td>
                             <td style="text-align:right;color:#16a34a;font-weight:600">
                                 @(c.SaldoAFavor > 0 ? "$" + c.SaldoAFavor.ToString("N0") : "—")
@@ -278,11 +323,14 @@
 (function () {
     function filtrarClientes() {
         var q = (document.getElementById('fiadoSearchInput')?.value ?? '').toLowerCase().trim();
+        // Los desactivados quedan ocultos salvo que se pidan explícitamente
+        var verInactivos = document.getElementById('fiadoVerInactivos')?.checked ?? false;
         var filas = document.querySelectorAll('#fiadoTabla tbody tr');
         var visibles = 0;
         filas.forEach(function (tr) {
             var nombre = tr.dataset.nombre ?? '';
-            var match  = !q || nombre.includes(q);
+            var activo = tr.dataset.activo !== '0';
+            var match  = (!q || nombre.includes(q)) && (activo || verInactivos);
             tr.style.display = match ? '' : 'none';
             if (match) visibles++;
         });
@@ -290,6 +338,7 @@
         if (noRes) noRes.style.display = visibles === 0 ? '' : 'none';
     }
     window.filtrarClientes = filtrarClientes;
+    filtrarClientes();   // oculta los desactivados en la carga inicial
 })();
 </script>
 }

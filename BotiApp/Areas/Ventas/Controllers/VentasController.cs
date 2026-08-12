@@ -133,15 +133,21 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
             };
         }).ToList();
 
-        var boleta = new VenBoletas
+        // Si la venta venía de una postergada se emite sobre esa misma boleta, para
+        // que conserve el número que el vendedor ya tenía a la vista en el panel
+        VenBoletas? creada = null;
+        if (request?.IdBoletaPostergada is { } idPostergada)
+            creada = await ventasRepository.EmitirVentaPostergadaAsync(idPostergada, idVendedor, detalles);
+
+        // Sin postergada de origen, o si ya no existe (otro cajero la descartó)
+        creada ??= await ventasRepository.CrearBoletaAsync(new VenBoletas
         {
             IdVendedor = idVendedor,
             IdEstadoBoleta = 1,
             FechaEmision = DateTime.Now,
             MontoTotal = detalles.Sum(d => d.Subtotal)
-        };
+        }, detalles);
 
-        var creada = await ventasRepository.CrearBoletaAsync(boleta, detalles);
         var completa = await ventasRepository.ObtenerPorIdAsync(creada.IdBoleta);
 
         // Notificar a todos los cajeros conectados en tiempo real
@@ -328,14 +334,34 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
             IdOfertaProducto = i.IdOfertaProducto
         }).ToList();
 
+        // Total ya con descuentos, que es el monto que el vendedor reconoce al retomarla
+        var montoTotal = request.MontoTotal > 0
+            ? request.MontoTotal
+            : detalles.Sum(d => d.Subtotal);
+
+        // Si venía de una venta ya postergada se actualiza en su lugar, para que
+        // reeditarla no la renumere ni deje copias sueltas en el panel
+        if (request.IdBoleta is { } idExistente)
+        {
+            var actualizada = await ventasRepository.ActualizarVentaPostergadaAsync(
+                idExistente, montoTotal, detalles);
+
+            if (actualizada is not null)
+                return Json(new
+                {
+                    ok = true,
+                    mensaje = $"Venta postergada N° {NumeroVenta(actualizada)} actualizada.",
+                    venta = MapVentaPostergada(actualizada, detalles.Count)
+                });
+
+            // Ya no existe (otro cajero la descartó): se guarda como una nueva
+        }
+
         var boleta = new VenBoletas
         {
             IdVendedor   = idVendedor,
             FechaEmision = DateTime.Now,
-            // Total ya con descuentos, que es el monto que el vendedor reconoce al retomarla
-            MontoTotal   = request.MontoTotal > 0
-                ? request.MontoTotal
-                : detalles.Sum(d => d.Subtotal)
+            MontoTotal   = montoTotal
         };
 
         var creada = await ventasRepository.PostergarVentaAsync(boleta, detalles);
@@ -343,7 +369,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         return Json(new
         {
             ok = true,
-            mensaje = $"Venta postergada como N° {creada.IdBoleta}.",
+            mensaje = $"Venta postergada como N° {NumeroVenta(creada)}.",
             venta = MapVentaPostergada(creada, detalles.Count)
         });
     }
@@ -356,7 +382,8 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         return Json(ventas.Select(b => MapVentaPostergada(b, b.VenBoletaDetalle.Count)));
     }
 
-    // POST: devuelve los productos al carrito y elimina la venta postergada
+    // POST: devuelve los productos al carrito; la venta postergada se conserva
+    // hasta que se emita o se vacíe el carrito (DescartarVentaPostergadaAjax)
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize(Policy = "TodosRoles")]
@@ -369,7 +396,7 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         return Json(new
         {
             ok = true,
-            mensaje = $"Venta N° {boleta.IdBoleta} recuperada.",
+            mensaje = $"Venta N° {NumeroVenta(boleta)} cargada en el carrito.",
             items = boleta.VenBoletaDetalle.Select(d => new
             {
                 idProducto     = d.IdProducto,
@@ -385,19 +412,24 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
     [Authorize(Policy = "TodosRoles")]
     public async Task<IActionResult> DescartarVentaPostergadaAjax([FromBody] BuscarBoletaRequest request)
     {
-        var ok = await ventasRepository.DescartarVentaPostergadaAsync(request.IdBoleta);
+        var numero = await ventasRepository.DescartarVentaPostergadaAsync(request.IdBoleta);
         return Json(new
         {
-            ok,
-            mensaje = ok
-                ? $"Venta postergada N° {request.IdBoleta} descartada."
+            ok = numero is not null,
+            mensaje = numero is { } n
+                ? $"Venta postergada N° {n} descartada."
                 : "La venta postergada ya no existe."
         });
     }
 
+    // Número que ve el vendedor: el correlativo diario cuando existe, con el id
+    // interno solo como respaldo (misma convención que el resto de las vistas).
+    private static int NumeroVenta(VenBoletas b) => b.CorrelativoDiario ?? b.IdBoleta;
+
     private static object MapVentaPostergada(VenBoletas b, int cantItems) => new
     {
         idBoleta      = b.IdBoleta,
+        numero        = NumeroVenta(b),
         montoTotal    = b.MontoTotal,
         cantProductos = cantItems,
         hora          = b.FechaEmision?.ToString("HH:mm") ?? "—",
@@ -457,12 +489,14 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
 }
 
 // ── Records de request ────────────────────────────────────────────────────────
-public record CrearBoletaRequest(List<ItemBoleta> Items);
+/// <param name="IdBoletaPostergada">Venta postergada que se está emitiendo, para reutilizar su boleta y su correlativo; null para una venta nueva.</param>
+public record CrearBoletaRequest(List<ItemBoleta> Items, int? IdBoletaPostergada = null);
 public record ItemBoleta(int IdProducto, int Cantidad, int PrecioNormal, int PrecioUnitario, int? IdPromocion, int? IdOfertaProducto, int? Subtotal = null);
 public record BuscarBoletaRequest(int IdBoleta);
 public record AnularBoletaRequest(int IdBoleta, string? Motivo = null);
 public record ModificarBoletaRequest(int IdBoleta, List<ItemBoleta> Items);
 public record CobrarBoletaRequest(int IdBoleta, List<MetodoPagoItem> MetodosPago);
 public record DejarFiadoRequest(int IdBoleta, int IdClienteFiado);
-public record PostergarVentaRequest(List<ItemBoleta> Items, int MontoTotal = 0);
+/// <param name="IdBoleta">Venta postergada que se está reeditando; null para una nueva.</param>
+public record PostergarVentaRequest(List<ItemBoleta> Items, int MontoTotal = 0, int? IdBoleta = null);
 public record MetodoPagoItem(int IdMetodoPago, int Monto);

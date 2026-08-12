@@ -78,8 +78,10 @@ public class ProductosController(
 
         if (esPack)
         {
-            if (idProductoUnidad <= 0 || cantidadUnidades <= 1)
-                return Json(new { ok = false, mensaje = "Para definir un pack debe seleccionar una unidad y una cantidad mayor a 1." });
+            // idProductoPack va en 0: el producto todavía no existe
+            var error = await ValidarPackAsync(0, idProductoUnidad, cantidadUnidades);
+            if (error is not null)
+                return Json(new { ok = false, mensaje = error });
         }
 
         if (imagenFile is { Length: > 0 })
@@ -129,10 +131,9 @@ public class ProductosController(
 
         if (esPack)
         {
-            if (idProductoUnidad <= 0 || cantidadUnidades <= 1)
-                return Json(new { ok = false, mensaje = "Para definir un pack debe seleccionar una unidad y una cantidad mayor a 1." });
-            if (idProductoUnidad == id)
-                return Json(new { ok = false, mensaje = "Un producto no puede ser pack de sí mismo." });
+            var error = await ValidarPackAsync(id, idProductoUnidad, cantidadUnidades);
+            if (error is not null)
+                return Json(new { ok = false, mensaje = error });
         }
 
         if (imagenFile is { Length: > 0 })
@@ -388,20 +389,55 @@ public class ProductosController(
 
     /// <summary>
     /// Devuelve los productos que pueden ser elegidos como "unidad base" de un pack:
-    /// activos, distintos de IdProducto (para evitar autoreferencia), y que NO estén
-    /// ya asignados como unidad de otro pack (constraint UNIQUE en BD).
+    /// activos y distintos de IdProducto (para evitar autoreferencia).
+    /// Una misma unidad SÍ puede alimentar varios packs (uno de 6 y otro de 12 del
+    /// mismo producto), por eso no se excluyen las unidades ya usadas. Lo que sí se
+    /// excluye es un producto que ya es pack: encadenar packs rompería el cálculo
+    /// de stock, que deriva cada pack de su unidad.
     /// Si <paramref name="incluirAdicionalId"/> viene (caso edición), fuerza a que ese
     /// producto aparezca aunque esté inactivo o sea la unidad actualmente seleccionada.
     /// </summary>
+    /// <summary>
+    /// Reglas de un pack, validadas en servidor (la lista del modal solo las sugiere).
+    /// Devuelve el mensaje de error, o null si la definición es válida.
+    /// Varios packs pueden compartir la misma unidad base siempre que sean de distinto
+    /// tamaño; lo que no se permite es encadenar packs ni duplicar un tamaño.
+    /// </summary>
+    private async Task<string?> ValidarPackAsync(int idProductoPack, int idProductoUnidad, int cantidadUnidades)
+    {
+        if (idProductoUnidad <= 0 || cantidadUnidades <= 1)
+            return "Para definir un pack debe seleccionar una unidad y una cantidad mayor a 1.";
+
+        if (idProductoUnidad == idProductoPack)
+            return "Un producto no puede ser pack de sí mismo.";
+
+        var idsQueSonPack = await productosRepository.ObtenerIdsProductosQueSonPackAsync();
+        if (idsQueSonPack.Contains(idProductoUnidad))
+            return "La unidad base no puede ser a su vez un pack: el stock se calcula desde la unidad y no se propaga en cadena.";
+
+        // El producto que se está definiendo no puede ser ya la unidad de otro pack
+        if (idProductoPack > 0 && (await productosRepository.ObtenerPacksPorUnidadAsync(idProductoPack)).Count > 0)
+            return "Este producto ya es la unidad base de otro pack, por lo que no puede convertirse en pack.";
+
+        // Dos packs del mismo tamaño sobre la misma unidad serían indistinguibles
+        var packsDeLaUnidad = await productosRepository.ObtenerPacksPorUnidadAsync(idProductoUnidad);
+        var duplicado = packsDeLaUnidad.FirstOrDefault(p => p.CantidadUnidades == cantidadUnidades
+                                                            && p.IdProductoPackProducto != idProductoPack);
+        if (duplicado is not null)
+            return $"Ya existe un pack de {cantidadUnidades} unidades para esa unidad base.";
+
+        return null;
+    }
+
     private async Task<List<ProProductos>> ObtenerProductosUnidadDisponiblesAsync(int excluirId, int? incluirAdicionalId = null)
     {
         var productos = await productosRepository.ObtenerTodosAsync();
-        var idsUnidadOcupados = await productosRepository.ObtenerIdsUnidadOcupadosAsync();
+        var idsQueSonPack = await productosRepository.ObtenerIdsProductosQueSonPackAsync();
         var lista = productos
             .Where(p => p.IdProducto != 0
                         && p.IdProducto != excluirId
                         && p.Estado
-                        && !idsUnidadOcupados.Contains(p.IdProducto))
+                        && !idsQueSonPack.Contains(p.IdProducto))
             .ToList();
         if (incluirAdicionalId is int idExtra && idExtra > 0 && idExtra != excluirId && !lista.Any(p => p.IdProducto == idExtra))
         {

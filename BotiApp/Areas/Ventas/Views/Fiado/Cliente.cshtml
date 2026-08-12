@@ -9,6 +9,28 @@
         id     = m.IdMetodoPago,
         nombre = m.NombreMetodoPago
     }));
+
+    // Boletas aún fiadas, en el mismo orden FIFO que usa el servidor al abonar.
+    // Sirven para anticipar en pantalla qué boletas saldará el abono.
+    var pendientes = Model.BoletasHistorial
+        .Where(b => b.IdEstadoBoleta == 4)
+        .OrderBy(b => b.FechaEmision)
+        .ToList();
+
+    var pendientesJson = JsonSerializer.Serialize(pendientes.Select(b => new
+    {
+        id     = b.IdBoleta,
+        numero = b.CorrelativoDiario ?? b.IdBoleta,
+        fecha  = b.FechaEmision?.ToString("dd/MM/yyyy") ?? "—",
+        monto  = b.MontoTotal
+    }));
+
+    var saldoAFavor = Model.Cliente.SaldoAFavor;
+    var deudaNeta   = Math.Max(0, Model.DeudaTotal - saldoAFavor);
+
+    var urlDesactivar = Url.Action("DesactivarClienteAjax", "Fiado", new { area = "Ventas" })!;
+    var urlReactivar  = Url.Action("ReactivarClienteAjax",  "Fiado", new { area = "Ventas" })!;
+    var urlEliminar   = Url.Action("EliminarClienteAjax",   "Fiado", new { area = "Ventas" })!;
 }
 
 <style>
@@ -88,14 +110,15 @@
     .fc-kpi-icon.warning svg { fill: var(--color-warning); }
     .fc-kpi-icon.success svg { fill: var(--color-success); }
     .fc-kpi-icon.danger  svg { fill: var(--color-danger); }
-    .fc-kpi-body { display: flex; flex-direction: column; gap: .1rem; }
+    .fc-kpi-body { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
     .fc-kpi-value { font-size: 1.45rem; font-weight: 800; color: var(--color-secundario); line-height: 1.1; }
     .fc-kpi-label { font-size: .76rem; color: #6b7280; font-weight: 500; }
+    .fc-kpi-hint  { font-size: .7rem; color: #9ca3af; margin-top: .1rem; }
 
     /* ── 2-column layout ── */
     .fc-grid {
         display: grid;
-        grid-template-columns: 1fr 340px;
+        grid-template-columns: 1fr 360px;
         gap: 1.25rem;
         align-items: start;
     }
@@ -116,11 +139,18 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: .6rem;
         padding: .9rem 1.3rem;
         border-bottom: 1px solid #f1ede8;
+        flex-wrap: wrap;
     }
     .fc-card-header h2 { font-size: .9rem; font-weight: 700; color: var(--color-secundario); margin: 0; }
     .fc-card-header span { font-size: .75rem; color: #9ca3af; }
+    /* La tarjeta de abono es la acción principal: se destaca y sigue al scroll */
+    .fc-card.destacada { border: 1.5px solid var(--color-primario); box-shadow: 0 3px 14px rgba(231,111,46,.13); }
+    .fc-card.destacada .fc-card-header { background: rgba(231,111,46,.07); border-bottom-color: rgba(231,111,46,.18); }
+    .fc-sticky { position: sticky; top: 1rem; }
+    @@media (max-width: 900px) { .fc-sticky { position: static; } }
 
     /* table */
     .fc-table-responsive { overflow-x: auto; }
@@ -148,7 +178,25 @@
         vertical-align: middle;
     }
     .fc-table tr:last-child td { border-bottom: none; }
-    .fc-table tr:hover td { background: #fdf9f5; }
+    .fc-table tbody tr:hover td { background: #fdf9f5; }
+    /* Fila que este abono va a saldar */
+    .fc-table tr.se-salda td { background: rgba(92,179,56,.09); }
+    .fc-table tr.se-salda:hover td { background: rgba(92,179,56,.15); }
+    .fc-salda-chip {
+        display: none;
+        margin-left: .4rem;
+        padding: .1rem .45rem;
+        border-radius: 20px;
+        background: rgba(92,179,56,.18);
+        color: #15803d;
+        font-size: .65rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    tr.se-salda .fc-salda-chip { display: inline-block; }
+
+    .fc-num-boleta { color: #6b7280; font-weight: 600; }
+    .fc-num-id { color: #c9bfb5; font-size: .7rem; font-weight: 500; }
 
     /* estado badges */
     .fc-badge {
@@ -157,13 +205,15 @@
         border-radius: 20px;
         font-size: .7rem;
         font-weight: 700;
+        white-space: nowrap;
     }
     .fc-badge.pagada   { background: rgba(92,179,56,.15);  color: #16a34a; }
     .fc-badge.fiado    { background: rgba(252,191,73,.2);  color: #b45309; }
     .fc-badge.anulada  { background: rgba(255,55,55,.12);  color: #dc2626; }
+    .fc-badge.metodo   { background: #f1f0fb;              color: #6366f1; }
 
     /* ── Abono form ── */
-    .fc-abono-form { padding: 1.1rem 1.3rem; display: flex; flex-direction: column; gap: .75rem; }
+    .fc-abono-form { padding: 1.1rem 1.3rem; display: flex; flex-direction: column; gap: .8rem; }
     .fc-form-group { display: flex; flex-direction: column; gap: .3rem; }
     .fc-form-group label { font-size: .78rem; font-weight: 600; color: var(--color-secundario); }
     .fc-form-input {
@@ -176,17 +226,18 @@
         transition: border-color .2s;
         width: 100%;
         box-sizing: border-box;
+        font-family: inherit;
     }
     .fc-form-input:focus { border-color: var(--color-primario); }
     .fc-form-hint { font-size: .73rem; color: #9ca3af; }
     .btn-registrar-abono {
         width: 100%;
-        padding: .6rem 1rem;
+        padding: .65rem 1rem;
         background: var(--color-primario);
         color: #fff;
         border: none;
         border-radius: 8px;
-        font-size: .85rem;
+        font-size: .88rem;
         font-weight: 700;
         cursor: pointer;
         transition: opacity .15s;
@@ -195,27 +246,80 @@
         justify-content: center;
         gap: .4rem;
     }
-    .btn-registrar-abono:hover { opacity: .9; }
-    .btn-registrar-abono:disabled { opacity: .55; cursor: default; }
+    .btn-registrar-abono:hover:not(:disabled) { opacity: .9; }
+    .btn-registrar-abono:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* deuda destacada arriba del form */
+    .fc-deuda-box {
+        background: #fffaf6;
+        border: 1px solid rgba(231,111,46,.2);
+        border-radius: 9px;
+        padding: .7rem .85rem;
+        display: flex;
+        flex-direction: column;
+        gap: .15rem;
+    }
+    .fc-deuda-box.saldado { background: #f4fbf1; border-color: rgba(92,179,56,.25); }
+    .fc-deuda-label { font-size: .72rem; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: .4px; }
+    .fc-deuda-monto { font-size: 1.5rem; font-weight: 800; color: var(--color-primario); line-height: 1.1; }
+    .fc-deuda-box.saldado .fc-deuda-monto { color: var(--color-success); }
+    .fc-deuda-detalle { font-size: .73rem; color: #6b7280; }
+
+    /* accesos rápidos de monto */
+    .fc-quick-row { display: flex; flex-wrap: wrap; gap: .35rem; }
+    .btn-quick {
+        padding: .3rem .6rem;
+        border: 1px solid #e5e0d8;
+        border-radius: 20px;
+        background: #fff;
+        color: var(--color-secundario);
+        font-size: .74rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: border-color .15s, background .15s;
+        white-space: nowrap;
+    }
+    .btn-quick:hover:not(:disabled) { border-color: var(--color-primario); background: #fffaf6; }
+    .btn-quick:disabled { opacity: .45; cursor: not-allowed; }
 
     /* ── Multi-método abono ── */
     .abono-metodo-lista { display: flex; flex-direction: column; gap: .45rem; }
     .abono-metodo-fila  { display: flex; align-items: center; gap: .4rem; }
-    .abono-metodo-fila select { flex: 1; padding: .42rem .6rem; border: 1px solid #e5e0d8; border-radius: 7px;
-        font-size: .82rem; color: var(--color-secundario); outline: none; }
+    .abono-metodo-fila select { flex: 1; min-width: 0; padding: .42rem .6rem; border: 1px solid #e5e0d8; border-radius: 7px;
+        font-size: .82rem; color: var(--color-secundario); outline: none; background: #fff; }
     .abono-metodo-fila select:focus { border-color: var(--color-primario); }
-    .abono-metodo-fila input  { width: 110px; padding: .42rem .6rem; border: 1px solid #e5e0d8; border-radius: 7px;
-        font-size: .82rem; color: var(--color-secundario); outline: none; }
+    .abono-metodo-fila input  { width: 105px; flex-shrink: 0; padding: .42rem .6rem; border: 1px solid #e5e0d8; border-radius: 7px;
+        font-size: .82rem; color: var(--color-secundario); outline: none; text-align: right; }
     .abono-metodo-fila input:focus  { border-color: var(--color-primario); }
-    .btn-quitar-metodo-fi { width: 24px; height: 24px; border: none; border-radius: 5px;
-        background: rgba(239,68,68,.12); color: #dc2626; cursor: pointer; font-size: .85rem;
+    .btn-quitar-metodo-fi { width: 26px; height: 26px; border: none; border-radius: 5px;
+        background: rgba(239,68,68,.12); color: #dc2626; cursor: pointer; font-size: .9rem; line-height: 1;
         display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .btn-quitar-metodo-fi:hover { background: rgba(239,68,68,.22); }
+    .btn-quitar-metodo-fi:hover:not(:disabled) { background: rgba(239,68,68,.22); }
+    .btn-quitar-metodo-fi:disabled { opacity: .35; cursor: not-allowed; }
     .btn-add-metodo-fi { align-self: flex-start; padding: .35rem .75rem; background: var(--color-secundario);
         color: #fff; border: none; border-radius: 7px; font-size: .78rem; font-weight: 600; cursor: pointer; }
-    .btn-add-metodo-fi:hover { background: var(--color-primario); }
+    .btn-add-metodo-fi:hover:not(:disabled) { background: var(--color-primario); }
+    .btn-add-metodo-fi:disabled { opacity: .45; cursor: not-allowed; }
     .abono-total-row { display: flex; justify-content: space-between; align-items: center;
-        padding: .35rem .1rem; font-size: .82rem; color: var(--color-secundario); font-weight: 600; }
+        padding: .45rem .1rem; font-size: .86rem; color: var(--color-secundario); font-weight: 700;
+        border-top: 1px dashed #eee6dd; }
+    .abono-total-row .monto { font-size: 1.05rem; }
+
+    /* previsualización del efecto del abono */
+    .fc-preview {
+        border-radius: 9px;
+        padding: .65rem .8rem;
+        font-size: .78rem;
+        line-height: 1.5;
+        background: #f6f9fb;
+        border: 1px solid #e6edf2;
+        color: #475569;
+    }
+    .fc-preview.ok    { background: #f4fbf1; border-color: rgba(92,179,56,.25); color: #3f6b2c; }
+    .fc-preview.warn  { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .fc-preview-title { font-weight: 700; display: block; margin-bottom: .15rem; }
+    .fc-preview ul { margin: .2rem 0 0; padding-left: 1.1rem; }
+    .fc-preview li { margin-bottom: .1rem; }
 
     /* abono history list */
     .fc-abono-list { padding: .5rem 0; }
@@ -230,9 +334,51 @@
     .fc-abono-item:last-child { border-bottom: none; }
     .fc-abono-fecha { font-size: .75rem; color: #9ca3af; }
     .fc-abono-monto { font-size: .9rem; font-weight: 700; color: var(--color-success); white-space: nowrap; }
-    .fc-abono-obs   { font-size: .75rem; color: #6b7280; margin-top: .1rem; }
+    .fc-abono-obs   { font-size: .75rem; color: #6b7280; margin-top: .15rem; }
+    .fc-abono-meta  { display: flex; align-items: center; gap: .35rem; margin-top: .2rem; flex-wrap: wrap; }
+    .fc-abono-user  { font-size: .72rem; color: #9ca3af; }
 
     .fc-empty { text-align: center; padding: 1.75rem 1rem; color: #9ca3af; font-size: .84rem; }
+
+    /* ── Administrar cliente ── */
+    .fc-estado-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        padding: .15rem .6rem;
+        border-radius: 20px;
+        font-size: .72rem;
+        font-weight: 700;
+        margin-right: .45rem;
+    }
+    .fc-estado-chip.activo   { background: rgba(92,179,56,.15); color: #16a34a; }
+    .fc-estado-chip.inactivo { background: #f1f0ee; color: #78716c; }
+    .fc-admin-body { padding: .9rem 1.3rem 1.1rem; display: flex; flex-direction: column; gap: .6rem; }
+    .fc-admin-estado { display: flex; align-items: center; justify-content: space-between; font-size: .82rem; color: var(--color-secundario); }
+    .btn-admin {
+        width: 100%;
+        padding: .55rem 1rem;
+        border-radius: 8px;
+        font-size: .83rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1.5px solid transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .4rem;
+        transition: background .15s, opacity .15s;
+    }
+    .btn-admin svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+    .btn-admin.neutro   { background: #f3f4f6; color: #57534e; border-color: #e7e5e4; }
+    .btn-admin.neutro:hover:not(:disabled) { background: #e7e5e4; }
+    .btn-admin.verde    { background: rgba(92,179,56,.12); color: #16a34a; border-color: rgba(92,179,56,.3); }
+    .btn-admin.verde:hover:not(:disabled) { background: rgba(92,179,56,.2); }
+    .btn-admin.peligro  { background: rgba(239,68,68,.1); color: #dc2626; border-color: rgba(239,68,68,.28); }
+    .btn-admin.peligro:hover:not(:disabled) { background: rgba(239,68,68,.18); }
+    .btn-admin:disabled { opacity: .45; cursor: not-allowed; }
+    .fc-admin-nota { font-size: .73rem; color: #9ca3af; line-height: 1.45; }
+    .fc-admin-nota.bloqueo { color: #b45309; }
 
     /* filtros año/mes */
     .fc-filter-sel {
@@ -248,7 +394,7 @@
     }
     .fc-filter-sel:focus { border-color: var(--color-primario); }
 
-    /* toast (reutiliza el global de _Layout si existe, o lo definimos aquí) */
+    /* toast */
     .fc-toast {
         position: fixed;
         bottom: 1.5rem;
@@ -268,10 +414,17 @@
         box-shadow: 0 4px 14px rgba(0,0,0,.15);
         animation: fcToastIn .25s ease;
         pointer-events: auto;
+        max-width: 340px;
     }
     .fc-toast-item.ok    { background: var(--color-success); }
     .fc-toast-item.error { background: var(--color-danger); }
     @@keyframes fcToastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @@keyframes fcSpin { to { transform: rotate(360deg); } }
+    .fc-spinner {
+        width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4);
+        border-top-color: #fff; border-radius: 50%; display: inline-block;
+        animation: fcSpin .7s linear infinite;
+    }
 </style>
 
 @* Toast container *@
@@ -288,6 +441,9 @@
     <div class="fc-title-block">
         <h1>@Model.Cliente.Nombre</h1>
         <p>
+            <span class="fc-estado-chip @(Model.Cliente.Estado ? "activo" : "inactivo")" id="chipEstadoHeader">
+                @(Model.Cliente.Estado ? "Activo" : "Desactivado")
+            </span>
             @if (!string.IsNullOrWhiteSpace(Model.Cliente.Telefono))
             {
                 <span class="fc-phone-chip">@Model.Cliente.Telefono</span>
@@ -299,15 +455,28 @@
 
 @* ── KPIs ── *@
 <div class="fc-kpi-row">
-    <div class="fc-kpi-card @(Model.DeudaTotal > 0 ? "warning" : "success")">
-        <div class="fc-kpi-icon @(Model.DeudaTotal > 0 ? "warning" : "success")">
+    <div class="fc-kpi-card @(deudaNeta > 0 ? "warning" : "success")" id="kpiCardNeta">
+        <div class="fc-kpi-icon @(deudaNeta > 0 ? "warning" : "success")" id="kpiIconNeta">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                 <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
             </svg>
         </div>
         <div class="fc-kpi-body">
+            <span class="fc-kpi-value" id="kpi-deuda-neta">$@deudaNeta.ToString("N0")</span>
+            <span class="fc-kpi-label">Deuda por cobrar</span>
+            <span class="fc-kpi-hint">Ya descontado el saldo a favor</span>
+        </div>
+    </div>
+    <div class="fc-kpi-card @(Model.DeudaTotal > 0 ? "warning" : "success")">
+        <div class="fc-kpi-icon @(Model.DeudaTotal > 0 ? "warning" : "success")">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/>
+            </svg>
+        </div>
+        <div class="fc-kpi-body">
             <span class="fc-kpi-value" id="kpi-deuda-total">$@Model.DeudaTotal.ToString("N0")</span>
-            <span class="fc-kpi-label">Deuda en boletas</span>
+            <span class="fc-kpi-label">Total en boletas fiadas</span>
+            <span class="fc-kpi-hint"><span id="kpi-cant-fiadas">@pendientes.Count</span> boleta(s) sin pagar</span>
         </div>
     </div>
     <div class="fc-kpi-card success">
@@ -317,19 +486,21 @@
             </svg>
         </div>
         <div class="fc-kpi-body">
-            <span class="fc-kpi-value" id="kpi-saldo-favor">$@Model.Cliente.SaldoAFavor.ToString("N0")</span>
+            <span class="fc-kpi-value" id="kpi-saldo-favor">$@saldoAFavor.ToString("N0")</span>
             <span class="fc-kpi-label">Saldo a favor</span>
+            <span class="fc-kpi-hint">Se aplica a la boleta más antigua</span>
         </div>
     </div>
     <div class="fc-kpi-card">
         <div class="fc-kpi-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/>
+                <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
             </svg>
         </div>
         <div class="fc-kpi-body">
-            <span class="fc-kpi-value">@Model.BoletasHistorial.Count(b => b.IdEstadoBoleta == 4)</span>
-            <span class="fc-kpi-label">Boletas fiadas activas</span>
+            <span class="fc-kpi-value" id="kpi-total-abonado">$@Model.Abonos.Sum(a => a.Monto).ToString("N0")</span>
+            <span class="fc-kpi-label">Total abonado histórico</span>
+            <span class="fc-kpi-hint"><span id="kpi-cant-abonos">@Model.Abonos.Count</span> abono(s)</span>
         </div>
     </div>
 </div>
@@ -339,10 +510,69 @@
 
     @* Left column: boletas *@
     <div>
+        @* Boletas pendientes: lo que realmente se está cobrando *@
+        <div class="fc-card">
+            <div class="fc-card-header">
+                <h2>Boletas pendientes de pago</h2>
+                <span>Se pagan de la más antigua a la más nueva</span>
+            </div>
+            @if (pendientes.Count == 0)
+            {
+                <div class="fc-empty">Este cliente no tiene boletas fiadas pendientes.</div>
+            }
+            else
+            {
+                <div class="fc-table-responsive">
+                    <table class="fc-table" id="fcPendientesTabla">
+                        <thead>
+                            <tr>
+                                <th>Orden</th>
+                                <th>Boleta</th>
+                                <th>Fecha</th>
+                                <th style="text-align:right">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ var orden = 0; }
+                            @foreach (var b in pendientes)
+                            {
+                                orden++;
+                                <tr data-boleta="@b.IdBoleta">
+                                    <td style="color:#9ca3af;font-weight:700">@orden°</td>
+                                    <td>
+                                        <span class="fc-num-boleta">#@(b.CorrelativoDiario ?? b.IdBoleta)</span>
+                                        @if (b.CorrelativoDiario != null)
+                                        {
+                                            <span class="fc-num-id">(ID: @b.IdBoleta)</span>
+                                        }
+                                        <span class="fc-salda-chip">Se salda con este abono</span>
+                                    </td>
+                                    <td style="white-space:nowrap">@(b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                                    <td style="text-align:right;font-weight:700">$@b.MontoTotal.ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" style="text-align:right;font-weight:700;background:#faf7f4">Total pendiente</td>
+                                <td style="text-align:right;font-weight:800;background:#faf7f4">$@Model.DeudaTotal.ToString("N0")</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+        </div>
+
         <div class="fc-card">
             <div class="fc-card-header">
                 <h2>Historial de boletas</h2>
                 <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+                    <select class="fc-filter-sel" id="filtroEstado" onchange="filtrarBoletas()">
+                        <option value="">Todos los estados</option>
+                        <option value="4">Fiado</option>
+                        <option value="3">Pagada</option>
+                        <option value="2">Anulada</option>
+                    </select>
                     <select class="fc-filter-sel" id="filtroAnio" onchange="filtrarBoletas()">
                         <option value="">Todos los años</option>
                         @foreach (var anio in Model.BoletasHistorial
@@ -376,7 +606,7 @@
                     <table class="fc-table" id="fcBoletasTabla">
                         <thead>
                             <tr>
-                                <th>#</th>
+                                <th>Boleta</th>
                                 <th>Fecha</th>
                                 <th>Estado</th>
                                 <th style="text-align:right">Monto</th>
@@ -389,8 +619,14 @@
                                 var estadoLabel = b.IdEstadoBoleta switch { 3 => "Pagada", 4 => "Fiado", 2 => "Anulada", _ => "—" };
                                 var anio = b.FechaEmision?.Year.ToString() ?? "";
                                 var mes  = b.FechaEmision?.Month.ToString() ?? "";
-                                <tr data-anio="@anio" data-mes="@mes">
-                                    <td style="color:#9ca3af">@(b.CorrelativoDiario != null ? $"#{b.CorrelativoDiario} (ID: {b.IdBoleta})" : $"ID: {b.IdBoleta}")</td>
+                                <tr data-anio="@anio" data-mes="@mes" data-estado="@b.IdEstadoBoleta" data-boleta="@b.IdBoleta">
+                                    <td>
+                                        <span class="fc-num-boleta">#@(b.CorrelativoDiario ?? b.IdBoleta)</span>
+                                        @if (b.CorrelativoDiario != null)
+                                        {
+                                            <span class="fc-num-id">(ID: @b.IdBoleta)</span>
+                                        }
+                                    </td>
                                     <td style="white-space:nowrap">@(b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
                                     <td><span class="fc-badge @estadoClass">@estadoLabel</span></td>
                                     <td style="text-align:right;font-weight:600">$@b.MontoTotal.ToString("N0")</td>
@@ -419,10 +655,19 @@
                     <div class="fc-abono-list" id="fcAbonoList">
                         @foreach (var a in Model.Abonos.OrderByDescending(a => a.Fecha))
                         {
+                            var registradoPor = a.IdUsuarioNavigation?.IdEmpleadoNavigation is { } emp
+                                ? $"{emp.NombresEmpleado} {emp.Apellido1}".Trim()
+                                : null;
                             <div class="fc-abono-item">
                                 <div>
                                     <div class="fc-abono-fecha">@a.Fecha.ToString("dd/MM/yyyy HH:mm")</div>
-                                    <div class="fc-abono-obs" style="color:#6b7280">@(a.IdMetodoPagoNavigation?.NombreMetodoPago ?? "—")</div>
+                                    <div class="fc-abono-meta">
+                                        <span class="fc-badge metodo">@(a.IdMetodoPagoNavigation?.NombreMetodoPago ?? "—")</span>
+                                        @if (!string.IsNullOrWhiteSpace(registradoPor))
+                                        {
+                                            <span class="fc-abono-user">por @registradoPor</span>
+                                        }
+                                    </div>
                                     @if (!string.IsNullOrWhiteSpace(a.Observaciones))
                                     {
                                         <div class="fc-abono-obs">@a.Observaciones</div>
@@ -438,33 +683,67 @@
     </div>
 
     @* Right column: registrar abono *@
-    <div>
-        <div class="fc-card">
+    <div class="fc-sticky">
+        <div class="fc-card destacada">
             <div class="fc-card-header">
                 <h2>Registrar abono</h2>
             </div>
             <div class="fc-abono-form">
                 @Html.AntiForgeryToken()
 
+                @* Cuánto se le debe cobrar hoy *@
+                <div class="fc-deuda-box @(deudaNeta > 0 ? "" : "saldado")" id="deudaBox">
+                    <span class="fc-deuda-label">Deuda por cobrar</span>
+                    <span class="fc-deuda-monto" id="deudaBoxMonto">$@deudaNeta.ToString("N0")</span>
+                    <span class="fc-deuda-detalle" id="deudaBoxDetalle">
+                        @if (saldoAFavor > 0)
+                        {
+                            @($"${Model.DeudaTotal:N0} en boletas − ${saldoAFavor:N0} de saldo a favor")
+                        }
+                        else if (pendientes.Count > 0)
+                        {
+                            @($"{pendientes.Count} boleta(s) fiada(s)")
+                        }
+                        else
+                        {
+                            @("Sin deuda pendiente")
+                        }
+                    </span>
+                </div>
+
+                @* Montos frecuentes *@
+                <div class="fc-quick-row" id="quickRow"></div>
+
                 @* Lista de filas de métodos *@
                 <div class="fc-form-group">
                     <label>Métodos de pago</label>
                     <div class="abono-metodo-lista" id="abonoMetodoLista"></div>
-                    <button type="button" class="btn-add-metodo-fi" onclick="agregarFilaMetodo()">+ Agregar método</button>
+                    <button type="button" class="btn-add-metodo-fi" id="btnAddMetodo" onclick="agregarFilaMetodo()">+ Agregar método</button>
+                    <span class="fc-form-hint" id="metodoHint">Puedes repartir el abono entre varios métodos.</span>
                 </div>
 
                 @* Total calculado *@
                 <div class="abono-total-row">
-                    <span>Total abono:</span>
-                    <span id="abonoTotalDisplay">$0</span>
+                    <span>Total abono</span>
+                    <span class="monto" id="abonoTotalDisplay">$0</span>
+                </div>
+
+                @* Qué va a pasar con este abono *@
+                <div class="fc-preview" id="abonoPreview">
+                    Ingresa un monto para ver qué boletas se saldarán.
                 </div>
 
                 <div class="fc-form-group">
-                    <label for="abonoObs">Observaciones <span style="color:#9ca3af;font-weight:400">(opcional)</span></label>
-                    <textarea class="fc-form-input" id="abonoObs" rows="2"
-                              placeholder="Notas adicionales…"></textarea>
+                    <label for="abonoObs">
+                        Observaciones <span style="color:#9ca3af;font-weight:400">(opcional)</span>
+                    </label>
+                    <textarea class="fc-form-input" id="abonoObs" rows="2" maxlength="300"
+                              oninput="_actualizarContadorObs()"
+                              placeholder="Ej: abona con vuelto de la compra…"></textarea>
+                    <span class="fc-form-hint"><span id="abonoObsCount">0</span>/300 caracteres</span>
                 </div>
-                <button class="btn-registrar-abono" id="btnRegistrarAbono" onclick="registrarAbono()">
+
+                <button class="btn-registrar-abono" id="btnRegistrarAbono" onclick="registrarAbono()" disabled>
                     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" style="fill:#fff">
                         <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                     </svg>
@@ -489,33 +768,90 @@
                 </div>
             </div>
         </div>
+
+        @* Baja del cliente: desactivar primero, eliminar después *@
+        <div class="fc-card">
+            <div class="fc-card-header">
+                <h2>Administrar cliente</h2>
+            </div>
+            <div class="fc-admin-body">
+                <div class="fc-admin-estado">
+                    <span>Estado</span>
+                    <span class="fc-estado-chip @(Model.Cliente.Estado ? "activo" : "inactivo")" id="chipEstadoAdmin">
+                        @(Model.Cliente.Estado ? "Activo" : "Desactivado")
+                    </span>
+                </div>
+
+                @* Bloque cliente activo *@
+                <div id="bloqueActivo" style="@(Model.Cliente.Estado ? "" : "display:none")">
+                    <button class="btn-admin neutro" id="btnDesactivar" onclick="desactivarCliente()">
+                        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 0 1-6.32-12.9l11.22 11.22A7.96 7.96 0 0 1 12 20zm6.32-3.1L7.1 5.68A8 8 0 0 1 18.32 16.9z"/></svg>
+                        Desactivar cliente
+                    </button>
+                    <div class="fc-admin-nota" id="notaDesactivar" style="margin-top:.45rem"></div>
+                </div>
+
+                @* Bloque cliente desactivado *@
+                <div id="bloqueInactivo" style="@(Model.Cliente.Estado ? "display:none" : "")">
+                    <button class="btn-admin verde" id="btnReactivar" onclick="reactivarCliente()">
+                        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                        Reactivar cliente
+                    </button>
+                    <button class="btn-admin peligro" id="btnEliminar" onclick="eliminarCliente()" style="margin-top:.5rem">
+                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        Eliminar definitivamente
+                    </button>
+                    <div class="fc-admin-nota" style="margin-top:.45rem">
+                        Al eliminar se borrarán sus <strong>@Model.Abonos.Count abono(s)</strong> y
+                        sus <strong>@Model.BoletasHistorial.Count boleta(s)</strong> quedarán sin cliente
+                        asociado. Las ventas se conservan en el historial. Esta acción no se puede deshacer.
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 @section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@@11/dist/sweetalert2.all.min.js"></script>
 <script>
 (function () {
-    var URL_ABONO    = '@Html.Raw(urlRegistrarAbono)';
+    var URL_ABONO      = '@Html.Raw(urlRegistrarAbono)';
+    var URL_DESACTIVAR = '@Html.Raw(urlDesactivar)';
+    var URL_REACTIVAR  = '@Html.Raw(urlReactivar)';
+    var URL_ELIMINAR   = '@Html.Raw(urlEliminar)';
     var ID_CLIENTE   = @Model.Cliente.IdCliente;
+    var NOMBRE_CLIENTE = @Html.Raw(JsonSerializer.Serialize(Model.Cliente.Nombre));
     var METODOS_PAGO = @Html.Raw(metodosPagoJson);
+    var CLIENTE_ACTIVO = @(Model.Cliente.Estado ? "true" : "false");
+    var CANT_ABONOS  = @Model.Abonos.Count;
+    var CANT_BOLETAS = @Model.BoletasHistorial.Count;
 
-    // ── Filtro año/mes boletas ────────────────────────────────────────────────
-    window.filtrarBoletas = function () {
-        var anio = document.getElementById('filtroAnio')?.value ?? '';
-        var mes  = document.getElementById('filtroMes')?.value  ?? '';
-        var filas = document.querySelectorAll('#fcBoletasTabla tbody tr');
-        var visibles = 0;
-        filas.forEach(function (tr) {
-            var match = (!anio || tr.dataset.anio === anio) &&
-                        (!mes  || tr.dataset.mes  === mes);
-            tr.style.display = match ? '' : 'none';
-            if (match) visibles++;
+    // Estado vivo: se actualiza tras cada abono para que la previsualización
+    // siga reflejando la realidad sin recargar la página.
+    var PENDIENTES  = @Html.Raw(pendientesJson);   // orden FIFO (más antigua primero)
+    var SALDO_FAVOR = @saldoAFavor;
+
+    function x(s) {
+        return String(s ?? '').replace(/[&<>"']/g, function (c) {
+            return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
         });
-        var vacio = document.getElementById('fcBoletasVacio');
-        if (vacio) vacio.style.display = visibles === 0 ? '' : 'none';
-        var count = document.getElementById('fcBoletaCount');
-        if (count) count.textContent = visibles + ' boleta(s)';
-    };
+    }
+
+    function _fmtPeso(n) { return '$' + Number(n || 0).toLocaleString('es-CL'); }
+
+    function _setVal(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
+
+    function _deudaBoletas() {
+        return PENDIENTES.reduce(function (acc, b) { return acc + b.monto; }, 0);
+    }
+
+    function _deudaNeta() {
+        return Math.max(0, _deudaBoletas() - SALDO_FAVOR);
+    }
 
     function _toast(msg, tipo) {
         var cont = document.getElementById('fcToastContainer');
@@ -524,72 +860,298 @@
         el.className = 'fc-toast-item ' + (tipo === 'ok' ? 'ok' : 'error');
         el.textContent = msg;
         cont.appendChild(el);
-        setTimeout(function () { el.remove(); }, 3500);
+        setTimeout(function () { el.remove(); }, 4500);
     }
 
-    function _fmtPeso(n) { return '$' + Number(n).toLocaleString('es-CL'); }
-
-    function _setVal(id, val) {
-        var el = document.getElementById(id);
-        if (el) el.textContent = val;
-    }
+    // ── Filtro estado/año/mes boletas ─────────────────────────────────────────
+    window.filtrarBoletas = function () {
+        var estado = document.getElementById('filtroEstado')?.value ?? '';
+        var anio   = document.getElementById('filtroAnio')?.value   ?? '';
+        var mes    = document.getElementById('filtroMes')?.value    ?? '';
+        var filas  = document.querySelectorAll('#fcBoletasTabla tbody tr');
+        var visibles = 0;
+        filas.forEach(function (tr) {
+            var match = (!estado || tr.dataset.estado === estado) &&
+                        (!anio   || tr.dataset.anio   === anio) &&
+                        (!mes    || tr.dataset.mes    === mes);
+            tr.style.display = match ? '' : 'none';
+            if (match) visibles++;
+        });
+        var vacio = document.getElementById('fcBoletasVacio');
+        if (vacio) vacio.style.display = visibles === 0 ? '' : 'none';
+        _setVal('fcBoletaCount', visibles + ' boleta(s)');
+    };
 
     // ── Multi-método: lista de filas ──────────────────────────────────────────
-    function _buildSelect(selectedId) {
-        var opts = METODOS_PAGO.map(function(m) {
-            var sel = m.id === selectedId ? ' selected' : '';
-            return '<option value="' + m.id + '"' + sel + '>' + m.nombre + '</option>';
-        }).join('');
-        return '<select onchange="_recalcTotal()">' + opts + '</select>';
+    function _metodosUsados(exceptoFila) {
+        var usados = [];
+        document.querySelectorAll('.abono-metodo-fila').forEach(function (fila) {
+            if (fila === exceptoFila) return;
+            var sel = fila.querySelector('select');
+            if (sel) usados.push(parseInt(sel.value, 10));
+        });
+        return usados;
+    }
+
+    // Un método por fila: los ya elegidos se deshabilitan para no duplicarlos
+    function _refrescarOpciones() {
+        document.querySelectorAll('.abono-metodo-fila').forEach(function (fila) {
+            var sel = fila.querySelector('select');
+            if (!sel) return;
+            var usados = _metodosUsados(fila);
+            Array.prototype.forEach.call(sel.options, function (op) {
+                op.disabled = usados.indexOf(parseInt(op.value, 10)) !== -1;
+            });
+        });
+
+        var filas = document.querySelectorAll('.abono-metodo-fila').length;
+        var btnAdd = document.getElementById('btnAddMetodo');
+        if (btnAdd) btnAdd.disabled = filas >= METODOS_PAGO.length;
+
+        // Con una sola fila no tiene sentido poder quitarla
+        document.querySelectorAll('.btn-quitar-metodo-fi').forEach(function (b) {
+            b.disabled = filas <= 1;
+        });
+    }
+
+    function _primerMetodoLibre() {
+        var usados = _metodosUsados(null);
+        for (var i = 0; i < METODOS_PAGO.length; i++) {
+            if (usados.indexOf(METODOS_PAGO[i].id) === -1) return METODOS_PAGO[i].id;
+        }
+        return METODOS_PAGO.length ? METODOS_PAGO[0].id : 0;
     }
 
     window.agregarFilaMetodo = function () {
         var lista = document.getElementById('abonoMetodoLista');
-        if (!lista) return;
-        var firstId = METODOS_PAGO.length ? METODOS_PAGO[0].id : 0;
+        if (!lista || !METODOS_PAGO.length) return;
+        if (lista.querySelectorAll('.abono-metodo-fila').length >= METODOS_PAGO.length) return;
+
+        var elegido = _primerMetodoLibre();
+        var opts = METODOS_PAGO.map(function (m) {
+            return '<option value="' + m.id + '"' + (m.id === elegido ? ' selected' : '') + '>' + x(m.nombre) + '</option>';
+        }).join('');
+
         var fila = document.createElement('div');
         fila.className = 'abono-metodo-fila';
         fila.innerHTML =
-            _buildSelect(firstId) +
-            '<input type="number" placeholder="Monto $" min="1" step="1" oninput="_recalcTotal()" />' +
-            '<button type="button" class="btn-quitar-metodo-fi" onclick="_quitarFila(this)" title="Quitar">×</button>';
+            '<select onchange="_onCambioMetodo()">' + opts + '</select>' +
+            '<input type="number" placeholder="Monto" min="1" step="1" inputmode="numeric" oninput="_recalcTotal()" />' +
+            '<button type="button" class="btn-quitar-metodo-fi" onclick="_quitarFila(this)" title="Quitar método">&times;</button>';
         lista.appendChild(fila);
+        _refrescarOpciones();
         _recalcTotal();
     };
 
-    window._quitarFila = function (btn) {
-        var fila = btn.closest('.abono-metodo-fila');
-        if (fila) { fila.remove(); _recalcTotal(); }
+    window._onCambioMetodo = function () {
+        _refrescarOpciones();
     };
 
-    window._recalcTotal = function () {
-        var total = _calcTotal();
-        var el = document.getElementById('abonoTotalDisplay');
-        if (el) el.textContent = _fmtPeso(total);
+    window._quitarFila = function (btn) {
+        var lista = document.getElementById('abonoMetodoLista');
+        if (lista && lista.querySelectorAll('.abono-metodo-fila').length <= 1) return;
+        var fila = btn.closest('.abono-metodo-fila');
+        if (fila) { fila.remove(); _refrescarOpciones(); _recalcTotal(); }
     };
 
     function _calcTotal() {
-        var lista = document.getElementById('abonoMetodoLista');
-        if (!lista) return 0;
         var total = 0;
-        lista.querySelectorAll('.abono-metodo-fila input').forEach(function(inp) {
-            total += parseInt(inp.value) || 0;
+        document.querySelectorAll('.abono-metodo-fila input').forEach(function (inp) {
+            total += parseInt(inp.value, 10) || 0;
         });
         return total;
     }
 
     function _recogerMetodos() {
-        var lista = document.getElementById('abonoMetodoLista');
-        if (!lista) return [];
         var result = [];
-        lista.querySelectorAll('.abono-metodo-fila').forEach(function(fila) {
-            var sel   = fila.querySelector('select');
-            var input = fila.querySelector('input');
-            var id    = parseInt(sel?.value ?? '0');
-            var monto = parseInt(input?.value ?? '0');
+        document.querySelectorAll('.abono-metodo-fila').forEach(function (fila) {
+            var id    = parseInt(fila.querySelector('select')?.value ?? '0', 10);
+            var monto = parseInt(fila.querySelector('input')?.value ?? '0', 10);
             if (id > 0 && monto > 0) result.push({ idMetodoPago: id, monto: monto });
         });
         return result;
+    }
+
+    // ── Previsualización: replica el pago FIFO que hace el servidor ───────────
+    function _simular(totalAbono) {
+        var saldo   = SALDO_FAVOR + totalAbono;
+        var saldadas = [];
+        for (var i = 0; i < PENDIENTES.length; i++) {
+            if (saldo < PENDIENTES[i].monto) break;
+            saldo -= PENDIENTES[i].monto;
+            saldadas.push(PENDIENTES[i]);
+        }
+        return {
+            saldadas    : saldadas,
+            saldoFinal  : saldo,
+            restantes   : PENDIENTES.length - saldadas.length,
+            montoRestante: PENDIENTES.slice(saldadas.length).reduce(function (a, b) { return a + b.monto; }, 0)
+        };
+    }
+
+    function _pintarPreview(total) {
+        var box = document.getElementById('abonoPreview');
+        if (!box) return;
+
+        // Marca en la tabla de pendientes las boletas que se saldarían
+        var sim = _simular(total);
+        var idsSaldadas = sim.saldadas.map(function (b) { return String(b.id); });
+        document.querySelectorAll('#fcPendientesTabla tbody tr').forEach(function (tr) {
+            tr.classList.toggle('se-salda', total > 0 && idsSaldadas.indexOf(tr.dataset.boleta) !== -1);
+        });
+
+        if (total <= 0) {
+            box.className = 'fc-preview';
+            box.textContent = PENDIENTES.length
+                ? 'Ingresa un monto para ver qué boletas se saldarán.'
+                : 'Sin boletas pendientes: el abono quedará como saldo a favor.';
+            return;
+        }
+
+        var partes = [];
+
+        if (sim.saldadas.length > 0) {
+            var lis = sim.saldadas.map(function (b) {
+                return '<li>Boleta #' + x(b.numero) + ' — ' + x(b.fecha) + ' — ' + _fmtPeso(b.monto) + '</li>';
+            }).join('');
+            partes.push('<span class="fc-preview-title">Se saldarán ' + sim.saldadas.length +
+                        ' boleta(s)</span><ul>' + lis + '</ul>');
+        } else {
+            partes.push('<span class="fc-preview-title">Todavía no alcanza para saldar una boleta</span>' +
+                        'El abono se guardará como saldo a favor.');
+        }
+
+        if (sim.restantes > 0) {
+            partes.push('Quedarán <strong>' + sim.restantes + ' boleta(s)</strong> por ' +
+                        _fmtPeso(sim.montoRestante) + '.');
+        } else if (PENDIENTES.length > 0) {
+            partes.push('<strong>La deuda queda saldada por completo.</strong>');
+        }
+
+        if (sim.saldoFinal > 0) {
+            partes.push('Saldo a favor tras el abono: <strong>' + _fmtPeso(sim.saldoFinal) + '</strong>.');
+        }
+
+        box.className = 'fc-preview ' + (sim.saldadas.length > 0 ? 'ok' : 'warn');
+        box.innerHTML = partes.join('<br>');
+    }
+
+    window._recalcTotal = function () {
+        var total = _calcTotal();
+        _setVal('abonoTotalDisplay', _fmtPeso(total));
+        _pintarPreview(total);
+
+        var btn = document.getElementById('btnRegistrarAbono');
+        if (btn) btn.disabled = total <= 0;
+
+        // Aviso si el abono supera lo que el cliente debe
+        var hint = document.getElementById('metodoHint');
+        if (hint) {
+            var neta = _deudaNeta();
+            hint.textContent = (total > neta && neta > 0)
+                ? 'El abono supera la deuda: la diferencia quedará como saldo a favor.'
+                : 'Puedes repartir el abono entre varios métodos.';
+        }
+    };
+
+    window._actualizarContadorObs = function () {
+        var ta = document.getElementById('abonoObs');
+        _setVal('abonoObsCount', (ta?.value ?? '').length);
+    };
+
+    // ── Accesos rápidos de monto ──────────────────────────────────────────────
+    // Rellenan la primera fila; si hay varias, se limpian las demás para que el
+    // total coincida exactamente con lo que el botón promete.
+    function _aplicarMonto(monto) {
+        var filas = document.querySelectorAll('.abono-metodo-fila');
+        if (!filas.length) return;
+        filas.forEach(function (fila, i) {
+            var inp = fila.querySelector('input');
+            if (inp) inp.value = i === 0 ? monto : '';
+        });
+        _recalcTotal();
+        filas[0].querySelector('input')?.focus();
+    }
+
+    function _pintarQuickRow() {
+        var cont = document.getElementById('quickRow');
+        if (!cont) return;
+        cont.innerHTML = '';
+
+        var neta = _deudaNeta();
+        var opciones = [];
+
+        if (neta > 0) opciones.push({ label: 'Saldar todo · ' + _fmtPeso(neta), monto: neta });
+
+        // Lo justo para saldar la boleta más antigua (el siguiente hito del FIFO)
+        if (PENDIENTES.length > 0) {
+            var falta = Math.max(0, PENDIENTES[0].monto - SALDO_FAVOR);
+            if (falta > 0 && falta !== neta) {
+                opciones.push({ label: 'Boleta más antigua · ' + _fmtPeso(falta), monto: falta });
+            }
+        }
+
+        if (!opciones.length) {
+            cont.innerHTML = '<span class="fc-form-hint">Sin deuda pendiente: el abono quedará como saldo a favor.</span>';
+            return;
+        }
+
+        opciones.forEach(function (o) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn-quick';
+            b.textContent = o.label;
+            b.onclick = function () { _aplicarMonto(o.monto); };
+            cont.appendChild(b);
+        });
+    }
+
+    // ── Refrescar KPIs y cabeceras tras un abono ──────────────────────────────
+    function _refrescarResumen() {
+        var deudaBoletas = _deudaBoletas();
+        var neta = _deudaNeta();
+
+        _setVal('kpi-deuda-neta',  _fmtPeso(neta));
+        _setVal('kpi-deuda-total', _fmtPeso(deudaBoletas));
+        _setVal('kpi-saldo-favor', _fmtPeso(SALDO_FAVOR));
+        _setVal('kpi-cant-fiadas', PENDIENTES.length);
+        _setVal('deudaBoxMonto',   _fmtPeso(neta));
+
+        var card = document.getElementById('kpiCardNeta');
+        var icon = document.getElementById('kpiIconNeta');
+        [card, icon].forEach(function (el) {
+            if (!el) return;
+            el.classList.toggle('warning', neta > 0);
+            el.classList.toggle('success', neta <= 0);
+        });
+
+        var box = document.getElementById('deudaBox');
+        if (box) box.classList.toggle('saldado', neta <= 0);
+
+        var det = document.getElementById('deudaBoxDetalle');
+        if (det) {
+            det.textContent = SALDO_FAVOR > 0
+                ? _fmtPeso(deudaBoletas) + ' en boletas − ' + _fmtPeso(SALDO_FAVOR) + ' de saldo a favor'
+                : (PENDIENTES.length > 0 ? PENDIENTES.length + ' boleta(s) fiada(s)' : 'Sin deuda pendiente');
+        }
+
+        _pintarQuickRow();
+        // Saldar la deuda habilita el botón de desactivar sin recargar
+        _pintarEstadoCliente();
+    }
+
+    // Marca como pagadas las boletas que el servidor informó saldadas
+    function _marcarSaldadas(saldadas) {
+        (saldadas || []).forEach(function (s) {
+            document.querySelectorAll('#fcBoletasTabla tbody tr[data-boleta="' + s.idBoleta + '"]').forEach(function (tr) {
+                tr.dataset.estado = '3';
+                var badge = tr.querySelector('.fc-badge');
+                if (badge) { badge.className = 'fc-badge pagada'; badge.textContent = 'Pagada'; }
+            });
+            document.querySelectorAll('#fcPendientesTabla tbody tr[data-boleta="' + s.idBoleta + '"]').forEach(function (tr) {
+                tr.remove();
+            });
+        });
     }
 
     // ── Prepend abono al historial ────────────────────────────────────────────
@@ -605,12 +1167,19 @@
             list.className = 'fc-abono-list';
             if (cont) cont.appendChild(list);
         }
-        var metodoHtml = abono.metodoPago ? '<div class="fc-abono-obs" style="color:#6b7280">' + abono.metodoPago + '</div>' : '';
-        var obs = abono.observaciones ? '<div class="fc-abono-obs">' + abono.observaciones + '</div>' : '';
+
+        var meta = '<div class="fc-abono-meta">' +
+            '<span class="fc-badge metodo">' + x(abono.metodoPago || '—') + '</span>' +
+            (abono.usuario ? '<span class="fc-abono-user">por ' + x(abono.usuario) + '</span>' : '') +
+            '</div>';
+        var obs = abono.observaciones
+            ? '<div class="fc-abono-obs">' + x(abono.observaciones) + '</div>'
+            : '';
+
         var item = document.createElement('div');
         item.className = 'fc-abono-item';
         item.innerHTML =
-            '<div><div class="fc-abono-fecha">' + abono.fecha + '</div>' + metodoHtml + obs + '</div>' +
+            '<div><div class="fc-abono-fecha">' + x(abono.fecha) + '</div>' + meta + obs + '</div>' +
             '<span class="fc-abono-monto">+' + _fmtPeso(abono.monto) + '</span>';
         list.insertBefore(item, list.firstChild);
     }
@@ -620,12 +1189,12 @@
         var metodos = _recogerMetodos();
         var obs     = (document.getElementById('abonoObs')?.value ?? '').trim();
 
-        if (!metodos.length) { _toast('Agrega al menos un método de pago con monto.', 'error'); return; }
+        if (!metodos.length) { _toast('Ingresa el monto de al menos un método de pago.', 'error'); return; }
 
         var btn = document.getElementById('btnRegistrarAbono');
-        btn.disabled = true;
-        var oldHtml  = btn.innerHTML;
-        btn.innerHTML = '<span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;display:inline-block;animation:fcToastIn .7s linear infinite"></span> Procesando…';
+        var oldHtml = btn.innerHTML;
+        btn.disabled  = true;
+        btn.innerHTML = '<span class="fc-spinner"></span> Procesando…';
 
         var res;
         try {
@@ -640,39 +1209,209 @@
             });
             res = await resp.json();
         } catch {
-            res = { ok: false, mensaje: 'Error de red.' };
+            res = { ok: false, mensaje: 'Error de red al registrar el abono.' };
         }
 
-        btn.disabled  = false;
         btn.innerHTML = oldHtml;
 
-        if (!res.ok) { _toast(res.mensaje, 'error'); return; }
-        _toast(res.mensaje, 'ok');
+        if (!res.ok) { btn.disabled = false; _toast(res.mensaje, 'error'); return; }
 
-        // Actualizar KPIs
-        _setVal('kpi-deuda-total', _fmtPeso(res.deudaTotal));
-        _setVal('kpi-saldo-favor', _fmtPeso(res.saldoAFavor));
+        // Estado local al día con lo que respondió el servidor
+        SALDO_FAVOR = res.saldoAFavor ?? 0;
+        var idsSaldadas = (res.saldadas || []).map(function (s) { return s.idBoleta; });
+        PENDIENTES = PENDIENTES.filter(function (b) { return idsSaldadas.indexOf(b.id) === -1; });
 
-        // Agregar cada abono al historial (los devuelve el servidor con nombre de método)
+        _marcarSaldadas(res.saldadas);
+
         if (Array.isArray(res.abonos)) {
-            res.abonos.forEach(function(a) { _prependAbono(a); });
-
-            // Actualizar contador
+            res.abonos.forEach(_prependAbono);
+            CANT_ABONOS += res.abonos.length;   // lo advierte el diálogo de eliminación
             var countEl = document.getElementById('fcAbonoCount');
             if (countEl) {
-                var cur = parseInt(countEl.textContent) || 0;
+                var cur = parseInt(countEl.textContent, 10) || 0;
                 countEl.textContent = (cur + res.abonos.length) + ' abono(s)';
+            }
+            _setVal('kpi-cant-abonos', (parseInt(document.getElementById('kpi-cant-abonos')?.textContent, 10) || 0) + res.abonos.length);
+            var abonadoEl = document.getElementById('kpi-total-abonado');
+            if (abonadoEl) {
+                var prev = parseInt(String(abonadoEl.textContent).replace(/\D/g, ''), 10) || 0;
+                abonadoEl.textContent = _fmtPeso(prev + res.abonos.reduce(function (a, b) { return a + b.monto; }, 0));
             }
         }
 
-        // Limpiar form: quitar todas las filas, limpiar obs, agregar fila inicial
+        var extra = (res.saldadas && res.saldadas.length)
+            ? ' Se saldaron ' + res.saldadas.length + ' boleta(s).'
+            : '';
+        _toast(res.mensaje + extra, 'ok');
+
+        // Limpiar formulario y volver al estado inicial
         document.getElementById('abonoMetodoLista').innerHTML = '';
         document.getElementById('abonoObs').value = '';
+        _actualizarContadorObs();
         agregarFilaMetodo();
+        _refrescarResumen();
+        _recalcTotal();
     };
 
-    // ── Inicializar con una fila por defecto ──────────────────────────────────
+    // ── Baja del cliente ──────────────────────────────────────────────────────
+    async function _postCliente(url) {
+        var resp = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? ''
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ idCliente: ID_CLIENTE })
+        });
+        return await resp.json();
+    }
+
+    // Refleja el estado activo/inactivo sin recargar la página
+    function _pintarEstadoCliente() {
+        ['chipEstadoHeader', 'chipEstadoAdmin'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.className = 'fc-estado-chip ' + (CLIENTE_ACTIVO ? 'activo' : 'inactivo');
+            el.textContent = CLIENTE_ACTIVO ? 'Activo' : 'Desactivado';
+        });
+
+        var act = document.getElementById('bloqueActivo');
+        var ina = document.getElementById('bloqueInactivo');
+        if (act) act.style.display = CLIENTE_ACTIVO ? '' : 'none';
+        if (ina) ina.style.display = CLIENTE_ACTIVO ? 'none' : '';
+
+        // Solo se puede desactivar sin deuda pendiente en boletas
+        var deuda = _deudaBoletas();
+        var btn   = document.getElementById('btnDesactivar');
+        var nota  = document.getElementById('notaDesactivar');
+        if (btn) btn.disabled = deuda > 0;
+        if (nota) {
+            if (deuda > 0) {
+                nota.className   = 'fc-admin-nota bloqueo';
+                nota.textContent = 'Tiene ' + _fmtPeso(deuda) + ' en boletas sin pagar. Salda la deuda para poder desactivarlo.';
+            } else {
+                nota.className = 'fc-admin-nota';
+                nota.textContent = SALDO_FAVOR > 0
+                    ? 'Sin deuda pendiente. Ojo: conserva ' + _fmtPeso(SALDO_FAVOR) + ' de saldo a favor.'
+                    : 'Un cliente desactivado deja de aparecer al fiar una venta nueva. Después podrás eliminarlo.';
+            }
+        }
+    }
+
+    window.desactivarCliente = async function () {
+        var deuda = _deudaBoletas();
+        if (deuda > 0) {
+            _toast('No se puede desactivar: tiene ' + _fmtPeso(deuda) + ' en boletas sin pagar.', 'error');
+            return;
+        }
+
+        var texto = SALDO_FAVOR > 0
+            ? NOMBRE_CLIENTE + ' dejará de aparecer al fiar ventas nuevas. Conserva ' + _fmtPeso(SALDO_FAVOR) + ' de saldo a favor.'
+            : NOMBRE_CLIENTE + ' dejará de aparecer al fiar ventas nuevas. Puedes reactivarlo cuando quieras.';
+
+        var r = await Swal.fire({
+            title: '¿Desactivar cliente?',
+            text: texto,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#7a6050',
+            cancelButtonColor: '#a8a29e',
+            confirmButtonText: 'Sí, desactivar',
+            cancelButtonText: 'Cancelar'
+        });
+        if (!r.isConfirmed) return;
+
+        var btn = document.getElementById('btnDesactivar');
+        if (btn) btn.disabled = true;
+        try {
+            var res = await _postCliente(URL_DESACTIVAR);
+            if (!res.ok) { _toast(res.mensaje, 'error'); _pintarEstadoCliente(); return; }
+            CLIENTE_ACTIVO = false;
+            _pintarEstadoCliente();
+            _toast(res.mensaje, 'ok');
+        } catch {
+            _toast('Error de red al desactivar el cliente.', 'error');
+            _pintarEstadoCliente();
+        }
+    };
+
+    window.reactivarCliente = async function () {
+        var btn = document.getElementById('btnReactivar');
+        if (btn) btn.disabled = true;
+        try {
+            var res = await _postCliente(URL_REACTIVAR);
+            if (!res.ok) { _toast(res.mensaje, 'error'); return; }
+            CLIENTE_ACTIVO = true;
+            _pintarEstadoCliente();
+            _toast(res.mensaje, 'ok');
+        } catch {
+            _toast('Error de red al reactivar el cliente.', 'error');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    };
+
+    window.eliminarCliente = async function () {
+        if (CLIENTE_ACTIVO) {
+            _toast('Primero debes desactivar al cliente.', 'error');
+            return;
+        }
+
+        // Borrado irreversible: se detalla exactamente qué se destruye y se pide
+        // escribir el nombre para que no ocurra por un clic distraído
+        var r = await Swal.fire({
+            title: '¿Eliminar definitivamente?',
+            html: 'Se eliminará <strong>' + x(NOMBRE_CLIENTE) + '</strong>.<br><br>' +
+                  'Se borrarán sus <strong>' + CANT_ABONOS + ' abono(s)</strong> y sus <strong>' +
+                  CANT_BOLETAS + ' boleta(s)</strong> quedarán sin cliente asociado ' +
+                  '(las ventas se conservan en el historial).<br><br>' +
+                  'Esta acción <strong>no se puede deshacer</strong>. Escribe el nombre del cliente para confirmar:',
+            icon: 'warning',
+            input: 'text',
+            inputPlaceholder: NOMBRE_CLIENTE,
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#a8a29e',
+            confirmButtonText: 'Eliminar cliente',
+            cancelButtonText: 'Cancelar',
+            inputValidator: function (valor) {
+                if ((valor ?? '').trim().toLowerCase() !== NOMBRE_CLIENTE.trim().toLowerCase()) {
+                    return 'El nombre no coincide.';
+                }
+            }
+        });
+        if (!r.isConfirmed) return;
+
+        var btn = document.getElementById('btnEliminar');
+        var btnHtml = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span class="fc-spinner"></span> Eliminando…'; }
+        try {
+            var res = await _postCliente(URL_ELIMINAR);
+            if (!res.ok) {
+                _toast(res.mensaje, 'error');
+                if (btn) { btn.disabled = false; btn.innerHTML = btnHtml; }
+                return;
+            }
+            // El cliente ya no existe: se vuelve al listado
+            await Swal.fire({
+                title: 'Cliente eliminado',
+                text: res.mensaje,
+                icon: 'success',
+                confirmButtonColor: 'var(--color-primario, #e76f2e)'
+            });
+            window.location.href = res.redirigirA || '@Url.Action("Index","Fiado",new{area="Ventas"})';
+        } catch {
+            _toast('Error de red al eliminar el cliente.', 'error');
+            if (btn) { btn.disabled = false; btn.innerHTML = btnHtml; }
+        }
+    };
+
+    // ── Inicialización ────────────────────────────────────────────────────────
     agregarFilaMetodo();
+    _pintarQuickRow();
+    _recalcTotal();
+    _pintarEstadoCliente();
 })();
 </script>
 }

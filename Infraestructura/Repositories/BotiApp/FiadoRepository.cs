@@ -12,12 +12,17 @@ public class FiadoRepository(BotiAppContext context) : IFiadoRepository
 
     // ── Clientes ──────────────────────────────────────────────────────────────
 
-    public async Task<IEnumerable<FiaClientes>> ObtenerClientesAsync(string? q = null)
+    public async Task<IEnumerable<FiaClientes>> ObtenerClientesAsync(string? q = null, bool soloActivos = true)
     {
         var query = context.FiaClientes
             .AsNoTracking()
             .Include(c => c.VenBoletas)
-            .Where(c => c.Estado);
+            .AsQueryable();
+
+        // Los inactivos solo se listan donde se administran (el Index de Fiados);
+        // para fiar una venta nueva nunca deben aparecer.
+        if (soloActivos)
+            query = query.Where(c => c.Estado);
 
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(c =>
@@ -61,6 +66,101 @@ public async Task<FiaClientes> CrearClienteAsync(FiaClientes cliente)
 
         await context.SaveChangesAsync();
         return existing;
+    }
+
+    // ── Baja de clientes ──────────────────────────────────────────────────────
+    // Escalera de seguridad: solo se desactiva un cliente sin deuda pendiente, y
+    // solo se elimina uno que ya esté desactivado.
+
+    public async Task<ResultadoBajaCliente> DesactivarClienteAsync(int idCliente)
+    {
+        var cliente = await context.FiaClientes
+            .Include(c => c.VenBoletas)
+            .FirstOrDefaultAsync(c => c.IdCliente == idCliente);
+
+        if (cliente is null)
+            return new ResultadoBajaCliente(false, "El cliente no existe.");
+
+        if (!cliente.Estado)
+            return new ResultadoBajaCliente(true, $"{cliente.Nombre} ya estaba desactivado.");
+
+        var deuda = cliente.VenBoletas
+            .Where(b => b.IdEstadoBoleta == EstadoFiado)
+            .Sum(b => b.MontoTotal);
+
+        if (deuda > 0)
+            return new ResultadoBajaCliente(false,
+                $"{cliente.Nombre} tiene ${deuda:N0} en boletas sin pagar. Salda la deuda antes de desactivarlo.");
+
+        cliente.Estado = false;
+        await context.SaveChangesAsync();
+
+        return new ResultadoBajaCliente(true, $"{cliente.Nombre} fue desactivado.");
+    }
+
+    public async Task<ResultadoBajaCliente> ReactivarClienteAsync(int idCliente)
+    {
+        var cliente = await context.FiaClientes.FirstOrDefaultAsync(c => c.IdCliente == idCliente);
+
+        if (cliente is null)
+            return new ResultadoBajaCliente(false, "El cliente no existe.");
+
+        if (cliente.Estado)
+            return new ResultadoBajaCliente(true, $"{cliente.Nombre} ya estaba activo.");
+
+        cliente.Estado = true;
+        await context.SaveChangesAsync();
+
+        return new ResultadoBajaCliente(true, $"{cliente.Nombre} fue reactivado.");
+    }
+
+    /// <remarks>
+    /// Borrado real: elimina los abonos del cliente y desvincula sus boletas
+    /// (Id_Cliente_Fiado queda en NULL). Las ventas siguen en el historial, pero se
+    /// pierde a quién se le fiaron. Es irreversible, por eso exige que el cliente
+    /// esté desactivado y sin deuda.
+    /// </remarks>
+    public async Task<ResultadoBajaCliente> EliminarClienteAsync(int idCliente)
+    {
+        await using var tx = await context.Database.BeginTransactionAsync();
+
+        var cliente = await context.FiaClientes
+            .Include(c => c.VenBoletas)
+            .Include(c => c.FiaAbonos)
+            .FirstOrDefaultAsync(c => c.IdCliente == idCliente);
+
+        if (cliente is null)
+            return new ResultadoBajaCliente(false, "El cliente no existe.");
+
+        if (cliente.Estado)
+            return new ResultadoBajaCliente(false,
+                $"Primero desactiva a {cliente.Nombre}: solo se pueden eliminar clientes desactivados.");
+
+        var deuda = cliente.VenBoletas
+            .Where(b => b.IdEstadoBoleta == EstadoFiado)
+            .Sum(b => b.MontoTotal);
+
+        if (deuda > 0)
+            return new ResultadoBajaCliente(false,
+                $"{cliente.Nombre} tiene ${deuda:N0} en boletas sin pagar y no puede eliminarse.");
+
+        var nombre       = cliente.Nombre;
+        var cantAbonos   = cliente.FiaAbonos.Count;
+        var cantBoletas  = cliente.VenBoletas.Count;
+
+        // Las boletas se conservan como ventas: solo pierden el vínculo al cliente
+        foreach (var boleta in cliente.VenBoletas)
+            boleta.IdClienteFiado = null;
+
+        context.FiaAbonos.RemoveRange(cliente.FiaAbonos);
+        await context.SaveChangesAsync();
+
+        context.FiaClientes.Remove(cliente);
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        return new ResultadoBajaCliente(true,
+            $"{nombre} fue eliminado. Se borraron {cantAbonos} abono(s) y {cantBoletas} boleta(s) quedaron sin cliente asociado.");
     }
 
     // ── Boletas fiadas ────────────────────────────────────────────────────────
@@ -152,6 +252,8 @@ public async Task<FiaClientes> CrearClienteAsync(FiaClientes cliente)
         => await context.FiaAbonos
             .AsNoTracking()
             .Include(a => a.IdUsuarioNavigation).ThenInclude(u => u.IdEmpleadoNavigation)
+            // Sin este include el nombre del método de pago llegaba siempre vacío a la vista
+            .Include(a => a.IdMetodoPagoNavigation)
             .Where(a => a.IdCliente == idCliente)
             .OrderByDescending(a => a.Fecha)
             .ToListAsync();

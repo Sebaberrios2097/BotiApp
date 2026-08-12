@@ -93,6 +93,8 @@
 .post-card-del svg { width:11px; height:11px; fill:currentColor; }
 .post-card:hover .post-card-del { opacity:1; }
 .post-card-del:hover { background:rgba(239,68,68,.14); }
+.post-card.activa { border-color:var(--color-primario); background:#fff5ee; box-shadow:inset 3px 0 0 var(--color-primario); }
+.post-card-activa { display:inline-block; background:var(--color-primario); color:#fff; font-size:.62rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; border-radius:4px; padding:.08rem .35rem; margin-bottom:.2rem; }
 .post-empty { text-align:center; padding:1.5rem .6rem; color:#b8a898; font-size:.76rem; line-height:1.45; }
 .post-empty svg { width:30px; height:30px; fill:#ddd0c4; display:block; margin:0 auto .4rem; }
 .post-card.recien { animation:postResalta 1.4s ease; }
@@ -293,9 +295,13 @@
 .cart-col-prods .cart-col-header { color:var(--color-secundario); border-bottom-color:#ede5df; }
 
 /* Item en carrito: Todo en 1 fila horizontal */
-.ci-item { background:#faf7f5; border:1.5px solid #ede5df; border-radius:10px; padding:.65rem .9rem; display:flex; align-items:center; justify-content:space-between; gap:.85rem; flex-wrap:nowrap; flex-shrink:0; }
-.ci-nombre-wrap { flex:1; min-width:0; display:flex; align-items:center; gap:.4rem; }
-.ci-nombre { font-size:.95rem; font-weight:700; color:var(--color-secundario); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* Fila apilada: el nombre siempre arriba, en su propia línea, y debajo la
+   cantidad, los precios y el subtotal. Así el nombre nunca compite por ancho. */
+.ci-item { background:#faf7f5; border:1.5px solid #ede5df; border-radius:10px; padding:.65rem .9rem; display:flex; flex-direction:column; align-items:stretch; gap:.45rem; flex-shrink:0; }
+.ci-nombre-wrap { min-width:0; display:flex; align-items:center; gap:.4rem; }
+.ci-nombre { font-size:.95rem; font-weight:700; color:var(--color-secundario); line-height:1.25; overflow-wrap:anywhere; }
+.ci-controls-row { display:flex; align-items:center; justify-content:flex-end; gap:.85rem; flex-wrap:wrap; }
+.ci-controls-row .ci-qty-wrap { margin-right:auto; }
 .ci-qty-wrap { display:flex; align-items:center; gap:.4rem; flex-shrink:0; }
 .ci-qty-label { font-size:.88rem; font-weight:600; color:#7a6050; }
 .ci-qty { display:flex; align-items:center; gap:.3rem; }
@@ -313,7 +319,7 @@
 
 /* Promo Card en Carrito: Mismas filas horizontales que productos + desglose inferior */
 .ci-promo-card { background:#fff; border:1.5px solid #d97706; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 2px 6px rgba(217,119,6,.08); flex-shrink:0; min-height:80px; }
-.ci-promo-main-row { background:#fffbeb; padding:.65rem .9rem; display:flex; align-items:center; justify-content:space-between; gap:.85rem; flex-wrap:nowrap; border-bottom:1px solid #fde68a; }
+.ci-promo-main-row { background:#fffbeb; padding:.65rem .9rem; display:flex; flex-direction:column; align-items:stretch; gap:.45rem; border-bottom:1px solid #fde68a; }
 .ci-promo-tag { background:#d97706; color:#fff; font-size:.72rem; font-weight:800; padding:.15rem .45rem; border-radius:4px; margin-right:.2rem; white-space:nowrap; flex-shrink:0; }
 .ci-promo-body { padding:.5rem .9rem; background:#ffffff; display:flex; flex-direction:column; gap:.3rem; }
 .ci-promo-body-title { font-size:.72rem; font-weight:700; color:#92400e; text-transform:uppercase; letter-spacing:.03em; margin-bottom:.1rem; }
@@ -1676,7 +1682,7 @@
             const totalCantidad = Math.max(cantDirect, cantAuto);
             if (totalCantidad <= 0) return;
 
-            const tagText = cantDirect > 0 ? '🎁 Promo' : '🏷️ Promo';
+            const tagText = 'Promo';
             const subtotal = promoInfo.precio * totalCantidad;
 
             // Si el motor ya emparejó instancias, esos son los productos que
@@ -1705,21 +1711,23 @@
                         <span class="ci-promo-tag">${tagText}</span>
                         <span class="ci-nombre" title="${x(promoInfo.nombre)}">${x(promoInfo.nombre)}</span>
                     </div>
-                    <div class="ci-qty-wrap">
-                        <span class="ci-qty-label">Cantidad:</span>
-                        <div class="ci-qty">
-                            <button onclick="${changeQtyOnClick},-1)">−</button>
-                            <span>${totalCantidad}</span>
-                            <button onclick="${changeQtyOnClick},+1)">+</button>
+                    <div class="ci-controls-row">
+                        <div class="ci-qty-wrap">
+                            <span class="ci-qty-label">Cantidad:</span>
+                            <div class="ci-qty">
+                                <button onclick="${changeQtyOnClick},-1)">−</button>
+                                <span>${totalCantidad}</span>
+                                <button onclick="${changeQtyOnClick},+1)">+</button>
+                            </div>
                         </div>
+                        <div class="ci-unit-price">
+                            <span class="ci-price-current">$${fmt(promoInfo.precio)} c/u</span>
+                        </div>
+                        <div class="ci-subtotal">$${fmt(subtotal)}</div>
+                        <button class="ci-del" onclick="${deleteOnClick}" title="Eliminar promoción">
+                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
                     </div>
-                    <div class="ci-unit-price">
-                        <span class="ci-price-current">$${fmt(promoInfo.precio)} c/u</span>
-                    </div>
-                    <div class="ci-subtotal">$${fmt(subtotal)}</div>
-                    <button class="ci-del" onclick="${deleteOnClick}" title="Eliminar promoción">
-                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                    </button>
                 </div>
                 <div class="ci-promo-body">
                     <div class="ci-promo-body-title">Productos incluidos:</div>
@@ -1742,24 +1750,26 @@
                     <span class="ci-nombre" title="${x(it.nombre)}">${x(it.nombre)}</span>
                     ${tieneOferta ? '<span class="ci-oferta-badge">Oferta</span>' : ''}
                 </div>
-                <div class="ci-qty-wrap">
-                    <span class="ci-qty-label">Cantidad:</span>
-                    <div class="ci-qty">
-                        <button onclick="cambiarCantidad(${it.id},-1)">−</button>
-                        <span>${cantRest}</span>
-                        <button onclick="cambiarCantidad(${it.id},+1)">+</button>
+                <div class="ci-controls-row">
+                    <div class="ci-qty-wrap">
+                        <span class="ci-qty-label">Cantidad:</span>
+                        <div class="ci-qty">
+                            <button onclick="cambiarCantidad(${it.id},-1)">−</button>
+                            <span>${cantRest}</span>
+                            <button onclick="cambiarCantidad(${it.id},+1)">+</button>
+                        </div>
                     </div>
+                    <div class="ci-unit-price">
+                        ${tieneOferta
+                            ? `<span class="ci-price-old">$${fmt(it.precio)}</span>
+                               <span class="ci-price-current">$${fmt(OFERTAS_MAP[it.id])} c/u</span>`
+                            : `<span class="ci-price-current">$${fmt(it.precio)} c/u</span>`}
+                    </div>
+                    <div class="ci-subtotal">$${fmt(precioEfectivo * cantRest)}</div>
+                    <button class="ci-del" onclick="quitarDePromo(${it.id},${cantRest})" title="Eliminar producto">
+                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
                 </div>
-                <div class="ci-unit-price">
-                    ${tieneOferta
-                        ? `<span class="ci-price-old">$${fmt(it.precio)}</span>
-                           <span class="ci-price-current">$${fmt(OFERTAS_MAP[it.id])} c/u</span>`
-                        : `<span class="ci-price-current">$${fmt(it.precio)} c/u</span>`}
-                </div>
-                <div class="ci-subtotal">$${fmt(precioEfectivo * cantRest)}</div>
-                <button class="ci-del" onclick="quitarDePromo(${it.id},${cantRest})" title="Eliminar producto">
-                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                </button>
             </div>`;
 
             const envase = envasesMap.get(it.id);
@@ -1790,17 +1800,22 @@
 
     window.confirmarLimpiarCarrito = function () {
         if (carrito.size === 0 && promoCarrito.size === 0) return;
-        
+
+        // Vaciar es la forma de dar por terminada una venta postergada sin emitirla
+        const desdePostergada = postergadaActiva != null;
+
         Swal.fire({
             title: '¿Vaciar carrito?',
-            text: 'Se eliminarán todos los productos agregados a esta venta.',
+            text: desdePostergada
+                ? `Se eliminarán todos los productos y la venta postergada N° ${numeroPostergada(postergadaActiva)} se descartará del panel.`
+                : 'Se eliminarán todos los productos agregados a esta venta.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc2626',
             cancelButtonColor: '#7a6050',
             confirmButtonText: 'Sí, vaciar carrito',
             cancelButtonText: 'Cancelar'
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
                 carrito.clear();
                 promoCarrito.clear();
@@ -1808,6 +1823,7 @@
                 renderCarrito();
                 renderPromoGrid();
                 actualizarTarjetasProductos();
+                await consumirPostergadaActiva();
                 toast('Carrito limpiado correctamente', 'exito');
             }
         });
@@ -1900,8 +1916,52 @@
        promos por su cuenta, así que no hace falta persistir ese estado.
        Postergar no mueve stock: la venta no se emitió y los productos siguen
        disponibles para otro cliente.
+
+       Al recuperar una postergada NO se borra: queda marcada como activa en el
+       panel para poder alternar entre varias sin perderlas. Se descarta recién
+       al emitir la venta o al vaciar el carrito.
     ══════════════════════════════════════════════════════════════════════ */
     let ventasPostergadas = [];
+    let postergadaActiva  = null;   // idBoleta cargada en el carrito, o null
+    let postergadaFirma   = null;   // firma del carrito al momento de cargarla
+
+    /* Número visible de una postergada (correlativo diario, con el id interno
+       solo como respaldo). El id sigue siendo la clave que viaja al servidor. */
+    function numeroPostergada(idBoleta) {
+        const v = ventasPostergadas.find(p => p.idBoleta === idBoleta);
+        return v ? (v.numero ?? v.idBoleta) : idBoleta;
+    }
+
+    /* Huella del carrito para detectar si el vendedor lo modificó después de
+       cargar una postergada (y solo entonces advertir al cambiar de venta). */
+    function firmaCarrito() {
+        const prods   = [...carrito].map(([id, it]) => `p${id}:${it.cantidad}`).sort();
+        const promos  = [...promoCarrito].map(([id, p]) => `m${id}:${p.cantidad}`).sort();
+        const envases = [...envasesMap].map(([id, e]) => `e${id}:${e.cobrados || 0}`).sort();
+        return [...prods, ...promos, ...envases].join('|');
+    }
+
+    /* Descarta en el servidor sin confirmar ni avisar: la usan los flujos donde
+       la venta postergada ya cumplió su propósito (se emitió o se vació). */
+    async function descartarPostergadaSilencioso(idBoleta) {
+        try {
+            await fetch(URL_DESCARTAR_POSTERGADA, {
+                method : 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': CSRF() },
+                body   : JSON.stringify({ idBoleta })
+            });
+        } catch { /* si falla, la postergada simplemente sigue en el panel */ }
+    }
+
+    /* Suelta la postergada cargada: la borra del servidor y refresca el panel. */
+    async function consumirPostergadaActiva() {
+        if (postergadaActiva == null) return;
+        const id = postergadaActiva;
+        postergadaActiva = null;
+        postergadaFirma  = null;
+        await descartarPostergadaSilencioso(id);
+        await cargarPostergadas();
+    }
 
     function itemsCarritoCrudo() {
         const items = [];
@@ -1914,14 +1974,15 @@
                 idPromocion: null, idOfertaProducto: OFERTAS_ID_MAP[id] ?? null
             });
         });
-        // Los envases viajan como fila con precioNormal 0, igual que en la venta real
+        // Los envases viajan como fila con precioNormal 0, igual que en la venta real,
+        // con la cantidad de envases efectivamente cobrados
         envasesMap.forEach((env, id) => {
             const it = carrito.get(id);
-            if (!it) return;
+            if (!it || !(env.cobrados > 0)) return;
             items.push({
-                idProducto: id, cantidad: it.cantidad,
+                idProducto: id, cantidad: env.cobrados,
                 precioNormal: 0, precioUnitario: env.valorEnvase,
-                subtotal: env.valorEnvase * it.cantidad,
+                subtotal: env.valorEnvase * env.cobrados,
                 idPromocion: null, idOfertaProducto: null
             });
         });
@@ -1935,7 +1996,7 @@
         let envases = 0;
         envasesMap.forEach((env, id) => {
             const it = carrito.get(id);
-            if (it) envases += env.valorEnvase * it.cantidad;
+            if (it && env.cobrados > 0) envases += env.valorEnvase * env.cobrados;
         });
         return Math.max(0, subtotal - descTotal) + envases;
     }
@@ -1976,11 +2037,19 @@
             const resp = await fetch(URL_POSTERGAR, {
                 method : 'POST',
                 headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': CSRF() },
-                body   : JSON.stringify({ items: itemsCarritoCrudo(), montoTotal: totalCarritoActual() })
+                // Si venía de una postergada se actualiza esa misma venta, para que
+                // conserve su número en lugar de aparecer como una nueva
+                body   : JSON.stringify({
+                    items      : itemsCarritoCrudo(),
+                    montoTotal : totalCarritoActual(),
+                    idBoleta   : postergadaActiva
+                })
             });
             const data = await resp.json();
             if (!data.ok) { toast(data.mensaje ?? 'No se pudo postergar la venta.', 'error'); return; }
 
+            postergadaActiva = null;
+            postergadaFirma  = null;
             vaciarCarrito();
             toast(data.mensaje, 'exito');
             await cargarPostergadas(data.venta?.idBoleta);
@@ -2009,6 +2078,13 @@
         if (!cont) return;
         if (cnt) cnt.textContent = ventasPostergadas.length;
 
+        // Si la que estaba cargada ya no existe (la descartó otro cajero), se
+        // suelta la marca para no dejar el carrito atado a una venta fantasma
+        if (postergadaActiva != null && !ventasPostergadas.some(v => v.idBoleta === postergadaActiva)) {
+            postergadaActiva = null;
+            postergadaFirma  = null;
+        }
+
         if (ventasPostergadas.length === 0) {
             cont.innerHTML = `<div class="post-empty">
                 <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
@@ -2016,25 +2092,42 @@
             return;
         }
 
-        cont.innerHTML = ventasPostergadas.map(v => `
-            <div class="post-card${v.idBoleta === resaltarId ? ' recien' : ''}"
+        cont.innerHTML = ventasPostergadas.map(v => {
+            const activa = v.idBoleta === postergadaActiva;
+            return `
+            <div class="post-card${v.idBoleta === resaltarId ? ' recien' : ''}${activa ? ' activa' : ''}"
                  onclick="recuperarPostergada(${v.idBoleta})"
-                 title="Recuperar esta venta — ${x(v.vendedor)} · ${x(v.fechaEmision)}">
+                 title="${activa ? 'Cargada en el carrito' : 'Cargar esta venta en el carrito'} — ${x(v.vendedor)} · ${x(v.fechaEmision)}">
                 <button class="post-card-del" title="Descartar esta venta"
                         onclick="event.stopPropagation(); descartarPostergada(${v.idBoleta});">
                     <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 </button>
-                <div class="post-card-num">N° ${v.idBoleta}</div>
+                ${activa ? '<div class="post-card-activa">En el carrito</div>' : ''}
+                <div class="post-card-num">N° ${v.numero ?? v.idBoleta}</div>
                 <div class="post-card-monto">$${fmt(v.montoTotal)}</div>
                 <div class="post-card-meta">${v.cantProductos} ítem(s) · ${x(v.hora)}</div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
     window.recuperarPostergada = async function (idBoleta) {
-        if (carrito.size > 0 || promoCarrito.size > 0) {
+        // Ya está cargada y sin cambios: no hay nada que rehacer
+        if (idBoleta === postergadaActiva && firmaCarrito() === postergadaFirma) return;
+
+        // Solo se advierte por lo que se perdería de verdad: un carrito armado a
+        // mano, o los cambios hechos sobre una postergada ya cargada. Alternar
+        // entre postergadas sin tocarlas no pierde nada, así que no interrumpe.
+        const hayCarrito = carrito.size > 0 || promoCarrito.size > 0;
+        const hayCambios = postergadaActiva == null
+            ? hayCarrito
+            : firmaCarrito() !== postergadaFirma;
+
+        if (hayCambios) {
             const r = await Swal.fire({
-                title: 'El carrito tiene productos',
-                text: 'Se descartarán para cargar la venta postergada. Si quieres conservarlos, postérgalos primero.',
+                title: postergadaActiva == null ? 'El carrito tiene productos' : 'Hay cambios sin guardar',
+                text: postergadaActiva == null
+                    ? 'Se descartarán para cargar la venta postergada. Si quieres conservarlos, postérgalos primero.'
+                    : `Los cambios hechos sobre la venta N° ${numeroPostergada(postergadaActiva)} se perderán. La venta postergada se conserva tal como se guardó.`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc2626',
@@ -2052,7 +2145,12 @@
                 body   : JSON.stringify({ idBoleta })
             });
             const data = await resp.json();
-            if (!data.ok) { toast(data.mensaje, 'error'); await cargarPostergadas(); return; }
+            if (!data.ok) {
+                toast(data.mensaje, 'error');
+                if (idBoleta === postergadaActiva) { postergadaActiva = null; postergadaFirma = null; }
+                await cargarPostergadas();
+                return;
+            }
 
             const idsPrevios = [...carrito.keys()];
             carrito.clear();
@@ -2063,8 +2161,10 @@
                 const prod = CATALOGO.find(p => p.id === it.idProducto);
                 if (!prod) return;
                 if (it.precioNormal === 0) {
-                    // Fila de envase: se vuelve a cobrar la garantía
+                    // Fila de envase: se vuelve a cobrar la garantía por las
+                    // mismas unidades que se cobraron al postergar
                     envasesMap.set(it.idProducto, {
+                        cobrados    : it.cantidad,
                         valorEnvase : it.precioUnitario,
                         soloEfectivo: prod.retornable?.soloEfectivo ?? false
                     });
@@ -2076,20 +2176,28 @@
                 }
             });
 
+            // La venta sigue guardada: queda marcada como activa en el panel
+            postergadaActiva = idBoleta;
+
             renderCarrito();
             new Set([...idsPrevios, ...carrito.keys()]).forEach(id => actualizarTarjeta(id));
             renderPromoGrid();
+            postergadaFirma = firmaCarrito();
+            renderPostergadas();
             toast(data.mensaje, 'exito');
-            await cargarPostergadas();
         } catch {
             toast('Error de conexión al recuperar la venta.', 'error');
         }
     };
 
     window.descartarPostergada = async function (idBoleta) {
+        const esActiva = idBoleta === postergadaActiva;
+        const numero   = numeroPostergada(idBoleta);
         const r = await Swal.fire({
             title: '¿Descartar la venta postergada?',
-            html: `Se eliminará la venta <strong>N° ${idBoleta}</strong> sin devolver sus productos al carrito.`,
+            html: esActiva
+                ? `Se eliminará la venta <strong>N° ${numero}</strong> del panel. Sus productos siguen en el carrito, que queda como una venta nueva.`
+                : `Se eliminará la venta <strong>N° ${numero}</strong> sin devolver sus productos al carrito.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc2626',
@@ -2106,6 +2214,7 @@
                 body   : JSON.stringify({ idBoleta })
             });
             const data = await resp.json();
+            if (esActiva) { postergadaActiva = null; postergadaFirma = null; }
             toast(data.mensaje, data.ok ? 'exito' : 'error');
             await cargarPostergadas();
         } catch {
@@ -2166,18 +2275,21 @@
             const precioUnitario = OFERTAS_MAP[id] != null ? OFERTAS_MAP[id] : it.precio;
             items.push({ idProducto: id, cantidad: cantRest, precioNormal: it.precio, precioUnitario, idPromocion: null, idOfertaProducto: OFERTAS_ID_MAP[id] ?? null });
         });
-        // Ítems de envase (cargo extra por envase no traído)
+        // Ítems de envase (cargo extra por envase no traído): sólo las unidades
+        // marcadas como «no trajo envase», no toda la cantidad del producto.
         snapshotEnvases.forEach((env, id) => {
             const it = carrito.get(id);
-            if (!it) return;
-            items.push({ idProducto: id, cantidad: it.cantidad, precioNormal: 0, precioUnitario: env.valorEnvase, idPromocion: null, idOfertaProducto: null });
+            if (!it || !(env.cobrados > 0)) return;
+            items.push({ idProducto: id, cantidad: env.cobrados, precioNormal: 0, precioUnitario: env.valorEnvase, idPromocion: null, idOfertaProducto: null });
         });
 
         try {
             const resp = await fetch(URL_CREAR, {
                 method : 'POST',
                 headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': CSRF() },
-                body   : JSON.stringify({ items })
+                // Al emitir una postergada se reutiliza su boleta: conserva el
+                // número que el vendedor venía viendo en el panel
+                body   : JSON.stringify({ items, idBoletaPostergada: postergadaActiva })
             });
             const data = await resp.json();
 
@@ -2195,6 +2307,14 @@
                 // Limpiar carrito (incluye promoCarrito: si no, una promo agregada
                 // desde su tarjeta quedaba en el panel después de vender)
                 vaciarCarrito();
+
+                // La postergada ya no está postergada: el servidor la emitió sobre
+                // su misma boleta, así que solo hay que refrescar el panel
+                if (postergadaActiva != null) {
+                    postergadaActiva = null;
+                    postergadaFirma  = null;
+                    await cargarPostergadas();
+                }
 
                 if (sinTicket) {
                     // Venta guardada sin emitir ticket: aviso breve que se cierra solo
@@ -2324,18 +2444,22 @@
             lineas += `<div class="ticket-row ticket-desc ticket-bold"><span class="tk-l">Total descuentos</span><span class="tk-r">-$${fmt(descTotal)}</span></div>`;
         }
 
-        // Envases en el ticket
+        // Envases en el ticket: sólo las unidades cobradas (cliente no trajo envase)
         let totalEnvasesTicket = 0;
+        let lineasEnvases = '';
         if (envases && envases.size > 0) {
-            lineas += `<hr class="ticket-hr">`;
             envases.forEach((env, id) => {
                 const it = carritoSnap.get(id);
-                if (!it) return;
-                const montoEnvase = env.valorEnvase * it.cantidad;
+                if (!it || !(env.cobrados > 0)) return;
+                const montoEnvase = env.valorEnvase * env.cobrados;
                 totalEnvasesTicket += montoEnvase;
                 const efLabel = env.soloEfectivo ? ' (SOLO EFECTIVO)' : '';
-                lineas += `<div class="ticket-row ticket-bottle-charge"><span class="tk-l">Envase: ${x(it.nombre)}${efLabel}</span><span class="tk-r">+$${fmt(montoEnvase)}</span></div>`;
+                const uLabel  = env.cobrados > 1 ? ` x${env.cobrados}` : '';
+                lineasEnvases += `<div class="ticket-row ticket-bottle-charge"><span class="tk-l">Envase: ${x(it.nombre)}${uLabel}${efLabel}</span><span class="tk-r">+$${fmt(montoEnvase)}</span></div>`;
             });
+        }
+        if (lineasEnvases) {
+            lineas += `<hr class="ticket-hr">` + lineasEnvases;
         }
 
         lineas += `<hr class="ticket-hr-sol">`;

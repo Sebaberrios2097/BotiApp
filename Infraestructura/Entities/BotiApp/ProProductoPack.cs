@@ -7,7 +7,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Infraestructura.Entities.BotiApp;
 
 [Table("Pro_Producto_Pack")]
-[Index("IdProductoUnidad", Name = "UQ_Pro_Producto_Pack_Unidad", IsUnique = true)]
+// Índice NO único: una misma unidad puede ser la base de varios packs
+// (por ejemplo, un pack de 6 y otro de 12 del mismo producto).
+[Index("IdProductoUnidad", Name = "IX_Pro_Producto_Pack_Unidad")]
 public partial class ProProductoPack
 {
     [Key]
