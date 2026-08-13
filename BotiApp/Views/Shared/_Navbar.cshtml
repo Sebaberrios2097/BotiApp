@@ -9,10 +9,12 @@
         && (string.IsNullOrEmpty(ar) || string.Equals(area, ar, StringComparison.OrdinalIgnoreCase));
 
     var nombreCompleto = User.FindFirst("NombreCompleto")?.Value ?? User.Identity?.Name ?? "Usuario";
-    var tipoUsuario    = User.FindFirst("TipoUsuario")?.Value ?? "";
-    bool esVendedor    = string.Equals(tipoUsuario, "Vendedor", StringComparison.OrdinalIgnoreCase);
-    bool esCajero      = string.Equals(tipoUsuario, "Cajero", StringComparison.OrdinalIgnoreCase);
-    bool esAdmin       = string.Equals(tipoUsuario, "Administrador", StringComparison.OrdinalIgnoreCase);
+    // El usuario puede tener rol combinado (ej. "Cajero/Vendedor"): hay una claim
+    // "TipoUsuario" por cada rol individual, por eso se chequea con HasClaim.
+    var tipoUsuario    = User.FindFirst("TipoUsuarioLabel")?.Value ?? User.FindFirst("TipoUsuario")?.Value ?? "";
+    bool esVendedor    = User.HasClaim("TipoUsuario", "Vendedor");
+    bool esCajero      = User.HasClaim("TipoUsuario", "Cajero");
+    bool esAdmin       = User.HasClaim("TipoUsuario", "Administrador");
 
     // Solo el administrador en Generar/Caja despliega el sidebar desde el navbar.
     bool mostrarMenuLateral = ViewData["MostrarMenuLateral"] as bool? ?? false;

@@ -28,7 +28,9 @@ namespace BotiApp.Controllers
         // Carga KPIs diferenciados según el rol del usuario autenticado.
         public async Task<IActionResult> Index(int? mes, int? anio)
         {
-            if (User.FindFirst("TipoUsuario")?.Value == "Vendedor")
+            // Cualquier rol que incluya Vendedor (puro o combinado, ej. Cajero/Vendedor)
+            // no ve el dashboard: su vista de inicio es Generar Venta.
+            if (ClaimHelper.EsVendedor(User) && !ClaimHelper.EsAdmin(User))
             {
                 return RedirectToAction("Generar", "Ventas", new { area = "Ventas" });
             }
@@ -277,25 +279,31 @@ namespace BotiApp.Controllers
                 .OrderByDescending(x => x.Monto)
                 .ToList();
             }
-            else if (ClaimHelper.EsVendedor(User))
+            else
             {
-                var idUsuario = ClaimHelper.GetIdUsuario(User);
-                var boletas   = (await _ventas.ObtenerBoletasVendedorDelMesAsync(idUsuario, anioSel, mesSel)).ToList();
+                // No son "else if": un usuario con rol combinado (ej. Cajero/Vendedor)
+                // debe ver los KPI de ambos roles, no solo del primero que matchee.
+                if (ClaimHelper.EsVendedor(User))
+                {
+                    var idUsuario = ClaimHelper.GetIdUsuario(User);
+                    var boletas   = (await _ventas.ObtenerBoletasVendedorDelMesAsync(idUsuario, anioSel, mesSel)).ToList();
 
-                vm.VendedorBoletasMes        = boletas.Count;
-                vm.VendedorMontoMes          = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
-                vm.VendedorBoletasPendientes = boletas.Count(b => b.IdEstadoBoleta == 1);
-                vm.VendedorUltimasBoletas    = boletas.Take(10);
-            }
-            else if (ClaimHelper.EsCajero(User))
-            {
-                var idUsuario = ClaimHelper.GetIdUsuario(User);
-                var boletas   = (await _ventas.ObtenerBoletasCajeroDelMesAsync(idUsuario, anioSel, mesSel)).ToList();
+                    vm.VendedorBoletasMes        = boletas.Count;
+                    vm.VendedorMontoMes          = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
+                    vm.VendedorBoletasPendientes = boletas.Count(b => b.IdEstadoBoleta == 1);
+                    vm.VendedorUltimasBoletas    = boletas.Take(10);
+                }
 
-                vm.CajeroBoletasCobradas = boletas.Count(b => b.IdEstadoBoleta == 3);
-                vm.CajeroBoletasAnuladas = boletas.Count(b => b.IdEstadoBoleta == 2);
-                vm.CajeroMontoGestionado = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
-                vm.CajeroUltimasBoletas  = boletas.Take(10);
+                if (ClaimHelper.EsCajero(User))
+                {
+                    var idUsuario = ClaimHelper.GetIdUsuario(User);
+                    var boletas   = (await _ventas.ObtenerBoletasCajeroDelMesAsync(idUsuario, anioSel, mesSel)).ToList();
+
+                    vm.CajeroBoletasCobradas = boletas.Count(b => b.IdEstadoBoleta == 3);
+                    vm.CajeroBoletasAnuladas = boletas.Count(b => b.IdEstadoBoleta == 2);
+                    vm.CajeroMontoGestionado = boletas.Where(b => b.IdEstadoBoleta == 3).Sum(b => (long)b.MontoTotal);
+                    vm.CajeroUltimasBoletas  = boletas.Take(10);
+                }
             }
 
             // ── Fiados globales (admin y cajero) ──────────────────────────────

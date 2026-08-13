@@ -763,10 +763,12 @@
                           || IsController("Empleados")     || IsArea("Compras");
 
     var nombreCompleto = User.FindFirst("NombreCompleto")?.Value ?? User.Identity?.Name ?? "Usuario";
-    var tipoUsuario    = User.FindFirst("TipoUsuario")?.Value ?? "";
-    bool esAdmin       = tipoUsuario == "Administrador";
-    bool esVendedor    = tipoUsuario == "Vendedor";
-    bool esCajero      = tipoUsuario == "Cajero";
+    // El usuario puede tener rol combinado (ej. "Cajero/Vendedor"): hay una claim
+    // "TipoUsuario" por cada rol individual, por eso se chequea con HasClaim.
+    var tipoUsuario    = User.FindFirst("TipoUsuarioLabel")?.Value ?? User.FindFirst("TipoUsuario")?.Value ?? "";
+    bool esAdmin       = User.HasClaim("TipoUsuario", "Administrador");
+    bool esVendedor    = User.HasClaim("TipoUsuario", "Vendedor");
+    bool esCajero      = User.HasClaim("TipoUsuario", "Cajero");
 
     // Vistas de operación (Generar venta / Caja / Historial): el administrador las ve
     // igual que vendedor y cajero — con navbar — pero con acceso al sidebar por

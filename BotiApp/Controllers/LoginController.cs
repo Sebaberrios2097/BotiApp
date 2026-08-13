@@ -57,11 +57,13 @@ namespace BotiApp.Controllers
                     principal,
                     authProperties);
 
-                if (tipoUsuario == "Vendedor")
+                // Todo rol que incluya Vendedor (puro o combinado, ej. Cajero/Vendedor) entra
+                // directo a Generar Venta, no al dashboard. El Cajero puro entra a Caja.
+                if (ClaimHelper.EsVendedor(principal))
                 {
                     return RedirectToAction("Generar", "Ventas", new { area = "Ventas" });
                 }
-                if (tipoUsuario == "Cajero")
+                if (ClaimHelper.EsCajero(principal))
                 {
                     return RedirectToAction("Caja", "Ventas", new { area = "Ventas" });
                 }
