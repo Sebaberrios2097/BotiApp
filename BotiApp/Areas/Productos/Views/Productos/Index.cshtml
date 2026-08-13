@@ -464,7 +464,9 @@ async function cargarRetornables() {
 }
 
 // ── Modal: abrir / cerrar ─────────────────────────────────────────────────
+let _modalClearTimeout = null;
 async function abrirModal(url) {
+    if (_modalClearTimeout) { clearTimeout(_modalClearTimeout); _modalClearTimeout = null; }
     overlay.classList.add('open');
     document.getElementById('modalBody').innerHTML =
         `<div class="m-spinner"><div class="spinner-ring"></div><span>Cargando…</span></div>`;
@@ -489,7 +491,7 @@ function cerrarModal() {
     // Limpiar scripts de modal anteriores
     document.querySelectorAll('script[data-modal-script]').forEach(s => s.remove());
     overlay.classList.remove('open');
-    setTimeout(() => { document.getElementById('modalBody').innerHTML = ''; }, 250);
+    _modalClearTimeout = setTimeout(() => { document.getElementById('modalBody').innerHTML = ''; }, 250);
 }
 overlay.addEventListener('click', e => {
     if (e.target === overlay) {
@@ -561,10 +563,11 @@ function prdDetenerScanner(ctx) {
 }
 
 // ── Formulario AJAX ───────────────────────────────────────────────────────
-async function submitFormAjax(formId, esNuevo) {
+async function submitFormAjax(formId, esNuevo, btn) {
     const form = document.getElementById(formId);
     if (!form) return;
-    const btn = form.querySelector('[type=submit]');
+    btn = btn || form.querySelector('[type=submit]');
+    const btnHtmlOriginal = btn ? btn.innerHTML : null;
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
     limpiarErroresModal();
     try {
@@ -578,7 +581,7 @@ async function submitFormAjax(formId, esNuevo) {
             if (data.mensaje) mostrarToast(data.mensaje, 'error');
         }
     } catch { mostrarToast('Error de conexión. Inténtalo de nuevo.', 'error'); }
-    finally { if (btn) { btn.disabled = false; btn.textContent = esNuevo ? 'Guardar producto' : 'Guardar cambios'; } }
+    finally { if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; } }
 }
 
 // ── Toggle estado ─────────────────────────────────────────────────────────
@@ -769,14 +772,19 @@ function buildFila(p) {
 
 // ── Errores inline en modals ──────────────────────────────────────────────
 function mostrarErroresModal(errores) {
+    let algunoSinMatch = false;
     Object.entries(errores).forEach(([campo, msg]) => {
-        const input = document.querySelector(`[name="${campo}"]`);
-        if (!input) return;
+        // El nombre de la clave puede venir en minúscula (nombre del parámetro del action)
+        // aunque el input tenga el name en PascalCase (asp-for), así que buscamos sin distinguir mayúsculas.
+        const input = document.querySelector(`[name="${campo}"]`) ||
+            [...document.querySelectorAll('#modalBody [name]')].find(el => el.name.toLowerCase() === campo.toLowerCase());
+        if (!input) { algunoSinMatch = true; return; }
         input.classList.add('input-error');
         let span = input.parentElement.querySelector('.field-error');
         if (!span) { span = document.createElement('span'); span.className = 'field-error'; input.after(span); }
         span.textContent = msg;
     });
+    if (algunoSinMatch) mostrarToast('Revisa los datos del formulario, hay campos inválidos.', 'error');
 }
 function limpiarErroresModal() {
     document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
