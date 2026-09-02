@@ -6,6 +6,8 @@ public interface IProductosRepository
 {
     Task<IEnumerable<ProProductos>> ObtenerTodosAsync();
     Task<ProProductos?> ObtenerPorIdAsync(int id);
+    /// <summary>Trae solo la imagen (sin cargar el resto del producto ni sus navegaciones), para servirla por HTTP.</summary>
+    Task<byte[]?> ObtenerImagenAsync(int id);
     Task<ProProductos> CrearAsync(ProProductos producto);
     Task<ProProductos> ActualizarAsync(ProProductos producto);
     Task<bool> EliminarAsync(int id);

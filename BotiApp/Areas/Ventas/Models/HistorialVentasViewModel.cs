@@ -7,7 +7,9 @@ public class HistorialVentasViewModel
     public int IdUsuarioActual { get; set; }
     public string NombreUsuarioActual { get; set; } = string.Empty;
     public IEnumerable<BoletaResumenDto> Boletas { get; set; } = [];
+    public int TotalBoletas { get; set; }
     public IEnumerable<VendedorFiltroDto> Vendedores { get; set; } = [];
+    public IEnumerable<int> AniosDisponibles { get; set; } = [];
 }
 
 public record BoletaResumenDto(

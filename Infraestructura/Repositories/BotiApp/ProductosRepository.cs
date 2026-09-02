@@ -57,6 +57,16 @@ public class ProductosRepository(BotiAppContext context) : IProductosRepository
             .Include(p => p.IdTipoProductoNavigation)
             .FirstOrDefaultAsync(p => p.IdProducto == id);
 
+    // Proyecta solo la columna Imagen: se pide una vez por cada <img> renderizado
+    // en catálogos/carritos, así que no vale la pena cargar el producto completo
+    // (con Marca/Tipo incluidos) solo para servir el binario.
+    public async Task<byte[]?> ObtenerImagenAsync(int id)
+        => await context.ProProductos
+            .AsNoTracking()
+            .Where(p => p.IdProducto == id)
+            .Select(p => p.Imagen)
+            .FirstOrDefaultAsync();
+
     public async Task<ProProductos> CrearAsync(ProProductos producto)
     {
         producto.FechaIngreso = DateTime.Now;

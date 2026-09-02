@@ -68,4 +68,21 @@ public interface IVentasRepository
     Task<IEnumerable<VenBoletas>> ObtenerBoletasVendedorDelMesAsync(int idVendedor, int anio, int mes);
     Task<IEnumerable<VenBoletas>> ObtenerBoletasCajeroDelMesAsync(int idCajero, int anio, int mes);
     Task<IEnumerable<(int Anio, int Mes)>> ObtenerPeriodosConMovimientoAsync();
+
+    // ── Historial (paginado, filtrado en servidor) ────────────────────────────
+    /// <summary>
+    /// Devuelve una página de boletas que cumplen los filtros indicados, junto con
+    /// el total de resultados (para armar la paginación). Solo trae el detalle
+    /// completo de las boletas de la página actual, no de todo el historial.
+    /// </summary>
+    Task<(IReadOnlyList<VenBoletas> Items, int Total)> ObtenerBoletasHistorialAsync(
+        int? idVendedorScope, int? idCajeroScope, int? idVendedorFiltro,
+        int? estado, int? anio, int? mes, int? dia, string? texto,
+        int pagina, int porPagina);
+
+    /// <summary>Años con boletas emitidas, dentro del alcance de vendedor/cajero indicado (o global si ambos son null).</summary>
+    Task<IEnumerable<int>> ObtenerAniosConVentasAsync(int? idVendedorScope, int? idCajeroScope);
+
+    /// <summary>Vendedores con al menos una boleta emitida (para el filtro por vendedor del admin).</summary>
+    Task<IEnumerable<(int IdUsuario, string Nombre)>> ObtenerVendedoresConVentasAsync();
 }

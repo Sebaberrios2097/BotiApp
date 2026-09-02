@@ -43,21 +43,11 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
         return View(vm);
     }
 
-    // ── GET /Ventas/Ventas/Historial ──────────────────────────────────────────
-    public async Task<IActionResult> Historial()
-    {
-        var esAdmin = ClaimHelper.EsAdmin(User);
-        var esCajero = ClaimHelper.EsCajero(User);
-        var idUsuario = ClaimHelper.GetIdUsuario(User);
-        var nombreUsuario = ClaimHelper.GetNombreCompleto(User);
+    private const int HistorialPageSize = 10;
 
-        var boletas = esAdmin
-            ? await ventasRepository.ObtenerBoletasAsync()
-            : esCajero
-                ? await ventasRepository.ObtenerBoletasPorCajeroAsync(idUsuario, top: 100)
-                : await ventasRepository.ObtenerBoletasPorVendedorAsync(idUsuario, top: 100);
-
-        var boletasDtos = boletas.Select(b => new BoletaResumenDto(
+    // Boletas ↔ DTO: se reutiliza tanto para el primer render como para el AJAX.
+    private static List<BoletaResumenDto> MapearBoletasDto(IEnumerable<VenBoletas> boletas)
+        => boletas.Select(b => new BoletaResumenDto(
             b.IdBoleta,
             b.CorrelativoDiario,
             b.FechaEmision?.ToString("dd/MM/yyyy HH:mm") ?? "—",
@@ -83,13 +73,61 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
             ))
         )).ToList();
 
+    // Controller.Json() serializa las propiedades del DTO en camelCase automático
+    // (IdBoleta → idBoleta, MontoTotal → montoTotal, etc.), que no coincide con los
+    // nombres que espera el JS de la vista (id, total, fecha…). Se arma el objeto
+    // a mano con esos nombres exactos para la respuesta AJAX.
+    private static object BoletaParaJson(BoletaResumenDto b) => new
+    {
+        id = b.IdBoleta,
+        correlativoDiario = b.CorrelativoDiario,
+        fecha = b.FechaEmision,
+        estado = b.Estado,
+        idEstado = b.IdEstado,
+        idVendedor = b.IdVendedor,
+        vendedor = b.Vendedor,
+        idCajero = b.IdCajero,
+        cajero = b.Cajero,
+        total = b.MontoTotal,
+        detalle = b.Detalle.Select(d => new
+        {
+            nombre = d.Nombre,
+            cantidad = d.Cantidad,
+            precioUnitario = d.PrecioUnitario,
+            precioNormal = d.PrecioNormal,
+            subtotal = d.Subtotal,
+            nombrePromocion = d.NombrePromocion,
+            nombreOferta = d.NombreOferta
+        })
+    };
+
+    // El historial de admin puede acumular años de boletas: por defecto solo se
+    // trae la página del mes actual (mismo filtro que ya venía preseleccionado
+    // en la UI), y el resto de páginas/filtros se piden por AJAX bajo demanda
+    // (ver HistorialAjax) en vez de cargar y enviar al navegador todo el historial.
+    public async Task<IActionResult> Historial()
+    {
+        var esAdmin = ClaimHelper.EsAdmin(User);
+        var esCajero = ClaimHelper.EsCajero(User);
+        var idUsuario = ClaimHelper.GetIdUsuario(User);
+        var nombreUsuario = ClaimHelper.GetNombreCompleto(User);
+
+        int? idVendedorScope = (!esAdmin && !esCajero) ? idUsuario : null;
+        int? idCajeroScope = (!esAdmin && esCajero) ? idUsuario : null;
+
+        var hoy = DateTime.Today;
+        var (items, total) = await ventasRepository.ObtenerBoletasHistorialAsync(
+            idVendedorScope, idCajeroScope, idVendedorFiltro: null,
+            estado: null, anio: hoy.Year, mes: hoy.Month, dia: null, texto: null,
+            pagina: 1, porPagina: HistorialPageSize);
+
         var vendedores = esAdmin
-            ? (IEnumerable<VendedorFiltroDto>)boletasDtos
-                .GroupBy(b => b.IdVendedor)
-                .Select(g => new VendedorFiltroDto(g.Key, g.First().Vendedor))
-                .OrderBy(v => v.Nombre)
+            ? (await ventasRepository.ObtenerVendedoresConVentasAsync())
+                .Select(v => new VendedorFiltroDto(v.IdUsuario, v.Nombre))
                 .ToList()
             : [];
+
+        var anios = await ventasRepository.ObtenerAniosConVentasAsync(idVendedorScope, idCajeroScope);
 
         var vm = new HistorialVentasViewModel
         {
@@ -97,11 +135,44 @@ public class VentasController(IVentasRepository ventasRepository, IHubContext<Bo
             EsCajero = esCajero,
             IdUsuarioActual = idUsuario,
             NombreUsuarioActual = nombreUsuario,
-            Boletas = boletasDtos,
-            Vendedores = vendedores
+            Boletas = MapearBoletasDto(items),
+            TotalBoletas = total,
+            Vendedores = vendedores,
+            AniosDisponibles = anios.ToList()
         };
 
         return View(vm);
+    }
+
+    // ── GET /Ventas/Ventas/HistorialAjax ────────────────────────────────────────
+    // Página filtrada del historial, para los cambios de filtro/página desde la UI.
+    [HttpGet]
+    public async Task<IActionResult> HistorialAjax(
+        int pagina = 1, int? estado = null, int? anio = null, int? mes = null,
+        int? dia = null, string? texto = null, int? idVendedorFiltro = null)
+    {
+        var esAdmin = ClaimHelper.EsAdmin(User);
+        var esCajero = ClaimHelper.EsCajero(User);
+        var idUsuario = ClaimHelper.GetIdUsuario(User);
+
+        int? idVendedorScope = (!esAdmin && !esCajero) ? idUsuario : null;
+        int? idCajeroScope = (!esAdmin && esCajero) ? idUsuario : null;
+        int? filtroVendedor = esAdmin ? idVendedorFiltro : null;
+
+        pagina = Math.Max(1, pagina);
+
+        var (items, total) = await ventasRepository.ObtenerBoletasHistorialAsync(
+            idVendedorScope, idCajeroScope, filtroVendedor,
+            estado, anio, mes, dia, texto,
+            pagina, HistorialPageSize);
+
+        return Json(new
+        {
+            pagina,
+            porPagina = HistorialPageSize,
+            total,
+            boletas = MapearBoletasDto(items).Select(BoletaParaJson)
+        });
     }
 
     // ── POST: crear boleta (vendedor) ─────────────────────────────────────────

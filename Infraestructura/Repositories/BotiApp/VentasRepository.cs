@@ -13,8 +13,15 @@ public class VentasRepository(BotiAppContext context, IProductosRepository produ
 
     // ── Boletas ───────────────────────────────────────────────────────────────
 
-    private IQueryable<VenBoletas> BoletasConIncludes()
-        => context.VenBoletas
+    // AsSplitQuery evita el producto cartesiano entre VenBoletaDetalle y
+    // VenMetodosPagoBoleta (dos colecciones hijas incluidas a la vez), que sin
+    // esto multiplica las filas devueltas por SQL para cada boleta. Además,
+    // permite paginar (Skip/Take) directamente sobre la consulta con includes:
+    // EF Core pagina la consulta raíz en una sola pasada y luego trae el detalle
+    // solo de esas filas, sin necesidad de buscar IDs de página aparte.
+    private static IQueryable<VenBoletas> ConIncludes(IQueryable<VenBoletas> q)
+        => q
+            .AsSplitQuery()
             .Include(b => b.IdEstadoBoletaNavigation)
             .Include(b => b.IdVendedorNavigation).ThenInclude(u => u.IdEmpleadoNavigation)
             .Include(b => b.IdCajeroNavigation).ThenInclude(u => u!.IdEmpleadoNavigation)
@@ -22,6 +29,8 @@ public class VentasRepository(BotiAppContext context, IProductosRepository produ
             .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdPromocionNavigation)
             .Include(b => b.VenBoletaDetalle).ThenInclude(d => d.IdOfertaProductoNavigation)
             .Include(b => b.VenMetodosPagoBoleta).ThenInclude(m => m.IdMetodoPagoNavigation);
+
+    private IQueryable<VenBoletas> BoletasConIncludes() => ConIncludes(context.VenBoletas);
 
     public async Task<IEnumerable<VenBoletas>> ObtenerBoletasAsync()
         => await BoletasConIncludes()
@@ -580,9 +589,21 @@ public class VentasRepository(BotiAppContext context, IProductosRepository produ
     }
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
+    // El dashboard solo necesita IdProducto/Cantidad/Subtotal de cada línea (no
+    // el producto/promoción/oferta completos) y el nombre del método de pago, así
+    // que se usa un include más liviano que BoletasConIncludes para no arrastrar
+    // el grafo completo de cada boleta del mes (potencialmente miles de filas).
+    private IQueryable<VenBoletas> BoletasDashboardIncludes()
+        => context.VenBoletas
+            .AsSplitQuery()
+            .Include(b => b.IdEstadoBoletaNavigation)
+            .Include(b => b.IdVendedorNavigation).ThenInclude(u => u.IdEmpleadoNavigation)
+            .Include(b => b.IdCajeroNavigation).ThenInclude(u => u!.IdEmpleadoNavigation)
+            .Include(b => b.VenBoletaDetalle)
+            .Include(b => b.VenMetodosPagoBoleta).ThenInclude(m => m.IdMetodoPagoNavigation);
 
     public async Task<IEnumerable<VenBoletas>> ObtenerBoletasDelMesAsync(int anio, int mes)
-        => await BoletasConIncludes()
+        => await BoletasDashboardIncludes()
             .AsNoTracking()
             .Where(b => b.FechaEmision.HasValue
                      && b.FechaEmision.Value.Year == anio
@@ -591,7 +612,7 @@ public class VentasRepository(BotiAppContext context, IProductosRepository produ
             .ToListAsync();
 
     public async Task<IEnumerable<VenBoletas>> ObtenerBoletasVendedorDelMesAsync(int idVendedor, int anio, int mes)
-        => await BoletasConIncludes()
+        => await BoletasDashboardIncludes()
             .AsNoTracking()
             .Where(b => b.IdVendedor == idVendedor
                      && b.FechaEmision.HasValue
@@ -601,7 +622,7 @@ public class VentasRepository(BotiAppContext context, IProductosRepository produ
             .ToListAsync();
 
     public async Task<IEnumerable<VenBoletas>> ObtenerBoletasCajeroDelMesAsync(int idCajero, int anio, int mes)
-        => await BoletasConIncludes()
+        => await BoletasDashboardIncludes()
             .AsNoTracking()
             .Where(b => b.IdCajero == idCajero
                      && b.FechaEmision.HasValue
@@ -619,5 +640,91 @@ public class VentasRepository(BotiAppContext context, IProductosRepository produ
             .OrderByDescending(x => x.Year).ThenByDescending(x => x.Month)
             .ToListAsync();
         return raw.Select(x => (x.Year, x.Month));
+    }
+
+    // ── Historial (paginado, filtrado en servidor) ──────────────────────────────
+    // El historial puede acumular años de boletas: en vez de traer todo el grafo
+    // de entidades para filtrar/paginar en memoria, se filtra y pagina a nivel SQL
+    // (solo columnas escalares) y recién ahí se cargan con include las boletas de
+    // la página actual.
+    public async Task<(IReadOnlyList<VenBoletas> Items, int Total)> ObtenerBoletasHistorialAsync(
+        int? idVendedorScope, int? idCajeroScope, int? idVendedorFiltro,
+        int? estado, int? anio, int? mes, int? dia, string? texto,
+        int pagina, int porPagina)
+    {
+        var q = context.VenBoletas.AsNoTracking().AsQueryable();
+
+        if (idVendedorScope.HasValue) q = q.Where(b => b.IdVendedor == idVendedorScope.Value);
+        if (idCajeroScope.HasValue) q = q.Where(b => b.IdCajero == idCajeroScope.Value);
+        if (idVendedorFiltro.HasValue && idVendedorFiltro.Value != 0) q = q.Where(b => b.IdVendedor == idVendedorFiltro.Value);
+        if (estado.HasValue && estado.Value != 0) q = q.Where(b => b.IdEstadoBoleta == estado.Value);
+        if (anio.HasValue) q = q.Where(b => b.FechaEmision.HasValue && b.FechaEmision.Value.Year == anio.Value);
+        if (mes.HasValue) q = q.Where(b => b.FechaEmision.HasValue && b.FechaEmision.Value.Month == mes.Value);
+        if (dia.HasValue) q = q.Where(b => b.FechaEmision.HasValue && b.FechaEmision.Value.Day == dia.Value);
+
+        if (!string.IsNullOrWhiteSpace(texto))
+        {
+            var t = texto.Trim();
+            var matchFechaDdMm = System.Text.RegularExpressions.Regex.Match(t, @"^(\d{1,2})[/\-](\d{1,2})$");
+
+            if (int.TryParse(t, out var numero))
+            {
+                q = q.Where(b => b.IdBoleta == numero
+                               || b.CorrelativoDiario == numero
+                               || (b.IdVendedorNavigation.IdEmpleadoNavigation!.NombresEmpleado + " " + b.IdVendedorNavigation.IdEmpleadoNavigation.Apellido1).Contains(t));
+            }
+            else if (matchFechaDdMm.Success)
+            {
+                var d = int.Parse(matchFechaDdMm.Groups[1].Value);
+                var m = int.Parse(matchFechaDdMm.Groups[2].Value);
+                q = q.Where(b => b.FechaEmision.HasValue && b.FechaEmision.Value.Day == d && b.FechaEmision.Value.Month == m);
+            }
+            else
+            {
+                q = q.Where(b => (b.IdVendedorNavigation.IdEmpleadoNavigation!.NombresEmpleado + " " + b.IdVendedorNavigation.IdEmpleadoNavigation.Apellido1).Contains(t));
+            }
+        }
+
+        var total = await q.CountAsync();
+        if (total == 0)
+            return (Array.Empty<VenBoletas>(), 0);
+
+        // Paginar directamente sobre la consulta con includes (AsSplitQuery aplica
+        // el mismo Skip/Take/OrderBy a las consultas de detalle y métodos de pago),
+        // en vez de buscar IDs de página y volver a consultar por separado.
+        var items = await ConIncludes(q)
+            .OrderByDescending(b => b.IdBoleta)
+            .Skip((pagina - 1) * porPagina)
+            .Take(porPagina)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    public async Task<IEnumerable<int>> ObtenerAniosConVentasAsync(int? idVendedorScope, int? idCajeroScope)
+    {
+        var q = context.VenBoletas.Where(b => b.FechaEmision.HasValue).AsQueryable();
+        if (idVendedorScope.HasValue) q = q.Where(b => b.IdVendedor == idVendedorScope.Value);
+        if (idCajeroScope.HasValue) q = q.Where(b => b.IdCajero == idCajeroScope.Value);
+
+        return await q
+            .Select(b => b.FechaEmision!.Value.Year)
+            .Distinct()
+            .OrderByDescending(y => y)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<(int IdUsuario, string Nombre)>> ObtenerVendedoresConVentasAsync()
+    {
+        var raw = await context.VenBoletas
+            .Select(b => new
+            {
+                b.IdVendedor,
+                Nombre = b.IdVendedorNavigation.IdEmpleadoNavigation!.NombresEmpleado + " " + b.IdVendedorNavigation.IdEmpleadoNavigation.Apellido1
+            })
+            .Distinct()
+            .OrderBy(x => x.Nombre)
+            .ToListAsync();
+        return raw.Select(x => (x.IdVendedor, x.Nombre));
     }
 }

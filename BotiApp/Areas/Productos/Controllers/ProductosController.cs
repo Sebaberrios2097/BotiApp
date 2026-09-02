@@ -18,12 +18,21 @@ public class ProductosController(
         => View((await productosRepository.ObtenerTodosAsync()).Where(p => p.IdProducto != 0));
 
     // ── Imagen ──────────────────────────────────────────────────────────────
+    // Se consume desde Generar/Caja/Historial (Vendedor, Cajero) además del
+    // mantenedor de Productos (Admin) — por eso necesita su propia política,
+    // más permisiva que el [Authorize(Policy = "SoloAdmin")] de la clase. Sin
+    // esto, un vendedor o cajero recibía 302 a Login/AccesoDenegado en cada
+    // <img>, que el navegador simplemente muestra como imagen rota — y como el
+    // caché de 7 días de abajo puede haber servido esa misma imagen antes desde
+    // una sesión de admin en el mismo navegador, el fallo se veía intermitente:
+    // algunas imágenes "pegaban" en caché y otras no.
+    [Authorize(Policy = "TodosRoles")]
     [ResponseCache(Duration = 604800, Location = ResponseCacheLocation.Any)]
     public async Task<IActionResult> Imagen(int id)
     {
-        var p = await productosRepository.ObtenerPorIdAsync(id);
-        if (p?.Imagen is null) return NotFound();
-        return File(p.Imagen, "image/jpeg");
+        var imagen = await productosRepository.ObtenerImagenAsync(id);
+        if (imagen is null) return NotFound();
+        return File(imagen, "image/jpeg");
     }
 
     // ── Partials para modals ─────────────────────────────────────────────────

@@ -171,11 +171,20 @@ namespace BotiApp.Controllers
                     .OrderBy(p => p.Stock)
                     .ToList();
 
-                // Ventas por día del mes (boletas pagadas, usando FechaPago)
+                // Ventas por día del mes (boletas pagadas, usando FechaPago), agrupadas
+                // por jornada comercial (8:00 a 8:00 del día siguiente — igual que el
+                // correlativo diario de boletas) en vez de por día calendario: una
+                // venta cobrada a la 1 AM sigue perteneciendo al día en que abrió la
+                // jornada, no al día calendario siguiente.
                 int diasEnMes = DateTime.DaysInMonth(anioSel, mesSel);
                 var ventasPorDia = new long[diasEnMes];
                 foreach (var b in boletas.Where(x => x.IdEstadoBoleta == 3 && x.FechaPago.HasValue))
-                    ventasPorDia[b.FechaPago!.Value.Day - 1] += b.MontoTotal;
+                {
+                    var fp = b.FechaPago!.Value;
+                    var inicioJornada = fp.Hour >= 8 ? fp.Date : fp.Date.AddDays(-1);
+                    if (inicioJornada.Year == anioSel && inicioJornada.Month == mesSel)
+                        ventasPorDia[inicioJornada.Day - 1] += b.MontoTotal;
+                }
                 vm.VentasPorDiaMes = ventasPorDia;
 
                 // Montos por método de pago (boletas pagadas)
@@ -191,11 +200,14 @@ namespace BotiApp.Controllers
                 var prodNombreMap = productos.ToDictionary(p => p.IdProducto, p => p.NombreProducto);
                 var prodCodigoMap = productos.ToDictionary(p => p.IdProducto, p => p.Codigo ?? "—");
 
-                // 1. Ventas por categoría (gráfico)
+                // 1. Ventas por categoría (gráfico), de mayor a menor monto — el
+                // orden de inserción del diccionario es el que ven tanto el gráfico
+                // como su leyenda (Dictionary conserva el orden de inserción).
                 vm.VentasPorCategoria = boletas
                     .Where(b => b.IdEstadoBoleta == 3)
                     .SelectMany(b => b.VenBoletaDetalle)
                     .GroupBy(d => prodTipoNombreMap.TryGetValue(d.IdProducto, out var catName) ? catName : "Otro")
+                    .OrderByDescending(g => g.Sum(d => d.Subtotal))
                     .ToDictionary(g => g.Key, g => (long)g.Sum(d => d.Subtotal));
 
                 // 2. Tops de productos más y menos vendidos (5 de cada uno)
@@ -205,6 +217,12 @@ namespace BotiApp.Controllers
                     .GroupBy(d => d.IdProducto)
                     .ToDictionary(g => g.Key, g => g.Sum(d => d.Cantidad));
 
+                var montoByProduct = boletas
+                    .Where(b => b.IdEstadoBoleta == 3)
+                    .SelectMany(b => b.VenBoletaDetalle)
+                    .GroupBy(d => d.IdProducto)
+                    .ToDictionary(g => g.Key, g => (long)g.Sum(d => d.Subtotal));
+
                 var activeProductsWithSales = productos
                     .Where(p => p.Estado)
                     .Select(p => new ProductoVendidoViewModel
@@ -213,11 +231,7 @@ namespace BotiApp.Controllers
                         Nombre = p.NombreProducto,
                         Codigo = p.Codigo ?? "—",
                         Cantidad = salesByProduct.GetValueOrDefault(p.IdProducto, 0),
-                        Monto = boletas
-                            .Where(b => b.IdEstadoBoleta == 3)
-                            .SelectMany(b => b.VenBoletaDetalle)
-                            .Where(d => d.IdProducto == p.IdProducto)
-                            .Sum(d => (long)d.Subtotal)
+                        Monto = montoByProduct.GetValueOrDefault(p.IdProducto, 0)
                     })
                     .ToList();
 

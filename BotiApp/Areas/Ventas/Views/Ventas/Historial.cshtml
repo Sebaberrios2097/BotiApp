@@ -3,41 +3,44 @@
 @{
     ViewData["Title"] = "Historial de Ventas";
 
-    var boletasJson = JsonSerializer.Serialize(Model.Boletas.Select(b => new
+    // Solo se serializa la primera página (la que ya pidió el servidor con los
+    // mismos filtros por defecto que muestra la UI). El resto de páginas y los
+    // cambios de filtro se piden por AJAX a HistorialAjax — el historial completo
+    // ya no se envuelve entero en el HTML.
+    static object BoletaAJson(BotiApp.Areas.Ventas.Models.BoletaResumenDto b) => new
     {
-        id         = b.IdBoleta,
+        id = b.IdBoleta,
         correlativoDiario = b.CorrelativoDiario,
-        fecha      = b.FechaEmision,
-        anio       = b.FechaEmision != "—" && b.FechaEmision.Length >= 10
-                         ? (int?)int.Parse(b.FechaEmision.Substring(6, 4)) : null,
-        mes        = b.FechaEmision != "—" && b.FechaEmision.Length >= 5
-                         ? (int?)int.Parse(b.FechaEmision.Substring(3, 2)) : null,
-        dia        = b.FechaEmision != "—" && b.FechaEmision.Length >= 2
-                         ? (int?)int.Parse(b.FechaEmision.Substring(0, 2)) : null,
-        estado     = b.Estado,
-        idEstado   = b.IdEstado,
+        fecha = b.FechaEmision,
+        estado = b.Estado,
+        idEstado = b.IdEstado,
         idVendedor = b.IdVendedor,
-        vendedor   = b.Vendedor,
-        idCajero   = b.IdCajero,
-        cajero     = b.Cajero,
-        total      = b.MontoTotal,
-        detalle    = b.Detalle.Select(d => new
+        vendedor = b.Vendedor,
+        idCajero = b.IdCajero,
+        cajero = b.Cajero,
+        total = b.MontoTotal,
+        detalle = b.Detalle.Select(d => new
         {
-            nombre         = d.Nombre,
-            cantidad       = d.Cantidad,
+            nombre = d.Nombre,
+            cantidad = d.Cantidad,
             precioUnitario = d.PrecioUnitario,
-            precioNormal   = d.PrecioNormal,
-            subtotal       = d.Subtotal,
+            precioNormal = d.PrecioNormal,
+            subtotal = d.Subtotal,
             nombrePromocion = d.NombrePromocion,
-            nombreOferta    = d.NombreOferta
+            nombreOferta = d.NombreOferta
         })
-    }));
+    };
+
+    var boletasJson = JsonSerializer.Serialize(Model.Boletas.Select(BoletaAJson));
 
     var vendedoresJson = JsonSerializer.Serialize(Model.Vendedores.Select(v => new
     {
         id     = v.IdUsuario,
         nombre = v.Nombre
     }));
+
+    var aniosJson = JsonSerializer.Serialize(Model.AniosDisponibles);
+    var hoy = DateTime.Today;
 }
 
 <style>
@@ -83,6 +86,14 @@
    LISTA DE BOLETAS
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .boletas-list { padding:.75rem 1rem; display:flex; flex-direction:column; gap:.55rem; }
+
+/* Encabezado de agrupación por día (filtro "Todos los días") */
+.bl-dia-header {
+    font-size:.78rem; font-weight:700; color:var(--color-secundario);
+    text-transform:capitalize; padding:.6rem .3rem .3rem;
+    border-bottom:1.5px solid #f0ebe5; margin-top:.2rem;
+}
+.bl-dia-header:first-child { margin-top:0; padding-top:.1rem; }
 
 /* Card de boleta */
 .bl-card { border:1.5px solid #ede5df; border-radius:11px; overflow:hidden; transition:border-color .15s,box-shadow .15s; }
@@ -132,6 +143,17 @@
 .boletas-empty { text-align:center; padding:3.5rem 1rem; color:#b8a898; font-size:.88rem; }
 .boletas-empty svg { width:52px; height:52px; fill:#ddd0c4; display:block; margin:0 auto .75rem; }
 
+/* Spinner de carga (filtros / paginación) */
+.boletas-list-wrap { position:relative; }
+.hist-spinner-overlay {
+    position:absolute; inset:0; background:rgba(255,255,255,.72);
+    display:none; align-items:center; justify-content:center; z-index:5;
+    min-height:120px; border-radius:0 0 14px 14px;
+}
+.hist-spinner-overlay.visible { display:flex; }
+.hist-spinner { width:32px; height:32px; border:3px solid #ede5df; border-top-color:var(--color-primario); border-radius:50%; animation:histSpin .7s linear infinite; }
+@@keyframes histSpin { to { transform:rotate(360deg); } }
+
 /* Paginación */
 .pag-wrap { display:flex; align-items:center; justify-content:center; gap:.35rem; padding:.75rem 1rem; border-top:1px solid #f0ebe5; flex-shrink:0; }
 .pag-btn { padding:.3rem .65rem; border-radius:7px; border:1.5px solid #e0d5cc; background:#fff; color:#7a6050; font-size:.78rem; font-weight:600; cursor:pointer; transition:border-color .13s,background .13s,color .13s; }
@@ -170,7 +192,9 @@
 .ticket-actions button:hover { opacity:.85; }
 .btn-print  { background:var(--color-secundario); color:#fff; }
 .btn-cerrar { background:#f0ebe5; color:var(--color-secundario); }
-.ticket { font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace; font-size:13px; line-height:1.35; padding: 0 .6rem .5rem .6rem; color:#000; }
+/* Verdana/Arial: fuentes del sistema (sin descarga ni carrera de carga), con el
+   0 como óvalo simple, sin raya ni punto, para no confundirlo con la "O". */
+.ticket { font-family: Verdana, Arial, 'Helvetica Neue', Helvetica, sans-serif; font-size:12px; line-height:1.4; padding: 0 .6rem .5rem .6rem; color:#000; }
 .ticket-hr     { border:none !important; border-top:1px dashed #555 !important; margin:.25rem 0 !important; opacity:1 !important; }
 .ticket-hr-sol { border:none !important; border-top:1px solid #555 !important;  margin:.25rem 0 !important; opacity:1 !important; }
 .ticket-row { display:flex; justify-content:space-between; margin-bottom:1px; }
@@ -240,7 +264,7 @@
     <div class="phc-badges">
         <span class="phc-badge naranja">
             <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.95-2.05L6.64 18.36A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
-            @Model.Boletas.Count() registros
+            <span id="phcBadgeTotal">@Model.TotalBoletas</span> registros
         </span>
     </div>
 </div>
@@ -249,7 +273,7 @@
     <div class="hist-panel-header">
         <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.95-2.05L6.64 18.36A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
         <span>@(Model.EsCajero ? "Tickets gestionados" : "Ventas registradas")</span>
-        <span class="cnt-badge" id="cntBoletas">@Model.Boletas.Count()</span>
+        <span class="cnt-badge" id="cntBoletas">@Model.TotalBoletas</span>
     </div>
 
     @if (Model.EsAdmin || Model.Boletas.Any())
@@ -272,17 +296,9 @@
                 </select>
                 <select class="fil-estado" id="selAnio" onchange="aplicarFiltros()">
                     <option value="">Todos los años</option>
-                    @{
-                        var anioActual = DateTime.Now.Year.ToString();
-                        var aniosDisp  = Model.Boletas
-                            .Where(b => b.FechaEmision != "—" && b.FechaEmision.Length >= 10)
-                            .Select(b => b.FechaEmision.Substring(6, 4))
-                            .Distinct()
-                            .OrderByDescending(y => y);
-                    }
-                    @foreach (var anio in aniosDisp)
+                    @foreach (var anio in Model.AniosDisponibles)
                     {
-                        if (anio == anioActual)
+                        if (anio == hoy.Year)
                         {
                             <option value="@anio" selected>@anio</option>
                         }
@@ -297,7 +313,7 @@
                     @{ var mesesNombres = new[]{"","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"}; }
                     @for (int m = 1; m <= 12; m++)
                     {
-                        if (m == DateTime.Now.Month)
+                        if (m == hoy.Month)
                         {
                             <option value="@m" selected>Mes: @mesesNombres[m]</option>
                         }
@@ -330,7 +346,10 @@
         </div>
     }
 
-    <div class="boletas-list" id="boletasList"></div>
+    <div class="boletas-list-wrap">
+        <div class="boletas-list" id="boletasList"></div>
+        <div class="hist-spinner-overlay" id="histSpinner"><div class="hist-spinner"></div></div>
+    </div>
     <div class="pag-wrap" id="pagWrap" style="display:none;"></div>
 </div>
 
@@ -339,28 +358,25 @@
 (function () {
 
     /* â”€â”€ Datos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-    var BOLETAS    = @Html.Raw(boletasJson);
+    var BOLETAS_INICIAL = @Html.Raw(boletasJson);
+    var TOTAL_INICIAL   = @Model.TotalBoletas;
     var ES_ADMIN   = @Html.Raw(Model.EsAdmin.ToString().ToLower());
     var ES_CAJERO  = @Html.Raw(Model.EsCajero.ToString().ToLower());
     var ID_USUARIO = @Model.IdUsuarioActual;
-
-    // Ordenar DESC por N° de boleta una sola vez
-    BOLETAS.sort(function(a, b) { return b.id - a.id; });
+    var URL_HISTORIAL_AJAX = '@Url.Action("HistorialAjax", "Ventas", new { area = "Ventas" })';
 
     /* â”€â”€ Estado paginaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-    var POR_PAG       = 10;
-    var paginaActual  = 1;
+    var POR_PAG        = 10;
+    var paginaActual   = 1;
+    var totalActual    = TOTAL_INICIAL;
+    var boletasPagina  = BOLETAS_INICIAL;
     var vendedorActivo = 0;
-    var boletasFiltradas = [];
+    var debounceTimer  = null;
+    var fetchCtrl      = null;
 
     /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        FILTROS
     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-    /* La fecha llega formateada según la cultura del servidor, que en es-CL usa
-       «-» como separador. Se normaliza a «/» solo para comparar en la búsqueda,
-       así el usuario encuentra igual escribiendo 11/08 que 11-08. */
-    function normFecha(s) { return String(s ?? '').replace(/[-.]/g, '/').toLowerCase(); }
-
     window.selVendedor = function (id) {
         vendedorActivo = id;
         document.querySelectorAll('#pillsVendedores .pill')
@@ -368,56 +384,71 @@
         aplicarFiltros();
     };
 
+    // Los cambios de filtro reinician a la página 1 y piden esa página al
+    // servidor, con un pequeño debounce para no disparar una consulta por cada
+    // tecla mientras el usuario escribe en el buscador.
     window.aplicarFiltros = function () {
-        var q         = (document.getElementById('txtBuscar')?.value ?? '').trim().toLowerCase();
-        var estadoSel = +(document.getElementById('selEstado')?.value ?? 0);
-        var anioSel   = +(document.getElementById('selAnio')?.value  ?? 0) || 0;
-        var mesSel    = +(document.getElementById('selMes')?.value   ?? 0) || 0;
-        var diaSel    = +(document.getElementById('selDia')?.value   ?? 0) || 0;
-
-        document.getElementById('btnClr')?.classList.toggle('on', q.length > 0);
-
-        var qFecha = normFecha(q);
-
-        boletasFiltradas = BOLETAS.filter(function(b) {
-            var okVendedor = vendedorActivo === 0 || b.idVendedor === vendedorActivo;
-            var okEstado   = estadoSel === 0 || b.idEstado === estadoSel;
-            var okAnio     = anioSel   === 0 || b.anio     === anioSel;
-            var okMes      = mesSel    === 0 || b.mes      === mesSel;
-            var okDia      = diaSel    === 0 || b.dia      === diaSel;
-            var okQ = q === ''
-                || String(b.id).includes(q)
-                || String(b.correlativoDiario ?? '').includes(q)
-                || b.vendedor.toLowerCase().includes(q)
-                || normFecha(b.fecha).includes(qFecha);
-            return okVendedor && okEstado && okAnio && okMes && okDia && okQ;
-        });
-
         paginaActual = 1;
-        renderPagina();
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(cargarPagina, 300);
     };
 
     window.limpiarQ = function () {
         document.getElementById('txtBuscar').value = '';
-        aplicarFiltros();
+        paginaActual = 1;
+        clearTimeout(debounceTimer);
+        cargarPagina();
     };
+
+    function cargarPagina() {
+        var texto  = (document.getElementById('txtBuscar')?.value ?? '').trim();
+        var estado = +(document.getElementById('selEstado')?.value ?? 0) || 0;
+        var anio   = document.getElementById('selAnio')?.value ?? '';
+        var mes    = document.getElementById('selMes')?.value  ?? '';
+        var dia    = document.getElementById('selDia')?.value  ?? '';
+
+        document.getElementById('btnClr')?.classList.toggle('on', texto.length > 0);
+
+        var qs = new URLSearchParams();
+        qs.set('pagina', paginaActual);
+        if (estado) qs.set('estado', estado);
+        if (anio)   qs.set('anio', anio);
+        if (mes)    qs.set('mes', mes);
+        if (dia)    qs.set('dia', dia);
+        if (texto)  qs.set('texto', texto);
+        if (ES_ADMIN && vendedorActivo) qs.set('idVendedorFiltro', vendedorActivo);
+
+        if (fetchCtrl) fetchCtrl.abort();
+        fetchCtrl = new AbortController();
+
+        var spinner = document.getElementById('histSpinner');
+        // Pequeño retraso antes de mostrar el spinner: si la respuesta llega
+        // rápido (página ya cacheada por el navegador, red local, etc.) evita el
+        // parpadeo de mostrar y ocultar el spinner en menos de un instante.
+        var spinnerTimer = setTimeout(function() { spinner.classList.add('visible'); }, 120);
+
+        fetch(URL_HISTORIAL_AJAX + '?' + qs.toString(), { signal: fetchCtrl.signal, credentials: 'same-origin' })
+            .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(function(d) {
+                boletasPagina = d.boletas;
+                totalActual   = d.total;
+                paginaActual  = d.pagina;
+                document.getElementById('cntBoletas').textContent = totalActual;
+                var phc = document.getElementById('phcBadgeTotal');
+                if (phc) phc.textContent = totalActual;
+                renderLista(boletasPagina);
+                renderControlesPag(Math.max(1, Math.ceil(totalActual / d.porPagina)), totalActual);
+            })
+            .catch(function(err) { if (err.name !== 'AbortError') console.error('Error cargando historial:', err); })
+            .finally(function() {
+                clearTimeout(spinnerTimer);
+                spinner.classList.remove('visible');
+            });
+    }
 
     /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        PAGINACIÃ“N
     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-    function renderPagina() {
-        var total  = boletasFiltradas.length;
-        var paginas = Math.max(1, Math.ceil(total / POR_PAG));
-        if (paginaActual > paginas) paginaActual = paginas;
-
-        var inicio = (paginaActual - 1) * POR_PAG;
-        var pagina = boletasFiltradas.slice(inicio, inicio + POR_PAG);
-
-        document.getElementById('cntBoletas').textContent = total;
-        renderLista(pagina);
-        renderControlesPag(paginas, total);
-    }
-
     function renderControlesPag(paginas, total) {
         var wrap = document.getElementById('pagWrap');
         if (paginas <= 1) { wrap.style.display = 'none'; return; }
@@ -441,10 +472,10 @@
     }
 
     window.irPag = function(p) {
-        var paginas = Math.max(1, Math.ceil(boletasFiltradas.length / POR_PAG));
+        var paginas = Math.max(1, Math.ceil(totalActual / POR_PAG));
         if (p < 1 || p > paginas) return;
         paginaActual = p;
-        renderPagina();
+        cargarPagina();
         document.getElementById('boletasList').scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
@@ -463,7 +494,41 @@
             return;
         }
 
-        cont.innerHTML = lista.map(function(b) {
+        var diaSel = document.getElementById('selDia')?.value ?? '';
+        if (diaSel) {
+            cont.innerHTML = lista.map(renderBoletaCard).join('');
+        } else {
+            cont.innerHTML = renderListaAgrupadaPorDia(lista);
+        }
+    }
+
+    // Agrupa la página actual por día calendario cuando el filtro "Todos los
+    // días" está activo: encabezado "Lunes 28" seguido de las ventas de ese día.
+    var DIAS_ES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    function renderListaAgrupadaPorDia(lista) {
+        var html = '';
+        var claveGrupoActual = null;
+        lista.forEach(function(b) {
+            var claveFecha = String(b.fecha ?? '').substring(0, 10); // dd/MM/yyyy
+            if (claveFecha !== claveGrupoActual) {
+                claveGrupoActual = claveFecha;
+                html += '<div class="bl-dia-header">' + x(etiquetaDia(claveFecha)) + '</div>';
+            }
+            html += renderBoletaCard(b);
+        });
+        return html;
+    }
+
+    function etiquetaDia(claveFecha) {
+        var partes = claveFecha.split(/[\/\-]/);
+        if (partes.length < 3) return claveFecha;
+        var d = +partes[0], m = +partes[1], y = +partes[2];
+        var fechaObj = new Date(y, m - 1, d);
+        if (isNaN(fechaObj.getTime())) return claveFecha;
+        return DIAS_ES[fechaObj.getDay()] + ' ' + d;
+    }
+
+    function renderBoletaCard(b) {
             var estadoClass = b.idEstado === 1 ? 'est-1'
                             : b.idEstado === 2 ? 'est-2'
                             : b.idEstado === 3 ? 'est-3'
@@ -566,7 +631,6 @@
                     '</div>' +
                 '</div>' +
             '</div>';
-        }).join('');
     }
 
     /* â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
@@ -592,7 +656,7 @@
        REIMPRIMIR
     ══════════════════════════════════════════════════════════════════════ */
     window.reimprimir = function (id, tipo) {
-        var b = BOLETAS.find(function(b) { return b.id === id; });
+        var b = boletasPagina.find(function(b) { return b.id === id; });
         if (!b) return;
         mostrarTicketHistorial(b, tipo);
     };
@@ -752,7 +816,10 @@
     }
 
     /* â”€â”€ Inicializar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-    aplicarFiltros();
+    // Primer render: usa la página que ya trajo el servidor con los mismos
+    // filtros por defecto que muestran los selects, sin volver a pedirla por AJAX.
+    renderLista(boletasPagina);
+    renderControlesPag(Math.max(1, Math.ceil(totalActual / POR_PAG)), totalActual);
 
 })();
 </script>

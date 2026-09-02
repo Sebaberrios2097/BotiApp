@@ -395,11 +395,12 @@
 .btn-print  { background:var(--color-secundario); color:#fff; }
 .btn-cerrar { background:#f0ebe5; color:var(--color-secundario); }
 
-/* El ticket propiamente (fuente monoespaciada, estilo impresora POS) */
+/* El ticket propiamente. Verdana/Arial: fuentes del sistema (sin descarga ni
+   carrera de carga), con el 0 como óvalo simple, sin raya ni punto. */
 .ticket {
-    font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace;
-    font-size:13px;
-    line-height:1.35;
+    font-family: Verdana, Arial, 'Helvetica Neue', Helvetica, sans-serif;
+    font-size:12px;
+    line-height:1.4;
     padding: 0 .6rem .5rem .6rem;
     color:#000;
 }

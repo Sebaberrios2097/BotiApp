@@ -228,6 +228,53 @@
         font-size: .83rem;
     }
 
+    /* ── Ventas por categoría: gráfico + leyenda propia al lado ── */
+    .cat-chart-split {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        flex: 1;
+        min-width: 0;
+    }
+    .cat-chart-side { flex: 0 0 200px; }
+    .cat-legend-side {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        max-height: 220px;
+        overflow-y: auto;
+        padding-right: .25rem;
+    }
+    .cat-legend-item {
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        font-size: .78rem;
+        color: var(--color-secundario);
+        min-width: 0;
+    }
+    .cat-legend-swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        flex-shrink: 0;
+    }
+    .cat-legend-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .cat-legend-value {
+        font-weight: 700;
+        color: #9ca3af;
+        font-size: .7rem;
+        flex-shrink: 0;
+    }
+
     /* ── Table card ── */
     .table-card {
         background: #fff;
@@ -341,6 +388,76 @@
     .panel-cigarros-pagos.open {
         max-height: 500px;
         opacity: 1;
+    }
+
+    /* ══════════════════════════ Responsivo ══════════════════════════ */
+    @@media (max-width: 768px) {
+        .dash-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: .5rem;
+            margin-bottom: 1.25rem;
+        }
+        .dash-header h1 { font-size: 1.3rem; }
+        .dash-period-select {
+            justify-content: flex-start;
+        }
+        .dash-period-select select { flex: 1; min-width: 0; }
+
+        .kpi-grid-admin,
+        .kpi-grid-vendor,
+        .kpi-grid-cajero {
+            grid-template-columns: repeat(2, 1fr);
+            gap: .65rem;
+        }
+        .kpi-card {
+            padding: .9rem 1rem;
+            gap: .65rem;
+        }
+        .kpi-icon { width: 38px; height: 38px; }
+        .kpi-icon svg { width: 18px; height: 18px; }
+        .kpi-value { font-size: 1.25rem; }
+        .kpi-label { font-size: .72rem; white-space: normal; }
+
+        .charts-grid {
+            grid-template-columns: 1fr;
+            gap: .85rem;
+        }
+        .chart-card,
+        .chart-card[style*="grid-column"] {
+            grid-column: auto !important;
+        }
+        .chart-card { padding: 1rem 1.1rem; }
+        .chart-wrap { height: 200px !important; }
+
+        .cat-chart-split { flex-direction: column; gap: 1rem; }
+        .cat-chart-side { flex: none; width: 100%; }
+        .cat-legend-side { max-height: none; width: 100%; }
+
+        .table-card-header,
+        .panel-bajo-stock-header {
+            padding: .8rem 1rem;
+            flex-wrap: wrap;
+            gap: .3rem;
+        }
+        .dash-table th,
+        .dash-table td { padding: .55rem .7rem; font-size: .78rem; }
+
+        /* Productos: apilar en vez de lado a lado */
+        .chart-card [style*="display: flex"][style*="flex-wrap: wrap"] {
+            flex-direction: column;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .kpi-grid-admin,
+        .kpi-grid-vendor,
+        .kpi-grid-cajero {
+            grid-template-columns: 1fr;
+        }
+        .dash-header h1 { font-size: 1.15rem; }
+        .dash-header h1 svg { width: 18px; height: 18px; }
+        .kpi-value { font-size: 1.15rem; }
     }
 </style>
 
@@ -660,20 +777,25 @@
             </div>
         </div>
 
-        @* Pie/Doughnut — Ventas por Categoría *@
-        <div class="chart-card">
+        @* Pie/Doughnut — Ventas por Categoría (gráfico + leyenda propia al lado) *@
+        <div class="chart-card" style="grid-column: span 2; min-width:0">
             <p class="chart-card-title">
                 Ventas por Categoría
                 <span class="chart-card-subtitle" id="chart-categorias-subtitle">@mesNombre @Model.Anio</span>
             </p>
             <div class="chart-empty" id="chartVentasCategoria-empty" @(Model.VentasPorCategoria.Any(v => v.Value > 0) ? "hidden" : "")>Sin datos este mes.</div>
-            <div class="chart-wrap" id="chartVentasCategoria-wrap" style="height:220px" @(Model.VentasPorCategoria.Any(v => v.Value > 0) ? "" : "hidden")>
-                <canvas id="chartVentasCategoria"></canvas>
+            <div class="cat-chart-split" id="chartVentasCategoria-wrap" @(Model.VentasPorCategoria.Any(v => v.Value > 0) ? "" : "hidden")>
+                <div class="cat-chart-side">
+                    <div class="chart-wrap" style="height:200px">
+                        <canvas id="chartVentasCategoria"></canvas>
+                    </div>
+                </div>
+                <div class="cat-legend-side" id="chartVentasCategoria-legend"></div>
             </div>
         </div>
 
         @* Tops de Productos (Informativo) *@
-        <div class="chart-card" style="grid-column: span 2; min-width: 0;">
+        <div class="chart-card" style="grid-column: 1 / -1; min-width: 0;">
             <p class="chart-card-title">
                 Rendimiento de Productos
                 <span class="chart-card-subtitle">Top 5 más vendidos y menos vendidos</span>
@@ -1277,12 +1399,12 @@
         if (hasCategorias) {
             var catChart = Chart.getChart(document.getElementById('chartVentasCategoria'));
             if (catChart) {
-                var catColors = [C_PRIMARY, C_INFO, C_SUCCESS, C_WARNING, C_DANGER,
-                                 '#0ea5e9', '#a855f7', '#f97316', '#14b8a6', '#ec4899'];
+                var catColors = _catColores();
                 catChart.data.labels = d.ventasPorCategoriaLabels;
                 catChart.data.datasets[0].data = d.ventasPorCategoriaData;
                 catChart.data.datasets[0].backgroundColor = d.ventasPorCategoriaLabels.map(function(_,i){ return catColors[i % catColors.length] + 'cc'; });
                 catChart.update();
+                _renderCategoriaLegend(d.ventasPorCategoriaLabels, d.ventasPorCategoriaData, catColors);
             } else {
                 _crearChartVentasCategoria(d.ventasPorCategoriaLabels, d.ventasPorCategoriaData);
             }
@@ -1478,11 +1600,32 @@
             );
         }
 
+        // Paleta compartida por el gráfico de categorías y su leyenda propia,
+        // para que los colores del uno y la otra coincidan siempre.
+        function _catColores() {
+            return [C_PRIMARY, C_INFO, C_SUCCESS, C_WARNING, C_DANGER,
+                    '#0ea5e9', '#a855f7', '#f97316', '#14b8a6', '#ec4899'];
+        }
+
+        function _renderCategoriaLegend(labels, data, colors) {
+            var cont = document.getElementById('chartVentasCategoria-legend');
+            if (!cont) return;
+            var total = data.reduce(function(a, v) { return a + v; }, 0) || 1;
+            cont.innerHTML = labels.map(function(label, i) {
+                var color = colors[i % colors.length];
+                var pct = (data[i] * 100 / total).toFixed(1);
+                return '<div class="cat-legend-item">' +
+                    '<span class="cat-legend-swatch" style="background:' + color + '"></span>' +
+                    '<span class="cat-legend-name" title="' + _esc(label) + '">' + _esc(label) + '</span>' +
+                    '<span class="cat-legend-value">' + pct + '%</span>' +
+                    '</div>';
+            }).join('');
+        }
+
         function _crearChartVentasCategoria(metLabels, metData) {
             var ctxCat = document.getElementById('chartVentasCategoria');
             if (!ctxCat) return;
-            var catColors = [C_PRIMARY, C_INFO, C_SUCCESS, C_WARNING, C_DANGER,
-                             '#0ea5e9', '#a855f7', '#f97316', '#14b8a6', '#ec4899'];
+            var catColors = _catColores();
             new Chart(ctxCat, {
                 type: 'doughnut',
                 data: {
@@ -1500,7 +1643,7 @@
                     maintainAspectRatio: false,
                     cutout: '62%',
                     plugins: {
-                        legend: { position: 'bottom', labels: { padding: 14, boxWidth: 12 } },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(ctx) { return ' ' + ctx.label + ': ' + _fmtPeso(ctx.parsed); }
@@ -1509,6 +1652,7 @@
                     }
                 }
             });
+            _renderCategoriaLegend(metLabels, metData, catColors);
         }
 
         var ctxCat = document.getElementById('chartVentasCategoria');
